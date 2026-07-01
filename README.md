@@ -2,8 +2,24 @@
 
 Mimari proje, akustik rapor ve yapı ruhsatı süreçlerinin; müşteri, arsa
 sahibi/vekaletname, hizmet aşamaları ve evrak (dijital + fiziksel) takibini
-tek yerden yapmanızı sağlayan ofis içi web uygulaması. Dijital evraklar
-Google Drive'a (ofis Google hesabınızın depolama alanına) yüklenir.
+tek yerden yapmanızı sağlayan ofis içi web uygulaması.
+
+## 🌐 Web Sürümü (kullanımda) — GitHub Pages
+
+**https://aligokten.github.io/Mimarl-k-Dosya-Takip/**
+
+`webapp/` klasöründeki bu sürüm tarayıcıda çalışır; kurulum, sunucu ve
+veritabanı gerektirmez. Veriler kullanılan tarayıcıda saklanır — düzenli
+olarak **Ayarlar → Veri Yedekleme** bölümünden yedek alın; yedeği başka bir
+bilgisayarda geri yükleyebilirsiniz. `main` dalına yapılan her push,
+GitHub Actions ile otomatik yayınlanır (`.github/workflows/pages.yml`).
+
+Yol haritası: Google Drive'a uygulama içinden dosya yükleme ve Drive'da
+otomatik yedekleme sonraki aşamada eklenecek.
+
+> Not: Deponun geri kalanı (aşağıda anlatılan Next.js + PostgreSQL tam
+> sürüm), çok kullanıcılı/sunuculu kuruluma geçilmek istendiğinde hazır
+> bekleyen gelişmiş sürümdür; web sürümünü etkilemez.
 
 ## Özellikler
 
