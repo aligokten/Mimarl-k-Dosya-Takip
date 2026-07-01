@@ -1,0 +1,192 @@
+// Mimarlık ofisi dosya/proje takip sistemi veri modeli
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+enum ProjectStatus {
+  DEVAM_EDIYOR
+  TAMAMLANDI
+  DURDURULDU
+}
+
+enum DocumentKind {
+  DIJITAL
+  FIZIKSEL
+  IKISI_DE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(STAFF)
+  createdAt    DateTime @default(now())
+
+  documents Document[]
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  taxNo     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+}
+
+model LandOwner {
+  id                         String    @id @default(cuid())
+  name                       String
+  phone                      String?
+  email                      String?
+  address                    String?
+  tcNo                       String?
+  powerOfAttorneyNo          String?
+  powerOfAttorneyDate        DateTime?
+  notaryName                 String?
+  powerOfAttorneyDriveFileId String?
+  powerOfAttorneyDriveUrl    String?
+  notes                      String?
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+
+  projects Project[]
+}
+
+model Project {
+  id            String        @id @default(cuid())
+  name          String
+  province      String?
+  district      String?
+  neighborhood  String?
+  ada           String?
+  parsel        String?
+  pafta         String?
+  address       String?
+  status        ProjectStatus @default(DEVAM_EDIYOR)
+  notes         String?
+  driveFolderId String?
+  driveFolderUrl String?
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  landOwnerId String?
+  landOwner   LandOwner? @relation(fields: [landOwnerId], references: [id])
+
+  services  ProjectService[]
+  documents Document[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ServiceType {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  stages   StageTemplate[]
+  services ProjectService[]
+}
+
+model StageTemplate {
+  id            String @id @default(cuid())
+  name          String
+  order         Int
+
+  serviceTypeId String
+  serviceType   ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+
+  statuses ProjectServiceStage[]
+}
+
+model ProjectService {
+  id            String        @id @default(cuid())
+  status        ProjectStatus @default(DEVAM_EDIYOR)
+  startDate     DateTime?
+  targetDate    DateTime?
+  completedDate DateTime?
+  notes         String?
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  serviceTypeId String
+  serviceType   ServiceType @relation(fields: [serviceTypeId], references: [id])
+
+  stages    ProjectServiceStage[]
+  documents Document[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, serviceTypeId])
+}
+
+model ProjectServiceStage {
+  id          String    @id @default(cuid())
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  note        String?
+
+  projectServiceId String
+  projectService   ProjectService @relation(fields: [projectServiceId], references: [id], onDelete: Cascade)
+
+  stageTemplateId String
+  stageTemplate   StageTemplate @relation(fields: [stageTemplateId], references: [id])
+
+  @@unique([projectServiceId, stageTemplateId])
+}
+
+model Document {
+  id   String       @id @default(cuid())
+  name String
+  kind DocumentKind @default(DIJITAL)
+
+  driveFileId  String?
+  driveFileUrl String?
+  mimeType     String?
+
+  physicalLocation String?
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  projectServiceId String?
+  projectService   ProjectService? @relation(fields: [projectServiceId], references: [id], onDelete: SetNull)
+
+  uploadedById String?
+  uploadedBy   User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+}
+
+model GoogleDriveConnection {
+  id           String    @id @default(cuid())
+  accountEmail String
+  accessToken  String
+  refreshToken String
+  expiryDate   DateTime?
+  rootFolderId String?
+  rootFolderUrl String?
+  updatedAt    DateTime  @updatedAt
+}
