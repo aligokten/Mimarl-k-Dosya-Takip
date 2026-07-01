@@ -7,26 +7,29 @@ const SCOPES = [
 ];
 const ROOT_FOLDER_NAME = "Mimarlık Ofisi Dosya Takip";
 
-function getRedirectUri() {
-  return (
-    process.env.GOOGLE_REDIRECT_URI ??
-    "http://localhost:3000/api/drive/callback"
-  );
+function getRedirectUri(origin?: string) {
+  if (process.env.GOOGLE_REDIRECT_URI) {
+    return process.env.GOOGLE_REDIRECT_URI;
+  }
+  if (origin) {
+    return `${origin}/api/drive/callback`;
+  }
+  return "http://localhost:3000/api/drive/callback";
 }
 
-export function getOAuthClient() {
+export function getOAuthClient(origin?: string) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
     throw new Error(
-      "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET tanımlı değil. .env dosyasını kontrol edin."
+      "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET tanımlı değil. Ortam değişkenlerini kontrol edin."
     );
   }
-  return new google.auth.OAuth2(clientId, clientSecret, getRedirectUri());
+  return new google.auth.OAuth2(clientId, clientSecret, getRedirectUri(origin));
 }
 
-export function getAuthUrl() {
-  const client = getOAuthClient();
+export function getAuthUrl(origin: string) {
+  const client = getOAuthClient(origin);
   return client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
@@ -34,8 +37,8 @@ export function getAuthUrl() {
   });
 }
 
-export async function exchangeCodeForTokens(code: string) {
-  const client = getOAuthClient();
+export async function exchangeCodeForTokens(code: string, origin: string) {
+  const client = getOAuthClient(origin);
   const { tokens } = await client.getToken(code);
   return tokens;
 }

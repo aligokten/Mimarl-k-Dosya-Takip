@@ -22,43 +22,63 @@ Google Drive'a (ofis Google hesabınızın depolama alanına) yüklenir.
 
 ## Teknoloji
 
-Next.js (App Router) + TypeScript + Tailwind CSS, Prisma + SQLite (yerel
-veritabanı dosyası), NextAuth (Auth.js) ile kimlik doğrulama, Google Drive
-API (googleapis) ile dosya depolama.
+Next.js (App Router) + TypeScript + Tailwind CSS, Prisma + PostgreSQL
+(Neon/Vercel Postgres veya kendi sunucunuz), NextAuth (Auth.js) ile kimlik
+doğrulama, Google Drive API (googleapis) ile dosya depolama.
 
-## Yerel Kurulum
+## İnternete Açma (Vercel + Neon Postgres) — Önerilen
+
+Uygulamayı `https://PROJE-ADI.vercel.app` gibi bir adresten tarayıcıyla
+kullanmak için (ücretsiz):
+
+1. [vercel.com](https://vercel.com) adresine gidin, **"Continue with
+   GitHub"** ile giriş yapın.
+2. **Add New… → Project** deyin ve `Mimarl-k-Dosya-Takip` deposunu
+   **Import** edin.
+3. Deploy etmeden önce **Environment Variables** bölümüne şunları ekleyin:
+   - `AUTH_SECRET`: uzun rastgele bir metin (ör. `openssl rand -base64 32`
+     çıktısı ya da rastgele 40+ karakter).
+   - `SEED_ADMIN_PASSWORD`: yönetici hesabının ilk şifresi — **mutlaka
+     kendiniz belirleyin**, varsayılan şifreyle internete açmayın.
+4. **Deploy** butonuna basın. İlk deploy veritabanı olmadığı için
+   **başarısız olabilir** — sorun değil, sıradaki adımla düzelecek.
+5. Proje panelinde **Storage** sekmesine gidin → **Create Database** →
+   **Neon (Serverless Postgres)** seçin → oluşturun ve projeye bağlayın.
+   Bu işlem `DATABASE_URL` değişkenini otomatik ekler.
+6. **Deployments** sekmesinden son deployment'ın yanındaki **⋯ →
+   Redeploy** deyin. Build sırasında migration'lar ve başlangıç verileri
+   (yönetici hesabı + hizmet türleri) otomatik yüklenir.
+7. Verilen `https://....vercel.app` adresini açın,
+   `SEED_ADMIN_EMAIL` (varsayılan `aligokten99@gmail.com`) ve
+   belirlediğiniz `SEED_ADMIN_PASSWORD` ile giriş yapın.
+
+Google Drive bağlantısı için aşağıdaki "Google Drive Bağlantısı Kurulumu"
+bölümündeki adımları izleyin; redirect URI olarak
+`https://SIZIN-VERCEL-ADRESINIZ/api/drive/callback` girin ve
+`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` değişkenlerini Vercel'e ekleyip
+yeniden deploy edin.
+
+> Not: Vercel'in ücretsiz planında tek istekte yüklenebilecek dosya boyutu
+> ~4.5MB ile sınırlıdır. Daha büyük taranmış evraklar için dosyayı Drive'a
+> elle yükleyip uygulamada "Fiziksel" kayıt + not olarak tutabilir ya da
+> ileride doğrudan tarayıcıdan Drive'a yükleme özelliği ekletebilirsiniz.
+
+## Yerel Kurulum (geliştirme)
+
+Yerelde PostgreSQL çalışıyor olmalı (ör. `postgresql://postgres:postgres@localhost:5432/mimarlik`).
 
 ```bash
 npm install
-cp .env.example .env
-```
-
-`.env` dosyasında `AUTH_SECRET` için rastgele bir değer üretin:
-
-```bash
-openssl rand -base64 32
-```
-
-Veritabanını oluşturun ve başlangıç verilerini (yönetici hesabı + varsayılan
-hizmet türleri/aşamaları) yükleyin:
-
-```bash
-npx prisma migrate dev --name init
+cp .env.example .env    # DATABASE_URL ve AUTH_SECRET doldurun
+npx prisma migrate dev
 npm run db:seed
+npm run dev
 ```
 
 Seed script'i `.env` içindeki `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` ile
 (varsayılan: `aligokten99@gmail.com` / `degistirin123`) bir yönetici hesabı
-oluşturur. **İlk girişten sonra bu şifreyi Ayarlar sayfasından değiştirmeniz
-önerilir** (şu an şifre değiştirme arayüzü yoksa, `npx prisma studio` ile
-`User` tablosundan `passwordHash` alanını güncelleyebilir veya yeni bir
-yönetici kullanıcı oluşturup eskisini silebilirsiniz).
-
-Geliştirme sunucusunu başlatın:
-
-```bash
-npm run dev
-```
+oluşturur. Şifrenizi giriş yaptıktan sonra **Ayarlar → Şifremi Değiştir**
+bölümünden güncelleyebilirsiniz.
 
 `http://localhost:3000` adresinden giriş yapabilirsiniz.
 
@@ -85,10 +105,13 @@ tek bir merkezi Drive bağlantısı üzerinden saklanır. Bunu kurmak için:
    - Authorized redirect URIs kısmına şunu ekleyin:
      - Yerel geliştirme için: `http://localhost:3000/api/drive/callback`
      - Canlı ortam için: `https://SIZIN-DOMAININIZ/api/drive/callback`
-5. Oluşturulan **Client ID** ve **Client Secret** değerlerini `.env`
-   dosyasındaki `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` alanlarına
-   yazın. Canlı ortamda `GOOGLE_REDIRECT_URI` değerini de gerçek domaininize
-   göre güncelleyin.
+       (Vercel kullanıyorsanız `https://PROJE-ADI.vercel.app/api/drive/callback`)
+5. Oluşturulan **Client ID** ve **Client Secret** değerlerini
+   `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` ortam değişkenlerine yazın
+   (yerelde `.env` dosyası, Vercel'de proje ayarlarındaki Environment
+   Variables). Yönlendirme adresi uygulamanın çalıştığı alan adından
+   otomatik türetilir; isterseniz `GOOGLE_REDIRECT_URI` ile elle de
+   belirleyebilirsiniz.
 6. Uygulamayı başlatıp `aligokten99@gmail.com` ile giriş yapın, **Ayarlar**
    sayfasından **"Google Drive'a Bağlan"** butonuna tıklayın ve Google hesabı
    ile yetkilendirmeyi tamamlayın (izin ekranında `aligokten99@gmail.com`
@@ -116,23 +139,12 @@ Akustik Rapor, Yapı Ruhsatı, Yapı Kullanma İzni/İskan, Zemin Etüdü). Bunl
 Ayarlar sayfasından tamamen özelleştirilebilir: yeni hizmet türü ekleyebilir,
 her hizmetin aşama/checklist adımlarını düzenleyebilirsiniz.
 
-## Dağıtım (Production) Notu
-
-Veritabanı SQLite dosyası olarak diskte tutulur (`dev.db`). Bu nedenle:
-
-- **Kendi sunucunuzda / VPS'de (önerilen)**: Node.js uygulamasını `npm run
-  build && npm run start` ile veya Docker ile kalıcı bir disk üzerinde
-  çalıştırın; `dev.db` dosyası ve `.env` dosyanızı düzenli yedekleyin.
-- **Vercel gibi sunucusuz (serverless) platformlar**: Dosya sistemi kalıcı
-  olmadığından SQLite bu tür ortamlarda **çalışmaz**. Serverless'a
-  dağıtmak isterseniz `DATABASE_URL`'i barındırılan bir Postgres'e (örn.
-  Vercel Postgres, Neon, Supabase) yönlendirip Prisma adaptörünü
-  (`@prisma/adapter-pg` vb.) değiştirmeniz gerekir.
-
 ## Komutlar
 
 - `npm run dev` — geliştirme sunucusu
-- `npm run build` / `npm run start` — production build ve çalıştırma
+- `npm run build` — migration + seed + production build (Vercel bunu kullanır)
+- `npm run build:local` — yalnızca build (veritabanına dokunmadan)
+- `npm run start` — production sunucusu
 - `npm run lint` — ESLint
 - `npm run db:migrate` — yeni migration oluştur/uygula
 - `npm run db:seed` — başlangıç verilerini (yönetici + hizmet türleri) yükle

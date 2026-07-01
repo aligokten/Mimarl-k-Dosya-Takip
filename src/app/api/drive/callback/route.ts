@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const tokens = await exchangeCodeForTokens(code);
+  const tokens = await exchangeCodeForTokens(code, request.nextUrl.origin);
   if (!tokens.access_token || !tokens.refresh_token) {
     return NextResponse.redirect(
       new URL("/ayarlar?drive_error=missing_refresh_token", request.nextUrl.origin)
