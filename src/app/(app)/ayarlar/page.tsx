@@ -4,6 +4,7 @@ import { getActiveConnection } from "@/lib/google-drive";
 import DriveSection from "./drive-section";
 import ServiceTypesSection from "./service-types-section";
 import UsersSection from "./users-section";
+import ChangePasswordSection from "./change-password-section";
 
 export default async function AyarlarPage({
   searchParams,
@@ -42,6 +43,8 @@ export default async function AyarlarPage({
       />
 
       <ServiceTypesSection serviceTypes={serviceTypes} isAdmin={isAdmin} />
+
+      <ChangePasswordSection />
 
       {isAdmin && <UsersSection users={users} currentUserId={session!.user.id} />}
     </div>
