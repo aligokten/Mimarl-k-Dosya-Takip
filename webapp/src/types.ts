@@ -1,5 +1,6 @@
 export type ProjectStatus = "DEVAM_EDIYOR" | "TAMAMLANDI" | "DURDURULDU";
 export type DocumentKind = "DIJITAL" | "FIZIKSEL" | "IKISI_DE";
+export type Priority = "DUSUK" | "ORTA" | "YUKSEK";
 
 export interface StageTemplate {
   id: string;
@@ -70,6 +71,7 @@ export interface Project {
   address?: string;
   notes?: string;
   status: ProjectStatus;
+  priority?: Priority;
   services: ProjectService[];
   documents: ProjectDocument[];
   createdAt: string;
@@ -100,4 +102,16 @@ export const DOCUMENT_KIND_LABELS: Record<DocumentKind, string> = {
   DIJITAL: "Dijital",
   FIZIKSEL: "Fiziksel",
   IKISI_DE: "Dijital + Fiziksel",
+};
+
+export const PRIORITY_LABELS: Record<Priority, string> = {
+  DUSUK: "Düşük",
+  ORTA: "Orta",
+  YUKSEK: "Yüksek",
+};
+
+export const PRIORITY_COLORS: Record<Priority, string> = {
+  DUSUK: "text-emerald-600",
+  ORTA: "text-amber-600",
+  YUKSEK: "text-red-600",
 };
