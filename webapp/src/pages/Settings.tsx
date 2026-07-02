@@ -8,7 +8,14 @@ import {
   useApp,
 } from "../data";
 import { connectDrive, disconnectDrive, getClientId, setClientId, useDrive } from "../drive";
-import { getAiKey, setAiKey, useAiConfigured } from "../ai";
+import {
+  AI_MODELS,
+  getAiKey,
+  getAiModel,
+  setAiKey,
+  setAiModel,
+  useAiConfigured,
+} from "../ai";
 import type { ServiceType } from "../types";
 import { cardCls, inputCls, primaryBtnCls, secondaryBtnCls, str } from "../ui";
 import PageTitle from "../components/PageTitle";
@@ -51,6 +58,7 @@ export default function Settings() {
 function AiSection() {
   const configured = useAiConfigured();
   const [keyInput, setKeyInput] = useState(getAiKey());
+  const [model, setModel] = useState(getAiModel());
   const [message, setMessage] = useState<string | null>(null);
 
   return (
@@ -107,6 +115,31 @@ function AiSection() {
         >
           Kaydet
         </button>
+      </div>
+
+      <div className="mt-4">
+        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+          Model (kota dolarsa değiştirin)
+        </label>
+        <select
+          value={model}
+          onChange={(e) => {
+            setModel(e.target.value);
+            setAiModel(e.target.value);
+            setMessage(`Model "${e.target.value}" olarak ayarlandı.`);
+          }}
+          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-100"
+        >
+          {AI_MODELS.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+          Ücretsiz katmanın günlük/dakikalık istek sınırı vardır. Bir model
+          &quot;kota doldu&quot; derse buradan başka bir modele geçebilirsiniz.
+        </p>
       </div>
 
       <div className="mt-3">
