@@ -61,6 +61,9 @@ export function setClientId(clientId: string) {
   const trimmed = clientId.trim();
   if (trimmed) {
     localStorage.setItem(CLIENT_ID_KEY, trimmed);
+    // Google betiğini şimdiden yükle: "Bağlan"a tıklandığında popup,
+    // kullanıcı dokunuşuyla aynı anda açılabilsin (Safari engellemesin).
+    void loadGis().catch(() => {});
   } else {
     localStorage.removeItem(CLIENT_ID_KEY);
   }
@@ -125,13 +128,19 @@ async function requestToken(): Promise<string> {
         resolve(accessToken);
       },
       error_callback: (err: any) => {
-        reject(
-          new Error(
-            err?.type === "popup_closed"
-              ? "Yetkilendirme penceresi kapatıldı."
-              : `Yetkilendirme başarısız: ${err?.message ?? err?.type ?? "bilinmeyen hata"}`
-          )
-        );
+        let message: string;
+        if (err?.type === "popup_closed") {
+          message = "Yetkilendirme penceresi kapatıldı.";
+        } else if (
+          err?.type === "popup_failed_to_open" ||
+          /popup/i.test(err?.message ?? "")
+        ) {
+          message =
+            "Tarayıcı, Google giriş penceresini engelledi. iPhone/iPad'de: Ayarlar > Safari > 'Açılır Pencereleri Engelle' seçeneğini kapatın (veya adres çubuğundaki 'aA' > Web Sitesi Ayarları > Açılır Pencereler > İzin Ver). Sonra tekrar deneyin.";
+        } else {
+          message = `Yetkilendirme başarısız: ${err?.message ?? err?.type ?? "bilinmeyen hata"}`;
+        }
+        reject(new Error(message));
       },
     });
     tokenClient.requestAccessToken({ prompt: "" });
@@ -399,3 +408,10 @@ subscribeDb(() => {
     });
   }, 5000);
 });
+
+// Client ID tanımlıysa Google betiğini uygulama açılışında yükle:
+// böylece "Drive'a Bağlan" tıklamasında popup gecikmeden (ve Safari
+// tarafından engellenmeden) açılır.
+if (state.configured) {
+  void loadGis().catch(() => {});
+}
