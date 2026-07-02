@@ -26,7 +26,7 @@ export default function Contacts() {
 
       <div className={`${cardCls} overflow-hidden`}>
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-600">
-          <thead className="bg-slate-50 dark:bg-slate-800/60">
+          <thead className="bg-slate-50 dark:bg-zinc-800/60">
             <tr>
               <th className={thCls}>Ad Soyad / Unvan</th>
               <th className={thCls}>Roller</th>
@@ -56,7 +56,7 @@ export default function Contacts() {
               return (
                 <tr
                   key={contact.id}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-700/60"
+                  className="hover:bg-slate-50 dark:hover:bg-zinc-700/60"
                 >
                   <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">
                     <Link

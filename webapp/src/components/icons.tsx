@@ -199,3 +199,20 @@ export function CloudIcon({ className }: { className?: string }) {
     </Svg>
   );
 }
+
+export function SparklesIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z" />
+      <path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14z" />
+    </Svg>
+  );
+}
+
+export function SendIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M4 12l16-8-6 16-3-6-7-2z" />
+    </Svg>
+  );
+}

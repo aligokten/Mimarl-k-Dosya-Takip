@@ -32,7 +32,7 @@ export default function NotificationBell() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         title="Bildirimler"
-        className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-slate-600 shadow-sm ring-1 ring-white/60 backdrop-blur hover:bg-white dark:bg-slate-800/80 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-700"
+        className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-slate-600 shadow-sm ring-1 ring-white/60 backdrop-blur hover:bg-white dark:bg-zinc-800/80 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-zinc-700"
       >
         <svg
           viewBox="0 0 24 24"
@@ -54,7 +54,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-30 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
+        <div className="absolute right-0 z-30 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 dark:bg-zinc-800 dark:ring-slate-700">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 dark:border-slate-700">
             <span className="text-sm font-bold text-slate-900 dark:text-white">
               Bildirimler
@@ -83,7 +83,7 @@ export default function NotificationBell() {
                   navigate(`/projeler/${n.projectId}`);
                 }}
                 className={
-                  "flex w-full gap-2 border-b border-slate-50 px-4 py-3 text-left last:border-0 hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-slate-700/50 " +
+                  "flex w-full gap-2 border-b border-slate-50 px-4 py-3 text-left last:border-0 hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-zinc-700/50 " +
                   (n.read ? "" : "bg-blue-50/50 dark:bg-blue-500/10")
                 }
               >

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { DOC_TEMPLATES } from "../templates";
 import { addDocTemplate, useApp } from "../data";
 import { cardCls, secondaryBtnCls } from "../ui";
 import { PrinterIcon } from "../components/icons";
@@ -22,9 +21,7 @@ export default function TemplateEditor() {
   const sheetRef = useRef<HTMLDivElement>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
-  const builtin = DOC_TEMPLATES.find((t) => t.id === id);
-  const custom = db.docTemplates.find((t) => t.id === id);
-  const template = builtin ?? custom;
+  const template = db.docTemplates.find((t) => t.id === id);
   const draftKey = `${DRAFT_KEY_PREFIX}${id}`;
 
   useEffect(() => {
@@ -113,7 +110,7 @@ export default function TemplateEditor() {
   }
 
   const toolbarBtn =
-    "flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700";
+    "flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-zinc-700";
 
   return (
     <div className="space-y-4">
@@ -135,7 +132,7 @@ export default function TemplateEditor() {
             saveDraft();
             window.print();
           }}
-          className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+          className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-zinc-200"
         >
           <PrinterIcon className="h-4 w-4" />
           PDF Olarak Kaydet / Yazdır
@@ -153,7 +150,7 @@ export default function TemplateEditor() {
             if (e.target.value) fillFromProject(e.target.value);
             e.target.value = "";
           }}
-          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-200"
         >
           <option value="" disabled>
             Proje seç (müşteri + arsa sahibi dahil)
@@ -219,7 +216,7 @@ export default function TemplateEditor() {
         <button type="button" onClick={() => exec("underline")} className={`${toolbarBtn} underline`} title="Altı çizili">
           A
         </button>
-        <span className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-600" />
+        <span className="mx-1 h-5 w-px bg-slate-200 dark:bg-zinc-600" />
         <button type="button" onClick={() => exec("justifyLeft")} className={toolbarBtn} title="Sola hizala">
           ⇤
         </button>
@@ -229,14 +226,14 @@ export default function TemplateEditor() {
         <button type="button" onClick={() => exec("justifyRight")} className={toolbarBtn} title="Sağa hizala">
           ⇥
         </button>
-        <span className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-600" />
+        <span className="mx-1 h-5 w-px bg-slate-200 dark:bg-zinc-600" />
         <button type="button" onClick={() => exec("insertUnorderedList")} className={toolbarBtn} title="Madde işaretli liste">
           • —
         </button>
         <button type="button" onClick={() => exec("insertOrderedList")} className={toolbarBtn} title="Numaralı liste">
           1. —
         </button>
-        <span className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-600" />
+        <span className="mx-1 h-5 w-px bg-slate-200 dark:bg-zinc-600" />
         <button type="button" onClick={() => exec("undo")} className={toolbarBtn} title="Geri al">
           ↺
         </button>

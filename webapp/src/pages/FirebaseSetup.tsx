@@ -93,7 +93,7 @@ export default function FirebaseSetup() {
           </div>
         </div>
 
-        <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+        <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-zinc-800/60 dark:text-slate-300">
           <p className="font-semibold text-slate-800 dark:text-slate-100">
             Adımlar:
           </p>

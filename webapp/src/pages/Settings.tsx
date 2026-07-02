@@ -8,6 +8,7 @@ import {
   useApp,
 } from "../data";
 import { connectDrive, disconnectDrive, getClientId, setClientId, useDrive } from "../drive";
+import { getAiKey, setAiKey, useAiConfigured } from "../ai";
 import type { ServiceType } from "../types";
 import { cardCls, inputCls, primaryBtnCls, secondaryBtnCls, str } from "../ui";
 import PageTitle from "../components/PageTitle";
@@ -40,9 +41,91 @@ export default function Settings() {
         </section>
       )}
 
+      <AiSection />
       <DriveSection />
       <ServiceTypesSection />
     </div>
+  );
+}
+
+function AiSection() {
+  const configured = useAiConfigured();
+  const [keyInput, setKeyInput] = useState(getAiKey());
+  const [message, setMessage] = useState<string | null>(null);
+
+  return (
+    <section className={`${cardCls} p-6`}>
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+        AI Asistan (İmar Mevzuatı)
+      </h2>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        Paneldeki İmar Asistanı, sorularınızı imar mevzuatından yararlanarak
+        yanıtlar. Çalışması için ücretsiz bir Google Gemini API anahtarı girin.
+        Anahtar yalnızca bu tarayıcıda saklanır.
+      </p>
+
+      <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+        <p className="font-semibold">Anahtar nasıl alınır (ücretsiz):</p>
+        <ol className="mt-2 list-decimal space-y-1 pl-5">
+          <li>
+            <a
+              href="https://aistudio.google.com/app/apikey"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              aistudio.google.com/app/apikey
+            </a>{" "}
+            adresine Google hesabınızla girin.
+          </li>
+          <li>
+            <strong>Create API key</strong> deyin ve verilen anahtarı kopyalayın.
+          </li>
+          <li>Anahtarı aşağıya yapıştırıp kaydedin.</li>
+        </ol>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <input
+          value={keyInput}
+          onChange={(e) => setKeyInput(e.target.value)}
+          type="password"
+          placeholder="Gemini API anahtarı (AIza...)"
+          className={`${inputCls} mt-0 flex-1`}
+        />
+        <button
+          type="button"
+          onClick={() => {
+            setAiKey(keyInput);
+            setMessage(
+              keyInput.trim()
+                ? "AI anahtarı kaydedildi. Panelde İmar Asistanı'na soru sorabilirsiniz."
+                : "AI anahtarı silindi."
+            );
+          }}
+          className={secondaryBtnCls}
+        >
+          Kaydet
+        </button>
+      </div>
+
+      <div className="mt-3">
+        {configured ? (
+          <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 dark:border-green-500/30 dark:bg-green-500/15 dark:text-green-300">
+            AI Asistan etkin
+          </span>
+        ) : (
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-400">
+            Henüz anahtar girilmedi
+          </span>
+        )}
+      </div>
+      {message && (
+        <p className="mt-3 text-sm text-green-700 dark:text-green-300">
+          {message}
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -206,7 +289,7 @@ function ServiceTypesSection() {
           name="name"
           required
           placeholder="Yeni hizmet türü adı"
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
+          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-600 dark:bg-zinc-900/60 dark:text-slate-100"
         />
         <button type="submit" className={primaryBtnCls}>
           Ekle
@@ -282,7 +365,7 @@ function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
               name="name"
               required
               placeholder="Yeni aşama adı"
-              className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
+              className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-600 dark:bg-zinc-900/60 dark:text-slate-100"
             />
             <button type="submit" className={secondaryBtnCls}>
               Aşama Ekle

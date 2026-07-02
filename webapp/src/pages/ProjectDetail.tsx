@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import clsx from "clsx";
 import { format, formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -33,6 +33,7 @@ import {
 } from "../ui";
 import ProjectForm from "./ProjectForm";
 import DeleteButton from "../components/DeleteButton";
+import { ChevronLeftIcon } from "../components/icons";
 import { Avatar } from "../App";
 
 const TABS = [
@@ -65,6 +66,13 @@ export default function ProjectDetail() {
 
   return (
     <div className="space-y-6">
+      <Link
+        to="/projeler"
+        className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+      >
+        <ChevronLeftIcon className="h-4 w-4" />
+        Projeler
+      </Link>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -90,7 +98,7 @@ export default function ProjectDetail() {
                 }
               );
             }}
-            className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+            className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-200"
           >
             {Object.entries(PROJECT_STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -108,7 +116,7 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      <div className="inline-flex max-w-full overflow-x-auto rounded-full border border-slate-200 bg-white p-1 dark:border-slate-600 dark:bg-slate-800">
+      <div className="inline-flex max-w-full overflow-x-auto rounded-full border border-slate-200 bg-white p-1 dark:border-slate-600 dark:bg-zinc-800">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -204,7 +212,7 @@ function AssigneesCard({ project }: { project: Project }) {
                 "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition",
                 isOn
                   ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
-                  : "border-slate-200 bg-white text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300",
+                  : "border-slate-200 bg-white text-slate-600 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-300",
                 !canManage && "cursor-default opacity-80"
               )}
             >
@@ -279,7 +287,7 @@ function ServicesTab({ project }: { project: Project }) {
                       }
                     );
                   }}
-                  className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                  className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-200"
                 >
                   {Object.entries(PROJECT_STATUS_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
@@ -296,7 +304,7 @@ function ServicesTab({ project }: { project: Project }) {
                       services: replaceService({ targetDate }),
                     });
                   }}
-                  className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                  className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-200"
                 />
                 <DeleteButton
                   label="Kaldır"
@@ -409,7 +417,7 @@ function ServicesTab({ project }: { project: Project }) {
             name="serviceTypeId"
             required
             defaultValue=""
-            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-200"
           >
             <option value="" disabled>
               Eklenecek hizmet türünü seçin
@@ -603,7 +611,7 @@ function DocumentsTab({ project }: { project: Project }) {
 
       <div className={`${cardCls} overflow-hidden`}>
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-600">
-          <thead className="bg-slate-50 dark:bg-slate-800/60">
+          <thead className="bg-slate-50 dark:bg-zinc-800/60">
             <tr>
               <th className={thCls}>Evrak</th>
               <th className={thCls}>Tür</th>
@@ -634,7 +642,7 @@ function DocumentsTab({ project }: { project: Project }) {
               return (
                 <tr
                   key={docItem.id}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                  className="hover:bg-slate-50 dark:hover:bg-zinc-700/50"
                 >
                   <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">
                     {docItem.name}

@@ -130,9 +130,9 @@ export default function TemplateUpload() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="h-px flex-1 bg-slate-200 dark:bg-slate-600" />
+          <span className="h-px flex-1 bg-slate-200 dark:bg-zinc-600" />
           <span className="text-xs font-medium text-slate-400">veya</span>
-          <span className="h-px flex-1 bg-slate-200 dark:bg-slate-600" />
+          <span className="h-px flex-1 bg-slate-200 dark:bg-zinc-600" />
         </div>
 
         <div>
