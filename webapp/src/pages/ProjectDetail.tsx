@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { mutate, now, uid, useDb } from "../store";
+import { uploadToDrive, useDrive } from "../drive";
 import {
   DOCUMENT_KIND_LABELS,
   PROJECT_STATUS_LABELS,
@@ -319,7 +320,9 @@ function ServicesTab({ project }: { project: Project }) {
 
 function DocumentsTab({ project }: { project: Project }) {
   const db = useDb();
+  const drive = useDrive();
   const [kind, setKind] = useState<DocumentKind>("DIJITAL");
+  const [uploading, setUploading] = useState(false);
 
   const documents = [...project.documents].sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt)
@@ -328,21 +331,41 @@ function DocumentsTab({ project }: { project: Project }) {
   return (
     <div className="space-y-6">
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          const formData = new FormData(e.currentTarget);
-          const name = str(formData, "name");
+          const form = e.currentTarget;
+          const formData = new FormData(form);
+          const file = formData.get("file");
+          const hasFile = file instanceof File && file.size > 0;
+          let name = str(formData, "name");
+          if (!name && hasFile) name = (file as File).name;
           if (!name) return;
-          const url = kind === "FIZIKSEL" ? undefined : str(formData, "url");
+          let url = kind === "FIZIKSEL" ? undefined : str(formData, "url");
           const physicalLocation =
             kind === "DIJITAL" ? undefined : str(formData, "physicalLocation");
           const projectServiceId = str(formData, "projectServiceId");
+
+          if (kind !== "FIZIKSEL" && hasFile) {
+            setUploading(true);
+            try {
+              const uploaded = await uploadToDrive(file as File, project.name);
+              url = uploaded.url ?? url;
+            } catch (err) {
+              window.alert(
+                err instanceof Error ? err.message : "Dosya yüklenemedi."
+              );
+              setUploading(false);
+              return;
+            }
+            setUploading(false);
+          }
+
           mutate((draft) => {
             const target = touchProject(draft, project.id);
             if (target) {
               target.documents.push({
                 id: uid(),
-                name,
+                name: name!,
                 kind,
                 url,
                 physicalLocation,
@@ -351,7 +374,7 @@ function DocumentsTab({ project }: { project: Project }) {
               });
             }
           });
-          e.currentTarget.reset();
+          form.reset();
         }}
         className={`${cardCls} space-y-3 p-5`}
       >
@@ -397,20 +420,41 @@ function DocumentsTab({ project }: { project: Project }) {
         </div>
 
         {kind !== "FIZIKSEL" && (
-          <div>
-            <label className={smallLabelCls}>
-              Dosya Bağlantısı (Google Drive linki)
-            </label>
-            <input
-              name="url"
-              type="url"
-              placeholder="https://drive.google.com/..."
-              className={inputCls}
-            />
-            <p className="mt-1 text-xs text-slate-400">
-              Dosyayı Drive&apos;a yükleyip paylaşım linkini buraya
-              yapıştırın. Otomatik yükleme sonraki aşamada eklenecek.
-            </p>
+          <div className="space-y-3">
+            {drive.connected ? (
+              <div>
+                <label className={smallLabelCls}>
+                  Dosya (Drive&apos;a otomatik yüklenir)
+                </label>
+                <input
+                  type="file"
+                  name="file"
+                  className="mt-1 text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-slate-200"
+                />
+                <p className="mt-1 text-xs text-slate-400">
+                  Dosya, Drive&apos;daki &quot;{project.name}&quot; proje
+                  klasörüne yüklenir. Evrak adı boş bırakılırsa dosya adı
+                  kullanılır.
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">
+                Dosyayı uygulama içinden yüklemek için Ayarlar &gt; Google
+                Drive bölümünden bağlanın; ya da aşağıya hazır bir Drive
+                linki yapıştırın.
+              </p>
+            )}
+            <div>
+              <label className={smallLabelCls}>
+                Dosya Bağlantısı (isteğe bağlı — hazır Drive linki)
+              </label>
+              <input
+                name="url"
+                type="url"
+                placeholder="https://drive.google.com/..."
+                className={inputCls}
+              />
+            </div>
           </div>
         )}
 
@@ -427,8 +471,12 @@ function DocumentsTab({ project }: { project: Project }) {
           </div>
         )}
 
-        <button type="submit" className={primaryBtnCls}>
-          Evrakı Kaydet
+        <button
+          type="submit"
+          disabled={uploading}
+          className={`${primaryBtnCls} disabled:opacity-60`}
+        >
+          {uploading ? "Drive'a yükleniyor..." : "Evrakı Kaydet"}
         </button>
       </form>
 
@@ -518,11 +566,6 @@ function DocumentsTab({ project }: { project: Project }) {
         </table>
       </div>
 
-      <p className="text-xs text-slate-400">
-        Not: Dosyaların Drive&apos;a otomatik yüklenmesi 2. aşamada
-        eklenecek. Şimdilik dosyayı Google Drive&apos;a kendiniz yükleyip
-        linkini kaydedebilirsiniz.
-      </p>
     </div>
   );
 }

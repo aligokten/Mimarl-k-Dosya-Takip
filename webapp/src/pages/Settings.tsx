@@ -1,7 +1,18 @@
 import { useRef, useState } from "react";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 import { exportBackup, importBackup, mutate, uid, useDb } from "../store";
+import {
+  backupToDrive,
+  connectDrive,
+  disconnectDrive,
+  getClientId,
+  restoreFromDrive,
+  setClientId,
+  useDrive,
+} from "../drive";
 import type { ServiceType } from "../types";
-import { cardCls, primaryBtnCls, secondaryBtnCls, str } from "../ui";
+import { cardCls, inputCls, primaryBtnCls, secondaryBtnCls, str } from "../ui";
 import DeleteButton from "../components/DeleteButton";
 
 export default function Settings() {
@@ -10,14 +21,201 @@ export default function Settings() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Ayarlar</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Hizmet türleri, aşama şablonları ve veri yedekleme.
+          Google Drive bağlantısı, hizmet türleri ve veri yedekleme.
         </p>
       </div>
 
+      <DriveSection />
       <ServiceTypesSection />
       <BackupSection />
-      <RoadmapSection />
     </div>
+  );
+}
+
+function DriveSection() {
+  const drive = useDrive();
+  const [clientIdInput, setClientIdInput] = useState(getClientId());
+  const [message, setMessage] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
+
+  return (
+    <section className={`${cardCls} p-6`}>
+      <h2 className="text-sm font-semibold text-slate-900">
+        Google Drive Bağlantısı
+      </h2>
+      <p className="mt-1 text-sm text-slate-500">
+        Bağlandığınızda dosyaları uygulama içinden doğrudan Drive&apos;ınıza
+        yükleyebilirsiniz; verileriniz de her değişiklikten sonra
+        Drive&apos;a otomatik yedeklenir. Uygulama yalnızca kendi
+        oluşturduğu &quot;{"Mimarlık Ofisi Dosya Takip"}&quot; klasörüne
+        erişir.
+      </p>
+
+      {!drive.configured && (
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">Tek seferlik kurulum gerekli:</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5">
+            <li>
+              <a
+                href="https://console.cloud.google.com/"
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                console.cloud.google.com
+              </a>{" "}
+              adresine Google hesabınızla girin ve yeni bir proje oluşturun.
+            </li>
+            <li>
+              <strong>APIs &amp; Services → Library</strong> bölümünden{" "}
+              <strong>Google Drive API</strong>&apos;yi bulup{" "}
+              <strong>Enable</strong> deyin.
+            </li>
+            <li>
+              <strong>APIs &amp; Services → OAuth consent screen</strong>:
+              External seçin, uygulama adı girin; &quot;Test users&quot;
+              kısmına kendi Gmail adresinizi ekleyin.
+            </li>
+            <li>
+              <strong>APIs &amp; Services → Credentials → Create
+              Credentials → OAuth client ID</strong>: tür olarak{" "}
+              <strong>Web application</strong> seçin;{" "}
+              <strong>Authorized JavaScript origins</strong> kısmına{" "}
+              <code>https://aligokten.github.io</code> yazın (redirect URI
+              gerekmez).
+            </li>
+            <li>
+              Oluşan <strong>Client ID</strong>&apos;yi (
+              <code>...apps.googleusercontent.com</code> ile biter) aşağıya
+              yapıştırıp kaydedin.
+            </li>
+          </ol>
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <input
+          value={clientIdInput}
+          onChange={(e) => setClientIdInput(e.target.value)}
+          placeholder="Google Client ID (....apps.googleusercontent.com)"
+          className={`${inputCls} mt-0 flex-1`}
+        />
+        <button
+          type="button"
+          onClick={() => {
+            setClientId(clientIdInput);
+            setMessage({
+              ok: true,
+              message: clientIdInput.trim()
+                ? "Client ID kaydedildi. Şimdi \"Drive'a Bağlan\" butonuna tıklayın."
+                : "Client ID silindi.",
+            });
+          }}
+          className={secondaryBtnCls}
+        >
+          Kaydet
+        </button>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        {!drive.connected ? (
+          <button
+            type="button"
+            disabled={!drive.configured || drive.busy}
+            onClick={() => {
+              setMessage(null);
+              connectDrive()
+                .then(() =>
+                  setMessage({ ok: true, message: "Google Drive bağlandı." })
+                )
+                .catch(() => {
+                  // hata drive.error üzerinden gösterilir
+                });
+            }}
+            className={`${primaryBtnCls} disabled:opacity-50`}
+          >
+            {drive.busy ? "Bağlanıyor..." : "Drive'a Bağlan"}
+          </button>
+        ) : (
+          <>
+            <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+              Bağlı{drive.email ? `: ${drive.email}` : ""}
+            </span>
+            <button
+              type="button"
+              disabled={drive.busy}
+              onClick={() => {
+                setMessage(null);
+                backupToDrive()
+                  .then(() =>
+                    setMessage({
+                      ok: true,
+                      message: "Veriler Drive'a yedeklendi.",
+                    })
+                  )
+                  .catch(() => {});
+              }}
+              className={secondaryBtnCls}
+            >
+              Verileri Şimdi Yedekle
+            </button>
+            <button
+              type="button"
+              disabled={drive.busy}
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    "Drive'daki yedek, bu tarayıcıdaki mevcut verilerin üzerine yazılacak. Devam edilsin mi?"
+                  )
+                ) {
+                  return;
+                }
+                setMessage(null);
+                restoreFromDrive().then(setMessage);
+              }}
+              className={secondaryBtnCls}
+            >
+              Drive'daki Yedeği Geri Yükle
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                disconnectDrive();
+                setMessage({ ok: true, message: "Drive bağlantısı kesildi." });
+              }}
+              className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+            >
+              Bağlantıyı Kes
+            </button>
+          </>
+        )}
+      </div>
+
+      {drive.connected && (
+        <p className="mt-3 text-xs text-slate-400">
+          Otomatik yedekleme açık: her değişiklikten birkaç saniye sonra
+          veriler Drive&apos;a kaydedilir.
+          {drive.lastBackupAt &&
+            ` Son yedek: ${format(new Date(drive.lastBackupAt), "d MMMM yyyy HH:mm", { locale: tr })}`}
+        </p>
+      )}
+      {drive.error && (
+        <p className="mt-3 text-sm text-red-600">{drive.error}</p>
+      )}
+      {message && (
+        <p
+          className={
+            message.ok
+              ? "mt-3 text-sm text-green-700"
+              : "mt-3 text-sm text-red-600"
+          }
+        >
+          {message.message}
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -227,21 +425,3 @@ function BackupSection() {
   );
 }
 
-function RoadmapSection() {
-  return (
-    <section className={`${cardCls} p-6`}>
-      <h2 className="text-sm font-semibold text-slate-900">
-        Yol Haritası (sonraki aşamalar)
-      </h2>
-      <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-600">
-        <li>
-          Google Drive entegrasyonu: dosyaları uygulama içinden doğrudan
-          Drive&apos;a yükleme ve verilerin Drive&apos;da otomatik
-          yedeklenmesi.
-        </li>
-        <li>Cihazlar arası otomatik eşitleme.</li>
-        <li>Kullanıcı hesapları ve yetkilendirme.</li>
-      </ul>
-    </section>
-  );
-}
