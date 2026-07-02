@@ -93,7 +93,7 @@ export default function Profile() {
         {me.role === "ADMIN" && (
           <Link
             to="/ekip"
-            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-200 dark:hover:bg-zinc-700"
           >
             Ekip Yönetimi →
           </Link>

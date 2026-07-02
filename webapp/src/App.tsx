@@ -9,6 +9,7 @@ import {
   GearIcon,
   GridIcon,
   MoonIcon,
+  ScaleIcon,
   SunIcon,
   UsersIcon,
 } from "./components/icons";
@@ -25,12 +26,14 @@ import TemplateEditor from "./pages/TemplateEditor";
 import TemplateUpload from "./pages/TemplateUpload";
 import Profile from "./pages/Profile";
 import Team from "./pages/Team";
+import Mevzuat from "./pages/Mevzuat";
 
 const NAV_ITEMS = [
   { to: "/", label: "Panel", end: true, icon: GridIcon },
   { to: "/projeler", label: "Projeler", end: false, icon: FolderIcon },
   { to: "/kisiler", label: "Kişiler", end: false, icon: UsersIcon },
   { to: "/sablonlar", label: "Şablonlar", end: false, icon: FileIcon },
+  { to: "/mevzuat", label: "Mevzuat", end: false, icon: ScaleIcon },
   { to: "/ayarlar", label: "Ayarlar", end: false, icon: GearIcon },
 ];
 
@@ -41,7 +44,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen px-2 py-3 sm:px-4 sm:py-6">
-      <div className="mx-auto max-w-[1240px] rounded-[2rem] bg-white/45 shadow-[0_24px_70px_rgba(15,23,42,0.18)] ring-1 ring-white/60 backdrop-blur-2xl dark:bg-slate-900/55 dark:ring-white/10">
+      <div className="mx-auto max-w-[1240px] rounded-[2rem] bg-white/45 shadow-[0_24px_70px_rgba(15,23,42,0.18)] ring-1 ring-white/60 backdrop-blur-2xl dark:bg-zinc-900/55 dark:ring-white/10">
         <header className="no-print flex items-center justify-between gap-2 px-5 pt-5 sm:px-8 sm:pt-6">
           <Link to="/" className="leading-tight">
             <span className="block text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
@@ -58,7 +61,7 @@ export default function App() {
               type="button"
               onClick={toggleTheme}
               title={theme === "dark" ? "Açık moda geç" : "Koyu moda geç"}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-slate-600 shadow-sm ring-1 ring-white/60 backdrop-blur hover:bg-white dark:bg-slate-800/80 dark:text-amber-300 dark:ring-white/10 dark:hover:bg-slate-700"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-slate-600 shadow-sm ring-1 ring-white/60 backdrop-blur hover:bg-white dark:bg-zinc-800/80 dark:text-amber-300 dark:ring-white/10 dark:hover:bg-zinc-700"
             >
               {theme === "dark" ? (
                 <SunIcon className="h-4.5 w-4.5" />
@@ -69,7 +72,7 @@ export default function App() {
             <Link
               to="/profil"
               title="Profilim"
-              className="flex items-center gap-2 rounded-full bg-white/80 py-1 pl-1 pr-3 text-xs font-medium text-slate-600 shadow-sm ring-1 ring-white/60 backdrop-blur hover:bg-white dark:bg-slate-800/80 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-700"
+              className="flex items-center gap-2 rounded-full bg-white/80 py-1 pl-1 pr-3 text-xs font-medium text-slate-600 shadow-sm ring-1 ring-white/60 backdrop-blur hover:bg-white dark:bg-zinc-800/80 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-zinc-700"
             >
               <Avatar member={me} />
               <span className="hidden max-w-[7rem] truncate sm:block">
@@ -91,7 +94,7 @@ export default function App() {
                   "whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium",
                   isActive
                     ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                    : "bg-white/70 text-slate-600 shadow-sm backdrop-blur dark:bg-slate-800/70 dark:text-slate-300"
+                    : "bg-white/70 text-slate-600 shadow-sm backdrop-blur dark:bg-zinc-800/70 dark:text-slate-300"
                 )
               }
             >
@@ -119,7 +122,7 @@ export default function App() {
                           "flex h-12 w-12 items-center justify-center rounded-full transition",
                           isActive
                             ? "bg-slate-900 text-white shadow-md dark:bg-white dark:text-slate-900"
-                            : "bg-white/70 text-slate-500 shadow-sm backdrop-blur group-hover:text-slate-900 dark:bg-slate-800/70 dark:text-slate-400 dark:group-hover:text-white"
+                            : "bg-white/70 text-slate-500 shadow-sm backdrop-blur group-hover:text-slate-900 dark:bg-zinc-800/70 dark:text-slate-400 dark:group-hover:text-white"
                         )}
                       >
                         <Icon className="h-5 w-5" />
@@ -142,7 +145,7 @@ export default function App() {
             <button
               onClick={() => signOutUser()}
               title="Çıkış Yap"
-              className="mt-1 flex h-12 w-12 items-center justify-center rounded-full bg-white/70 text-slate-400 shadow-sm backdrop-blur hover:text-red-500 dark:bg-slate-800/70 dark:text-slate-500 dark:hover:text-red-400"
+              className="mt-1 flex h-12 w-12 items-center justify-center rounded-full bg-white/70 text-slate-400 shadow-sm backdrop-blur hover:text-red-500 dark:bg-zinc-800/70 dark:text-slate-500 dark:hover:text-red-400"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -170,6 +173,7 @@ export default function App() {
               <Route path="/sablonlar" element={<Templates />} />
               <Route path="/sablonlar/yukle" element={<TemplateUpload />} />
               <Route path="/sablonlar/:id" element={<TemplateEditor />} />
+              <Route path="/mevzuat" element={<Mevzuat />} />
               <Route path="/profil" element={<Profile />} />
               <Route path="/ekip" element={<Team />} />
               <Route path="/ayarlar" element={<Settings />} />

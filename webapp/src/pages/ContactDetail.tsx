@@ -11,6 +11,7 @@ import { cardCls, secondaryBtnCls, smallLabelCls } from "../ui";
 import { CONTACT_ROLE_CHIP, CONTACT_ROLE_LABELS } from "../types";
 import ContactForm from "./ContactForm";
 import DeleteButton from "../components/DeleteButton";
+import { ChevronLeftIcon } from "../components/icons";
 
 function PoaUpload({
   contactId,
@@ -100,6 +101,13 @@ export default function ContactDetail() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      <Link
+        to="/kisiler"
+        className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+      >
+        <ChevronLeftIcon className="h-4 w-4" />
+        Kişiler
+      </Link>
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
