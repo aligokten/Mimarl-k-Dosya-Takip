@@ -416,8 +416,8 @@ export default function Dashboard() {
               ))}
             </div>
             <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-              Toplam {documentCount} kayıtlı evrak · {db.clients.length}{" "}
-              müşteri
+              Toplam {documentCount} kayıtlı evrak · {db.contacts.length}{" "}
+              kişi
             </p>
           </div>
         </div>
@@ -482,7 +482,7 @@ export default function Dashboard() {
               </li>
             )}
             {recentProjects.map((project) => {
-              const client = db.clients.find(
+              const client = db.contacts.find(
                 (c) => c.id === project.clientId
               );
               return (

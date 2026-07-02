@@ -7,6 +7,7 @@ export type ProjectFormValues = Pick<
   | "name"
   | "clientId"
   | "landOwnerId"
+  | "contractorId"
   | "province"
   | "district"
   | "neighborhood"
@@ -30,6 +31,7 @@ export function readProjectForm(formData: FormData): ProjectFormValues | null {
     clientId,
     priority,
     landOwnerId: str(formData, "landOwnerId"),
+    contractorId: str(formData, "contractorId"),
     province: str(formData, "province"),
     district: str(formData, "district"),
     neighborhood: str(formData, "neighborhood"),
@@ -51,12 +53,12 @@ export default function ProjectForm({
   onSubmit: (values: ProjectFormValues) => void;
 }) {
   const db = useDb();
-  const clients = [...db.clients].sort((a, b) =>
+  const sorted = [...db.contacts].sort((a, b) =>
     a.name.localeCompare(b.name, "tr")
   );
-  const landOwners = [...db.landOwners].sort((a, b) =>
-    a.name.localeCompare(b.name, "tr")
-  );
+  const clients = sorted.filter((c) => c.roles.includes("MUSTERI"));
+  const landOwners = sorted.filter((c) => c.roles.includes("ARSA_SAHIBI"));
+  const contractors = sorted.filter((c) => c.roles.includes("MUTEAHHIT"));
 
   return (
     <form
@@ -93,9 +95,9 @@ export default function ProjectForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
-          <label className={labelCls}>Müşteri</label>
+          <label className={labelCls}>Müşteri / İş Sahibi</label>
           <select
             name="clientId"
             required
@@ -113,7 +115,8 @@ export default function ProjectForm({
           </select>
           {clients.length === 0 && (
             <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-              Önce Müşteriler sayfasından bir müşteri ekleyin.
+              Önce Kişiler sayfasından &quot;Müşteri&quot; rollü bir kişi
+              ekleyin.
             </p>
           )}
         </div>
@@ -128,6 +131,21 @@ export default function ProjectForm({
             {landOwners.map((owner) => (
               <option key={owner.id} value={owner.id}>
                 {owner.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>Müteahhit</label>
+          <select
+            name="contractorId"
+            defaultValue={initialValues?.contractorId ?? ""}
+            className={inputCls}
+          >
+            <option value="">Seçilmedi</option>
+            {contractors.map((contractor) => (
+              <option key={contractor.id} value={contractor.id}>
+                {contractor.name}
               </option>
             ))}
           </select>

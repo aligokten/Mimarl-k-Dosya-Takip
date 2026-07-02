@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { DB } from "./types";
+import type { Contact, DB } from "./types";
 
 const KEY = "mimarlik-dosya-takip-db-v1";
 
@@ -64,10 +64,10 @@ export function now(): string {
 
 function seedDb(): DB {
   return {
-    version: 1,
-    clients: [],
-    landOwners: [],
+    version: 2,
+    contacts: [],
     projects: [],
+    docTemplates: [],
     serviceTypes: DEFAULT_SERVICES.map((s) => ({
       id: uid(),
       name: s.name,
@@ -76,12 +76,111 @@ function seedDb(): DB {
   };
 }
 
+// v1 (ayrı müşteri + arsa sahibi listeleri) → v2 (rollü tek kişi listesi).
+// Aynı isimli müşteri ve arsa sahibi tek kişide birleştirilir; proje
+// referansları korunur/güncellenir.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function migrateV1(old: any): DB {
+  const contacts: Contact[] = [];
+  const idRemap = new Map<string, string>();
+
+  for (const client of old.clients ?? []) {
+    contacts.push({
+      id: client.id,
+      name: client.name,
+      roles: ["MUSTERI"],
+      phone: client.phone,
+      email: client.email,
+      address: client.address,
+      taxNo: client.taxNo,
+      notes: client.notes,
+      createdAt: client.createdAt ?? now(),
+    });
+  }
+
+  for (const owner of old.landOwners ?? []) {
+    const existing = contacts.find(
+      (c) =>
+        c.name.trim().toLocaleLowerCase("tr") ===
+        String(owner.name ?? "").trim().toLocaleLowerCase("tr")
+    );
+    if (existing) {
+      idRemap.set(owner.id, existing.id);
+      if (!existing.roles.includes("ARSA_SAHIBI")) {
+        existing.roles.push("ARSA_SAHIBI");
+      }
+      existing.phone = existing.phone ?? owner.phone;
+      existing.email = existing.email ?? owner.email;
+      existing.address = existing.address ?? owner.address;
+      existing.tcNo = existing.tcNo ?? owner.tcNo;
+      existing.poaNo = owner.poaNo;
+      existing.poaDate = owner.poaDate;
+      existing.notaryName = owner.notaryName;
+      existing.poaUrl = owner.poaUrl;
+      if (owner.notes) {
+        existing.notes = existing.notes
+          ? `${existing.notes}\n${owner.notes}`
+          : owner.notes;
+      }
+    } else {
+      contacts.push({
+        id: owner.id,
+        name: owner.name,
+        roles: ["ARSA_SAHIBI"],
+        phone: owner.phone,
+        email: owner.email,
+        address: owner.address,
+        tcNo: owner.tcNo,
+        poaNo: owner.poaNo,
+        poaDate: owner.poaDate,
+        notaryName: owner.notaryName,
+        poaUrl: owner.poaUrl,
+        notes: owner.notes,
+        createdAt: owner.createdAt ?? now(),
+      });
+    }
+  }
+
+  const projects = (old.projects ?? []).map((p: any) => ({
+    ...p,
+    landOwnerId: p.landOwnerId
+      ? (idRemap.get(p.landOwnerId) ?? p.landOwnerId)
+      : undefined,
+  }));
+
+  return {
+    version: 2,
+    contacts,
+    projects,
+    serviceTypes: old.serviceTypes ?? [],
+    docTemplates: [],
+  };
+}
+
+function normalize(parsed: any): DB | null {
+  if (!parsed) return null;
+  if (parsed.version === 1) return migrateV1(parsed);
+  if (parsed.version === 2) {
+    return {
+      ...parsed,
+      contacts: parsed.contacts ?? [],
+      projects: parsed.projects ?? [],
+      serviceTypes: parsed.serviceTypes ?? [],
+      docTemplates: parsed.docTemplates ?? [],
+    } as DB;
+  }
+  return null;
+}
+
 function load(): DB {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as DB;
-      if (parsed && parsed.version === 1) return parsed;
+      const migrated = normalize(JSON.parse(raw));
+      if (migrated) {
+        localStorage.setItem(KEY, JSON.stringify(migrated));
+        return migrated;
+      }
     }
   } catch {
     // bozuk kayıt — sıfırdan başla
@@ -135,17 +234,19 @@ export function exportBackup() {
 
 export function importBackup(text: string): { ok: boolean; message: string } {
   try {
-    const parsed = JSON.parse(text) as DB;
+    const parsed = JSON.parse(text);
     if (
       !parsed ||
-      parsed.version !== 1 ||
       !Array.isArray(parsed.projects) ||
-      !Array.isArray(parsed.clients) ||
       !Array.isArray(parsed.serviceTypes)
     ) {
       return { ok: false, message: "Geçersiz yedek dosyası." };
     }
-    db = parsed;
+    const migrated = normalize(parsed);
+    if (!migrated) {
+      return { ok: false, message: "Yedek dosyası sürümü tanınamadı." };
+    }
+    db = migrated;
     persistAndEmit();
     return { ok: true, message: "Yedek geri yüklendi." };
   } catch {

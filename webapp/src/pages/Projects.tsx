@@ -65,7 +65,7 @@ export default function Projects() {
   const projects = [...db.projects]
     .filter((p) => {
       if (!normalizedQuery) return true;
-      const client = db.clients.find((c) => c.id === p.clientId);
+      const client = db.contacts.find((c) => c.id === p.clientId);
       return (
         p.name.toLocaleLowerCase("tr").includes(normalizedQuery) ||
         (client?.name.toLocaleLowerCase("tr") ?? "").includes(normalizedQuery)
@@ -186,7 +186,7 @@ function ProjectCard({
   wide?: boolean;
 }) {
   const db = useDb();
-  const client = db.clients.find((c) => c.id === project.clientId);
+  const client = db.contacts.find((c) => c.id === project.clientId);
   const { done, total } = projectProgress(project, stageCountByType);
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const barColor =
