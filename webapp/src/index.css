@@ -1,9 +1,98 @@
 @import "tailwindcss";
 
+/* Koyu mod: html.dark sınıfıyla elle kontrol edilir */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --donut-track: #e9edf2;
+}
+
+.dark {
+  --donut-track: #334155;
+}
+
 body {
   background: linear-gradient(125deg, #f8d9bc 0%, #f2e6dc 22%, #e8edf3 55%, #c9d9ec 100%)
     fixed;
   color: #0f172a;
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", Arial,
     Helvetica, sans-serif;
+}
+
+.dark body {
+  background: linear-gradient(125deg, #1c1410 0%, #101623 45%, #0b1220 100%)
+    fixed;
+  color: #e2e8f0;
+}
+
+/* Resmi evrak sayfası (şablon editörü) */
+.doc-sheet {
+  font-family: "Times New Roman", Times, Georgia, serif;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: #111827;
+}
+.doc-sheet:focus {
+  outline: none;
+}
+.doc-sheet h1 {
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 1.2em;
+}
+.doc-sheet h2 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 1.1em 0 0.4em;
+}
+.doc-sheet p {
+  margin: 0.55em 0;
+  text-align: justify;
+}
+.doc-sheet ul,
+.doc-sheet ol {
+  padding-left: 1.5em;
+  margin: 0.55em 0;
+  list-style: disc;
+}
+.doc-sheet ol {
+  list-style: decimal;
+}
+.doc-sheet .sag {
+  text-align: right;
+}
+.doc-sheet .orta {
+  text-align: center;
+}
+
+/* PDF çıktısı: yalnızca evrak sayfası yazdırılır */
+@page {
+  size: A4;
+  margin: 18mm 16mm;
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-sheet,
+  .print-sheet * {
+    visibility: visible;
+  }
+  .print-sheet {
+    position: absolute !important;
+    inset: 0 auto auto 0;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
 }

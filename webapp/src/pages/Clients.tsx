@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { useDb } from "../store";
 import { cardCls, primaryBtnCls, thCls } from "../ui";
+import PageTitle from "../components/PageTitle";
+import { UsersIcon } from "../components/icons";
 
 export default function Clients() {
   const db = useDb();
@@ -11,10 +13,7 @@ export default function Clients() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Müşteriler</h1>
-          <p className="mt-1 text-sm text-slate-500">Kayıtlı müşteri listesi.</p>
-        </div>
+        <PageTitle icon={<UsersIcon className="h-5 w-5" />} title="Müşteriler" subtitle="Kayıtlı müşteri listesi." />
         <Link to="/musteriler/yeni" className={primaryBtnCls}>
           Yeni Müşteri
         </Link>
@@ -22,7 +21,7 @@ export default function Clients() {
 
       <div className={`${cardCls} overflow-hidden`}>
         <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
+          <thead className="bg-slate-50 dark:bg-slate-800/60">
             <tr>
               <th className={thCls}>Ad Soyad / Unvan</th>
               <th className={thCls}>Telefon</th>
@@ -30,12 +29,12 @@ export default function Clients() {
               <th className={thCls}>Proje Sayısı</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
             {clients.length === 0 && (
               <tr>
                 <td
                   colSpan={4}
-                  className="px-4 py-6 text-center text-sm text-slate-500"
+                  className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400"
                 >
                   Henüz müşteri eklenmemiş.
                 </td>
@@ -47,7 +46,7 @@ export default function Clients() {
               ).length;
               return (
                 <tr key={client.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                  <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">
                     <Link
                       to={`/musteriler/${client.id}`}
                       className="hover:underline"
@@ -55,13 +54,13 @@ export default function Clients() {
                       {client.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                     {client.phone || "-"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                     {client.email || "-"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                     {projectCount}
                   </td>
                 </tr>

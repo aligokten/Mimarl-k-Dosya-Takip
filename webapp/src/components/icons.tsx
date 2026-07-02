@@ -121,6 +121,77 @@ export function SearchIcon({ className }: { className?: string }) {
   );
 }
 
+export function PenIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z" />
+      <path d="m13.5 6.5 3 3" />
+    </Svg>
+  );
+}
+
+export function PrinterIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M7 8V3.5h10V8" />
+      <rect x="4" y="8" width="16" height="8" rx="2" />
+      <path d="M7 13h10v7H7z" />
+    </Svg>
+  );
+}
+
+export function SunIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8" />
+    </Svg>
+  );
+}
+
+export function MoonIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z" />
+    </Svg>
+  );
+}
+
+export function ChevronLeftIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="m14.5 6-6 6 6 6" />
+    </Svg>
+  );
+}
+
+export function ChevronRightIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="m9.5 6 6 6-6 6" />
+    </Svg>
+  );
+}
+
+export function ScaleIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M12 3v18M8 21h8" />
+      <path d="M12 6H6.5L3 13a3.5 3.5 0 0 0 7 0L6.5 6M12 6h5.5L21 13a3.5 3.5 0 0 1-7 0L17.5 6" />
+    </Svg>
+  );
+}
+
+export function BuildingIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
+      <path d="M3 21h18" />
+      <path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2" />
+    </Svg>
+  );
+}
+
 export function CloudIcon({ className }: { className?: string }) {
   return (
     <Svg className={className}>

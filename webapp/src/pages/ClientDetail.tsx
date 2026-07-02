@@ -11,7 +11,7 @@ export default function ClientDetail() {
 
   const client = db.clients.find((c) => c.id === id);
   if (!client) {
-    return <p className="text-sm text-slate-500">Müşteri bulunamadı.</p>;
+    return <p className="text-sm text-slate-500 dark:text-slate-400">Müşteri bulunamadı.</p>;
   }
 
   const projects = db.projects.filter((p) => p.clientId === client.id);
@@ -20,10 +20,10 @@ export default function ClientDetail() {
     <div className="max-w-2xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             {client.name}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">Müşteri bilgileri</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Müşteri bilgileri</p>
         </div>
         <DeleteButton
           confirmMessage="Bu müşteriyi silmek istediğinize emin misiniz?"
@@ -57,10 +57,10 @@ export default function ClientDetail() {
       </div>
 
       <div className={`${cardCls} p-6`}>
-        <h2 className="text-sm font-semibold text-slate-900">Projeler</h2>
-        <ul className="mt-3 divide-y divide-slate-100">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Projeler</h2>
+        <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-700">
           {projects.length === 0 && (
-            <li className="py-3 text-sm text-slate-500">
+            <li className="py-3 text-sm text-slate-500 dark:text-slate-400">
               Bu müşteriye ait proje yok.
             </li>
           )}
@@ -68,7 +68,7 @@ export default function ClientDetail() {
             <li key={project.id} className="py-3">
               <Link
                 to={`/projeler/${project.id}`}
-                className="text-sm font-medium text-slate-900 hover:underline"
+                className="text-sm font-medium text-slate-900 dark:text-white hover:underline"
               >
                 {project.name}
               </Link>

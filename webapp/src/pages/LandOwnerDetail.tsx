@@ -20,7 +20,7 @@ function PoaUpload({
 
   return (
     <div className={`${cardCls} p-6`}>
-      <h2 className="text-sm font-semibold text-slate-900">
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
         Taranmış Vekaletnameyi Drive&apos;a Yükle
       </h2>
       <form
@@ -57,7 +57,7 @@ function PoaUpload({
             type="file"
             name="file"
             required
-            className="mt-1 text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-slate-200"
+            className="mt-1 text-sm text-slate-600 dark:text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 dark:file:bg-slate-700 dark:file:text-slate-200 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-slate-200"
           />
         </div>
         <button
@@ -79,7 +79,7 @@ export default function LandOwnerDetail() {
 
   const owner = db.landOwners.find((o) => o.id === id);
   if (!owner) {
-    return <p className="text-sm text-slate-500">Arsa sahibi bulunamadı.</p>;
+    return <p className="text-sm text-slate-500 dark:text-slate-400">Arsa sahibi bulunamadı.</p>;
   }
 
   const projects = db.projects.filter((p) => p.landOwnerId === owner.id);
@@ -88,16 +88,16 @@ export default function LandOwnerDetail() {
     <div className="max-w-2xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             {owner.name}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">Arsa sahibi bilgileri</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Arsa sahibi bilgileri</p>
           {owner.poaUrl && (
             <a
               href={owner.poaUrl}
               target="_blank"
               rel="noreferrer"
-              className="mt-1 inline-block text-xs text-blue-600 hover:underline"
+              className="mt-1 inline-block text-xs text-blue-600 dark:text-blue-400 hover:underline"
             >
               Taranmış vekaletnameyi görüntüle
             </a>
@@ -136,10 +136,10 @@ export default function LandOwnerDetail() {
       </div>
 
       <div className={`${cardCls} p-6`}>
-        <h2 className="text-sm font-semibold text-slate-900">Projeler</h2>
-        <ul className="mt-3 divide-y divide-slate-100">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Projeler</h2>
+        <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-700">
           {projects.length === 0 && (
-            <li className="py-3 text-sm text-slate-500">
+            <li className="py-3 text-sm text-slate-500 dark:text-slate-400">
               Bu arsa sahibine ait proje yok.
             </li>
           )}
@@ -147,7 +147,7 @@ export default function LandOwnerDetail() {
             <li key={project.id} className="py-3">
               <Link
                 to={`/projeler/${project.id}`}
-                className="text-sm font-medium text-slate-900 hover:underline"
+                className="text-sm font-medium text-slate-900 dark:text-white hover:underline"
               >
                 {project.name}
               </Link>

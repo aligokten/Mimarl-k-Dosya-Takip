@@ -45,7 +45,7 @@ export default function ProjectDetail() {
 
   const project = db.projects.find((p) => p.id === id);
   if (!project) {
-    return <p className="text-sm text-slate-500">Proje bulunamadı.</p>;
+    return <p className="text-sm text-slate-500 dark:text-slate-400">Proje bulunamadı.</p>;
   }
 
   const client = db.clients.find((c) => c.id === project.clientId);
@@ -55,10 +55,10 @@ export default function ProjectDetail() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             {project.name}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {client?.name ?? "-"}
             {landOwner ? ` · Arsa Sahibi: ${landOwner.name}` : ""}
           </p>
@@ -73,7 +73,7 @@ export default function ProjectDetail() {
                 if (target) target.status = status;
               });
             }}
-            className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3.5 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-200 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
           >
             {Object.entries(PROJECT_STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -95,7 +95,7 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      <div className="inline-flex max-w-full overflow-x-auto rounded-full border border-slate-200 bg-white p-1">
+      <div className="inline-flex max-w-full overflow-x-auto rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-1">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -104,8 +104,8 @@ export default function ProjectDetail() {
             className={clsx(
               "whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold",
               tab === t.key
-                ? "bg-slate-900 text-white"
-                : "text-slate-500 hover:text-slate-800"
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800"
             )}
           >
             {t.label}
@@ -148,7 +148,7 @@ function ServicesTab({ project }: { project: Project }) {
   return (
     <div className="space-y-4">
       {project.services.length === 0 && (
-        <div className={`${cardCls} p-6 text-center text-sm text-slate-500`}>
+        <div className={`${cardCls} p-6 text-center text-sm text-slate-500 dark:text-slate-400`}>
           Bu projeye henüz hizmet eklenmemiş.
         </div>
       )}
@@ -165,10 +165,10 @@ function ServicesTab({ project }: { project: Project }) {
           <div key={service.id} className={`${cardCls} p-5`}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold text-slate-900">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">
                   {serviceType?.name ?? "Silinmiş hizmet türü"}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   {doneCount}/{stages.length} aşama tamamlandı
                 </p>
               </div>
@@ -185,7 +185,7 @@ function ServicesTab({ project }: { project: Project }) {
                       if (svc) svc.status = status;
                     });
                   }}
-                  className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                  className="rounded-lg border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
                 >
                   {Object.entries(PROJECT_STATUS_LABELS).map(
                     ([value, label]) => (
@@ -208,7 +208,7 @@ function ServicesTab({ project }: { project: Project }) {
                       if (svc) svc.targetDate = targetDate;
                     });
                   }}
-                  className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                  className="rounded-lg border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
                 />
                 <DeleteButton
                   label="Kaldır"
@@ -228,7 +228,7 @@ function ServicesTab({ project }: { project: Project }) {
             </div>
 
             {stages.length > 0 && (
-              <ol className="mt-4 space-y-1.5 border-t border-slate-100 pt-4">
+              <ol className="mt-4 space-y-1.5 border-t border-slate-100 dark:border-slate-700 pt-4">
                 {stages.map((stage) => {
                   const isDone = completed.has(stage.id);
                   return (
@@ -256,8 +256,8 @@ function ServicesTab({ project }: { project: Project }) {
                       <span
                         className={
                           isDone
-                            ? "text-sm text-slate-400 line-through"
-                            : "text-sm text-slate-700"
+                            ? "text-sm text-slate-400 dark:text-slate-500 line-through"
+                            : "text-sm text-slate-700 dark:text-slate-200"
                         }
                       >
                         {stage.name}
@@ -296,7 +296,7 @@ function ServicesTab({ project }: { project: Project }) {
             name="serviceTypeId"
             required
             defaultValue=""
-            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           >
             <option value="" disabled>
               Eklenecek hizmet türünü seçin
@@ -376,7 +376,7 @@ function DocumentsTab({ project }: { project: Project }) {
         }}
         className={`${cardCls} space-y-3 p-5`}
       >
-        <p className="text-sm font-semibold text-slate-900">Yeni Evrak Ekle</p>
+        <p className="text-sm font-semibold text-slate-900 dark:text-white">Yeni Evrak Ekle</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={smallLabelCls}>Evrak Adı</label>
@@ -427,16 +427,16 @@ function DocumentsTab({ project }: { project: Project }) {
                 <input
                   type="file"
                   name="file"
-                  className="mt-1 text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-slate-200"
+                  className="mt-1 text-sm text-slate-600 dark:text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 dark:file:bg-slate-700 dark:file:text-slate-200 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-slate-200"
                 />
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                   Dosya, Drive&apos;daki &quot;{project.name}&quot; proje
                   klasörüne yüklenir. Evrak adı boş bırakılırsa dosya adı
                   kullanılır.
                 </p>
               </div>
             ) : (
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 Dosyayı uygulama içinden yüklemek için Ayarlar &gt; Google
                 Drive bölümünden bağlanın; ya da aşağıya hazır bir Drive
                 linki yapıştırın.
@@ -480,7 +480,7 @@ function DocumentsTab({ project }: { project: Project }) {
 
       <div className={`${cardCls} overflow-hidden`}>
         <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
+          <thead className="bg-slate-50 dark:bg-slate-800/60">
             <tr>
               <th className={thCls}>Evrak</th>
               <th className={thCls}>Tür</th>
@@ -490,12 +490,12 @@ function DocumentsTab({ project }: { project: Project }) {
               <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
             {documents.length === 0 && (
               <tr>
                 <td
                   colSpan={6}
-                  className="px-4 py-6 text-center text-sm text-slate-500"
+                  className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400"
                 >
                   Henüz evrak eklenmemiş.
                 </td>
@@ -510,22 +510,22 @@ function DocumentsTab({ project }: { project: Project }) {
                 : undefined;
               return (
                 <tr key={doc.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                  <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">
                     {doc.name}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                     {DOCUMENT_KIND_LABELS[doc.kind]}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                     {serviceType?.name ?? "Genel"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                     {doc.url && (
                       <a
                         href={doc.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-blue-600 hover:underline"
+                        className="text-blue-600 dark:text-blue-400 hover:underline"
                       >
                         Bağlantıyı Aç
                       </a>
@@ -537,7 +537,7 @@ function DocumentsTab({ project }: { project: Project }) {
                     )}
                     {!doc.url && !doc.physicalLocation && "-"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                     {format(new Date(doc.createdAt), "d MMM yyyy", {
                       locale: tr,
                     })}

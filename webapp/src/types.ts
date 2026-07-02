@@ -111,7 +111,7 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
 };
 
 export const PRIORITY_COLORS: Record<Priority, string> = {
-  DUSUK: "text-emerald-600",
-  ORTA: "text-amber-600",
-  YUKSEK: "text-red-600",
+  DUSUK: "text-emerald-600 dark:text-emerald-400",
+  ORTA: "text-amber-600 dark:text-amber-400",
+  YUKSEK: "text-red-600 dark:text-red-400",
 };
