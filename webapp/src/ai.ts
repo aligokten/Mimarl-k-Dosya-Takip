@@ -6,9 +6,31 @@ import { useSyncExternalStore } from "react";
 import { mevzuatContext } from "./mevzuat";
 
 const KEY_STORAGE = "mimarlik-gemini-key";
-const MODEL = "gemini-2.0-flash";
+const MODEL_STORAGE = "mimarlik-gemini-model";
+
+// Ücretsiz katmanda kullanılabilen modeller. Biri kotayı doldurursa
+// kullanıcı Ayarlar'dan başka bir modele geçebilir. "-lite" ve "flash"
+// modelleri en yüksek ücretsiz günlük kotaya sahiptir.
+export const AI_MODELS: { id: string; label: string }[] = [
+  { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash-Lite (en yüksek ücretsiz kota)" },
+  { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash (dengeli)" },
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash (daha güçlü)" },
+  { id: "gemini-1.5-flash", label: "Gemini 1.5 Flash (eski, geniş erişim)" },
+];
+const DEFAULT_MODEL = "gemini-2.0-flash-lite";
+
+export function getAiModel(): string {
+  return localStorage.getItem(MODEL_STORAGE) || DEFAULT_MODEL;
+}
+
+export function setAiModel(model: string) {
+  if (model) localStorage.setItem(MODEL_STORAGE, model);
+  else localStorage.removeItem(MODEL_STORAGE);
+  emit();
+}
+
 const ENDPOINT = (key: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(key)}`;
+  `https://generativelanguage.googleapis.com/v1beta/models/${getAiModel()}:generateContent?key=${encodeURIComponent(key)}`;
 
 export interface ChatMessage {
   role: "user" | "model";
@@ -110,7 +132,14 @@ export async function askAssistant(history: ChatMessage[]): Promise<string> {
       );
     }
     if (resp.status === 429) {
-      throw new Error("AI kullanım kotası doldu, biraz sonra tekrar deneyin.");
+      throw new Error(
+        `"${getAiModel()}" modelinin ücretsiz kotası doldu. Ayarlar > AI Asistan'dan başka bir model seçin (ör. Flash-Lite) veya bir süre sonra tekrar deneyin.`
+      );
+    }
+    if (resp.status === 404) {
+      throw new Error(
+        `"${getAiModel()}" modeli bu anahtarla kullanılamıyor. Ayarlar > AI Asistan'dan başka bir model seçin.`
+      );
     }
     throw new Error(`AI hatası: ${detail}`);
   }
