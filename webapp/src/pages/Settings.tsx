@@ -19,7 +19,7 @@ export default function Settings() {
   return (
     <div className="max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Ayarlar</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ayarlar</h1>
         <p className="mt-1 text-sm text-slate-500">
           Google Drive bağlantısı, hizmet türleri ve veri yedekleme.
         </p>
@@ -185,7 +185,7 @@ function DriveSection() {
                 disconnectDrive();
                 setMessage({ ok: true, message: "Drive bağlantısı kesildi." });
               }}
-              className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+              className="rounded-full border border-red-200 px-3.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
             >
               Bağlantıyı Kes
             </button>
@@ -252,7 +252,7 @@ function ServiceTypesSection() {
           name="name"
           required
           placeholder="Yeni hizmet türü adı"
-          className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
         />
         <button type="submit" className={primaryBtnCls}>
           Ekle
@@ -353,7 +353,7 @@ function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
               name="name"
               required
               placeholder="Yeni aşama adı"
-              className="flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
             />
             <button type="submit" className={secondaryBtnCls}>
               Aşama Ekle
@@ -387,7 +387,7 @@ function BackupSection() {
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
         >
           Yedeği Geri Yükle
         </button>

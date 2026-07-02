@@ -1,4 +1,4 @@
-import type { Project } from "../types";
+import { PRIORITY_LABELS, type Priority, type Project } from "../types";
 import { useDb } from "../store";
 import { inputCls, labelCls, primaryBtnCls, smallLabelCls, str } from "../ui";
 
@@ -15,15 +15,20 @@ export type ProjectFormValues = Pick<
   | "pafta"
   | "address"
   | "notes"
+  | "priority"
 >;
 
 export function readProjectForm(formData: FormData): ProjectFormValues | null {
   const name = str(formData, "name");
   const clientId = str(formData, "clientId");
   if (!name || !clientId) return null;
+  const priorityRaw = str(formData, "priority");
+  const priority: Priority =
+    priorityRaw === "DUSUK" || priorityRaw === "YUKSEK" ? priorityRaw : "ORTA";
   return {
     name,
     clientId,
+    priority,
     landOwnerId: str(formData, "landOwnerId"),
     province: str(formData, "province"),
     district: str(formData, "district"),
@@ -62,14 +67,30 @@ export default function ProjectForm({
       }}
       className="space-y-4"
     >
-      <div>
-        <label className={labelCls}>Proje Adı / İş Adı</label>
-        <input
-          name="name"
-          required
-          defaultValue={initialValues?.name}
-          className={inputCls}
-        />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_10rem]">
+        <div>
+          <label className={labelCls}>Proje Adı / İş Adı</label>
+          <input
+            name="name"
+            required
+            defaultValue={initialValues?.name}
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>Öncelik</label>
+          <select
+            name="priority"
+            defaultValue={initialValues?.priority ?? "ORTA"}
+            className={inputCls}
+          >
+            {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

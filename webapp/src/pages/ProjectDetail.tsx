@@ -55,7 +55,7 @@ export default function ProjectDetail() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             {project.name}
           </h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -73,7 +73,7 @@ export default function ProjectDetail() {
                 if (target) target.status = status;
               });
             }}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
           >
             {Object.entries(PROJECT_STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -95,24 +95,22 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      <div className="border-b border-slate-200">
-        <nav className="-mb-px flex gap-6">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={clsx(
-                "border-b-2 px-1 py-3 text-sm font-medium",
-                tab === t.key
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
+      <div className="inline-flex max-w-full overflow-x-auto rounded-full border border-slate-200 bg-white p-1">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            className={clsx(
+              "whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold",
+              tab === t.key
+                ? "bg-slate-900 text-white"
+                : "text-slate-500 hover:text-slate-800"
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {tab === "genel" && <GeneralTab project={project} />}
@@ -187,7 +185,7 @@ function ServicesTab({ project }: { project: Project }) {
                       if (svc) svc.status = status;
                     });
                   }}
-                  className="rounded-md border border-slate-300 px-2 py-1.5 text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                  className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
                 >
                   {Object.entries(PROJECT_STATUS_LABELS).map(
                     ([value, label]) => (
@@ -210,7 +208,7 @@ function ServicesTab({ project }: { project: Project }) {
                       if (svc) svc.targetDate = targetDate;
                     });
                   }}
-                  className="rounded-md border border-slate-300 px-2 py-1.5 text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                  className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
                 />
                 <DeleteButton
                   label="Kaldır"
@@ -298,7 +296,7 @@ function ServicesTab({ project }: { project: Project }) {
             name="serviceTypeId"
             required
             defaultValue=""
-            className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           >
             <option value="" disabled>
               Eklenecek hizmet türünü seçin
