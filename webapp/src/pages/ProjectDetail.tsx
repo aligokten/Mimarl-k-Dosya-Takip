@@ -48,8 +48,8 @@ export default function ProjectDetail() {
     return <p className="text-sm text-slate-500 dark:text-slate-400">Proje bulunamadı.</p>;
   }
 
-  const client = db.clients.find((c) => c.id === project.clientId);
-  const landOwner = db.landOwners.find((o) => o.id === project.landOwnerId);
+  const client = db.contacts.find((c) => c.id === project.clientId);
+  const landOwner = db.contacts.find((o) => o.id === project.landOwnerId);
 
   return (
     <div className="space-y-6">

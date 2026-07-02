@@ -1,4 +1,4 @@
-import { Link, NavLink, Route, Routes } from "react-router-dom";
+import { Link, Navigate, NavLink, Route, Routes } from "react-router-dom";
 import clsx from "clsx";
 import { useDrive } from "./drive";
 import { toggleTheme, useTheme } from "./theme";
@@ -7,35 +7,26 @@ import {
   FolderIcon,
   GearIcon,
   GridIcon,
-  HomeIcon,
   MoonIcon,
   SunIcon,
   UsersIcon,
 } from "./components/icons";
 import Dashboard from "./pages/Dashboard";
-import Clients from "./pages/Clients";
-import ClientDetail from "./pages/ClientDetail";
-import LandOwners from "./pages/LandOwners";
-import LandOwnerDetail from "./pages/LandOwnerDetail";
+import Contacts from "./pages/Contacts";
+import ContactNew from "./pages/ContactNew";
+import ContactDetail from "./pages/ContactDetail";
 import Projects from "./pages/Projects";
 import ProjectNew from "./pages/ProjectNew";
 import ProjectDetail from "./pages/ProjectDetail";
-import ClientNew from "./pages/ClientNew";
-import LandOwnerNew from "./pages/LandOwnerNew";
 import Settings from "./pages/Settings";
 import Templates from "./pages/Templates";
 import TemplateEditor from "./pages/TemplateEditor";
+import TemplateUpload from "./pages/TemplateUpload";
 
 const NAV_ITEMS = [
   { to: "/", label: "Panel", end: true, icon: GridIcon },
   { to: "/projeler", label: "Projeler", end: false, icon: FolderIcon },
-  { to: "/musteriler", label: "Müşteriler", end: false, icon: UsersIcon },
-  {
-    to: "/arsa-sahipleri",
-    label: "Arsa Sahipleri",
-    end: false,
-    icon: HomeIcon,
-  },
+  { to: "/kisiler", label: "Kişiler", end: false, icon: UsersIcon },
   { to: "/sablonlar", label: "Şablonlar", end: false, icon: FileIcon },
   { to: "/ayarlar", label: "Ayarlar", end: false, icon: GearIcon },
 ];
@@ -158,16 +149,19 @@ export default function App() {
               <Route path="/projeler" element={<Projects />} />
               <Route path="/projeler/yeni" element={<ProjectNew />} />
               <Route path="/projeler/:id" element={<ProjectDetail />} />
-              <Route path="/musteriler" element={<Clients />} />
-              <Route path="/musteriler/yeni" element={<ClientNew />} />
-              <Route path="/musteriler/:id" element={<ClientDetail />} />
-              <Route path="/arsa-sahipleri" element={<LandOwners />} />
-              <Route path="/arsa-sahipleri/yeni" element={<LandOwnerNew />} />
+              <Route path="/kisiler" element={<Contacts />} />
+              <Route path="/kisiler/yeni" element={<ContactNew />} />
+              <Route path="/kisiler/:id" element={<ContactDetail />} />
               <Route
-                path="/arsa-sahipleri/:id"
-                element={<LandOwnerDetail />}
+                path="/musteriler/*"
+                element={<Navigate to="/kisiler" replace />}
+              />
+              <Route
+                path="/arsa-sahipleri/*"
+                element={<Navigate to="/kisiler" replace />}
               />
               <Route path="/sablonlar" element={<Templates />} />
+              <Route path="/sablonlar/yukle" element={<TemplateUpload />} />
               <Route path="/sablonlar/:id" element={<TemplateEditor />} />
               <Route path="/ayarlar" element={<Settings />} />
             </Routes>

@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { DOC_TEMPLATES } from "../templates";
-import { useDb } from "../store";
+import { mutate, now, uid, useDb } from "../store";
 import { cardCls, secondaryBtnCls } from "../ui";
 import { PrinterIcon } from "../components/icons";
 
@@ -22,7 +22,9 @@ export default function TemplateEditor() {
   const sheetRef = useRef<HTMLDivElement>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
-  const template = DOC_TEMPLATES.find((t) => t.id === id);
+  const builtin = DOC_TEMPLATES.find((t) => t.id === id);
+  const custom = db.docTemplates.find((t) => t.id === id);
+  const template = builtin ?? custom;
   const draftKey = `${DRAFT_KEY_PREFIX}${id}`;
 
   useEffect(() => {
@@ -66,8 +68,11 @@ export default function TemplateEditor() {
   function fillFromProject(projectId: string) {
     const project = db.projects.find((p) => p.id === projectId);
     if (!project) return;
-    const client = db.clients.find((c) => c.id === project.clientId);
-    const owner = db.landOwners.find((o) => o.id === project.landOwnerId);
+    const client = db.contacts.find((c) => c.id === project.clientId);
+    const owner = db.contacts.find((o) => o.id === project.landOwnerId);
+    const contractor = db.contacts.find(
+      (c) => c.id === project.contractorId
+    );
     fillTokens({
       "PROJE ADI": project.name,
       İL: project.province,
@@ -82,11 +87,37 @@ export default function TemplateEditor() {
       "ARSA SAHİBİ ADI": owner?.name,
       "ARSA SAHİBİ TC": owner?.tcNo,
       "ARSA SAHİBİ ADRESİ": owner?.address,
+      "MÜTEAHHİT ADI": contractor?.name,
+      "MÜTEAHHİT ADRESİ": contractor?.address,
+      "MÜTEAHHİT TELEFON": contractor?.phone,
+      "MÜTEAHHİT VERGİ NO": contractor?.taxNo,
       "BAŞVURAN ADI": owner?.name ?? client?.name,
       "BAŞVURAN TC": owner?.tcNo,
       "BAŞVURAN ADRESİ": owner?.address ?? client?.address,
       TELEFON: owner?.phone ?? client?.phone,
     });
+  }
+
+  function saveAsNewTemplate() {
+    if (!sheetRef.current) return;
+    const title = window.prompt(
+      "Yeni şablonun adı ne olsun?",
+      `${template?.title ?? "Şablon"} (Kopya)`
+    );
+    if (!title?.trim()) return;
+    const newId = uid();
+    const body = sheetRef.current.innerHTML;
+    mutate((draft) => {
+      draft.docTemplates.push({
+        id: newId,
+        title: title.trim(),
+        body,
+        createdAt: now(),
+      });
+    });
+    window.alert(
+      `"${title.trim()}" şablonu kaydedildi. Şablonlar sayfasında görebilirsiniz.`
+    );
   }
 
   const toolbarBtn =
@@ -168,6 +199,13 @@ export default function TemplateEditor() {
           className={secondaryBtnCls}
         >
           Şablonu Sıfırla
+        </button>
+        <button
+          type="button"
+          onClick={saveAsNewTemplate}
+          className={secondaryBtnCls}
+        >
+          Yeni Şablon Olarak Kaydet
         </button>
         {savedAt && (
           <span className="ml-auto px-1 text-[11px] text-slate-400">
