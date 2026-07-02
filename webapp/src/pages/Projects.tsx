@@ -16,18 +16,19 @@ import {
   CalendarIcon,
   FlagIcon,
   PaperclipIcon,
+  SearchIcon,
 } from "../components/icons";
 
 const COLUMNS: { status: ProjectStatus; dot: string; pill: string }[] = [
   {
     status: "DEVAM_EDIYOR",
-    dot: "bg-blue-500",
-    pill: "bg-blue-50 text-blue-700 border-blue-200",
+    dot: "bg-orange-500",
+    pill: "bg-orange-50 text-orange-600 border-orange-200",
   },
   {
     status: "TAMAMLANDI",
-    dot: "bg-emerald-500",
-    pill: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    dot: "bg-blue-500",
+    pill: "bg-blue-50 text-blue-700 border-blue-200",
   },
   {
     status: "DURDURULDU",
@@ -53,13 +54,22 @@ function projectProgress(
 export default function Projects() {
   const db = useDb();
   const [view, setView] = useState<"board" | "list">("board");
+  const [query, setQuery] = useState("");
 
   const stageCountByType = new Map(
     db.serviceTypes.map((st) => [st.id, st.stages.length])
   );
-  const projects = [...db.projects].sort((a, b) =>
-    b.updatedAt.localeCompare(a.updatedAt)
-  );
+  const normalizedQuery = query.trim().toLocaleLowerCase("tr");
+  const projects = [...db.projects]
+    .filter((p) => {
+      if (!normalizedQuery) return true;
+      const client = db.clients.find((c) => c.id === p.clientId);
+      return (
+        p.name.toLocaleLowerCase("tr").includes(normalizedQuery) ||
+        (client?.name.toLocaleLowerCase("tr") ?? "").includes(normalizedQuery)
+      );
+    })
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
   return (
     <div className="space-y-5">
@@ -72,7 +82,16 @@ export default function Projects() {
             Tüm mimarlık ve ruhsat projeleri.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="relative">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Proje veya müşteri ara..."
+              className="w-44 rounded-full bg-white py-2 pl-9 pr-3 text-sm text-slate-700 shadow-sm ring-1 ring-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 sm:w-56"
+            />
+          </label>
           <div className="inline-flex rounded-full border border-slate-200 bg-white p-1">
             {(
               [
@@ -103,7 +122,9 @@ export default function Projects() {
 
       {projects.length === 0 ? (
         <div className={`${cardCls} p-8 text-center text-sm text-slate-500`}>
-          Henüz proje eklenmemiş. &quot;+ Yeni Proje&quot; ile başlayın.
+          {normalizedQuery
+            ? "Aramanızla eşleşen proje bulunamadı."
+            : 'Henüz proje eklenmemiş. "+ Yeni Proje" ile başlayın.'}
         </div>
       ) : view === "board" ? (
         <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
@@ -173,10 +194,8 @@ function ProjectCard({
     total === 0
       ? "bg-slate-300"
       : pct === 100
-        ? "bg-emerald-500"
-        : pct >= 40
-          ? "bg-blue-500"
-          : "bg-orange-500";
+        ? "bg-blue-500"
+        : "bg-orange-500";
   const priority = project.priority ?? "ORTA";
   const nextTarget = project.services
     .filter((s) => s.status === "DEVAM_EDIYOR" && s.targetDate)

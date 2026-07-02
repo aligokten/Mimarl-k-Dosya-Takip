@@ -83,6 +83,44 @@ export function PaperclipIcon({ className }: { className?: string }) {
   );
 }
 
+export function GridIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <rect x="4" y="4" width="7" height="7" rx="1.8" />
+      <rect x="13" y="4" width="7" height="7" rx="1.8" />
+      <rect x="4" y="13" width="7" height="7" rx="1.8" />
+      <rect x="13" y="13" width="7" height="7" rx="1.8" />
+    </Svg>
+  );
+}
+
+export function HomeIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="m3.5 10.5 8.5-7 8.5 7" />
+      <path d="M5.5 9v10.5h13V9" />
+    </Svg>
+  );
+}
+
+export function GearIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19 12a7 7 0 0 0-.15-1.4l2-1.55-2-3.45-2.35 1a7 7 0 0 0-2.4-1.4L13.7 2.7h-3.4L9.9 5.2a7 7 0 0 0-2.4 1.4l-2.35-1-2 3.45 2 1.55A7 7 0 0 0 5 12c0 .48.05.94.15 1.4l-2 1.55 2 3.45 2.35-1a7 7 0 0 0 2.4 1.4l.4 2.5h3.4l.4-2.5a7 7 0 0 0 2.4-1.4l2.35 1 2-3.45-2-1.55c.1-.46.15-.92.15-1.4z" />
+    </Svg>
+  );
+}
+
+export function SearchIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m20 20-4.4-4.4" />
+    </Svg>
+  );
+}
+
 export function CloudIcon({ className }: { className?: string }) {
   return (
     <Svg className={className}>

@@ -11,7 +11,7 @@ export const secondaryBtnCls =
   "inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50";
 
 export const cardCls =
-  "rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05)]";
+  "rounded-3xl bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]";
 
 export const chipCls =
   "inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600";
