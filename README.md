@@ -14,8 +14,14 @@ olarak **Ayarlar → Veri Yedekleme** bölümünden yedek alın; yedeği başka 
 bilgisayarda geri yükleyebilirsiniz. `main` dalına yapılan her push,
 GitHub Actions ile otomatik yayınlanır (`.github/workflows/pages.yml`).
 
-Yol haritası: Google Drive'a uygulama içinden dosya yükleme ve Drive'da
-otomatik yedekleme sonraki aşamada eklenecek.
+**Google Drive entegrasyonu**: Ayarlar → Google Drive bölümünden, bir
+kerelik oluşturacağınız OAuth Client ID ile (adımlar uygulamanın içinde
+yazıyor) Google hesabınıza bağlanabilirsiniz. Bağlandıktan sonra evrak
+dosyaları uygulama içinden doğrudan Drive'daki proje klasörlerine
+yüklenir ve tüm veriler her değişiklikte Drive'a otomatik yedeklenir
+(başka bir cihazda "Drive'daki Yedeği Geri Yükle" ile açılabilir).
+Uygulama `drive.file` kapsamı kullanır: yalnızca kendi oluşturduğu
+"Mimarlık Ofisi Dosya Takip" klasörüne erişebilir.
 
 > Not: Deponun geri kalanı (aşağıda anlatılan Next.js + PostgreSQL tam
 > sürüm), çok kullanıcılı/sunuculu kuruluma geçilmek istendiğinde hazır

@@ -1,8 +1,76 @@
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { mutate, useDb } from "../store";
-import { cardCls } from "../ui";
+import { uploadToDrive, useDrive } from "../drive";
+import { cardCls, secondaryBtnCls, smallLabelCls } from "../ui";
 import LandOwnerForm from "./LandOwnerForm";
 import DeleteButton from "../components/DeleteButton";
+
+function PoaUpload({
+  ownerId,
+  ownerName,
+}: {
+  ownerId: string;
+  ownerName: string;
+}) {
+  const drive = useDrive();
+  const [uploading, setUploading] = useState(false);
+
+  if (!drive.connected) return null;
+
+  return (
+    <div className={`${cardCls} p-6`}>
+      <h2 className="text-sm font-semibold text-slate-900">
+        Taranmış Vekaletnameyi Drive&apos;a Yükle
+      </h2>
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const form = e.currentTarget;
+          const file = new FormData(form).get("file");
+          if (!(file instanceof File) || file.size === 0) return;
+          setUploading(true);
+          try {
+            const uploaded = await uploadToDrive(file, "Vekaletnameler");
+            mutate((draft) => {
+              const target = draft.landOwners.find((o) => o.id === ownerId);
+              if (target && uploaded.url) target.poaUrl = uploaded.url;
+            });
+            form.reset();
+            window.alert("Vekaletname Drive'a yüklendi ve kayda bağlandı.");
+          } catch (err) {
+            window.alert(
+              err instanceof Error ? err.message : "Dosya yüklenemedi."
+            );
+          } finally {
+            setUploading(false);
+          }
+        }}
+        className="mt-3 flex flex-wrap items-center gap-2"
+      >
+        <div className="flex-1">
+          <label className={smallLabelCls}>
+            Dosya (Drive&apos;daki &quot;Vekaletnameler&quot; klasörüne,{" "}
+            {ownerName} adına yüklenir)
+          </label>
+          <input
+            type="file"
+            name="file"
+            required
+            className="mt-1 text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-slate-200"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={uploading}
+          className={`${secondaryBtnCls} disabled:opacity-60`}
+        >
+          {uploading ? "Yükleniyor..." : "Drive'a Yükle"}
+        </button>
+      </form>
+    </div>
+  );
+}
 
 export default function LandOwnerDetail() {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +118,8 @@ export default function LandOwnerDetail() {
           }}
         />
       </div>
+
+      <PoaUpload ownerId={owner.id} ownerName={owner.name} />
 
       <div className={`${cardCls} p-6`}>
         <LandOwnerForm
