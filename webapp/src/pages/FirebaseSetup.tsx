@@ -3,6 +3,45 @@ import { saveConfig } from "../firebase";
 import type { FirebaseConfig } from "../firebase-config";
 import { cardCls, inputCls, labelCls, primaryBtnCls } from "../ui";
 
+// Firebase Console'un verdiği bloğu esnek şekilde ayrıştırır: tüm kod
+// parçasını ("import { ... }" satırları + "const firebaseConfig = { ... }"
+// + initializeApp çağrıları), yalnızca "{ ... }" nesnesini ya da düz JSON'u
+// kabul eder.
+export function parseFirebaseConfig(input: string): FirebaseConfig {
+  let text = input;
+  // "firebaseConfig =" varsa oradan başla; böylece "import { ... }" gibi
+  // önceki süslü parantezler yanlışlıkla nesne sanılmaz.
+  const eq = text.search(/firebaseConfig\s*=/);
+  if (eq >= 0) text = text.slice(eq);
+  const start = text.indexOf("{");
+  if (start < 0) throw new Error("Yapılandırma bulunamadı.");
+  // Dengeli süslü parantezle nesnenin kapanışını bul.
+  let depth = 0;
+  let end = -1;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end < 0) throw new Error("Yapılandırma bulunamadı.");
+  let obj = text.slice(start, end + 1);
+  // Yorumları temizle (URL'lerdeki // zarar görmesin diye yalnızca satır
+  // başındaki // yorumları), anahtarları tırnakla, sondaki virgülü at.
+  obj = obj
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/[^\n]*$/gm, "")
+    .replace(/([{,]\s*)([a-zA-Z0-9_$]+)\s*:/g, '$1"$2":')
+    .replace(/'/g, '"')
+    .replace(/,(\s*[}\]])/g, "$1");
+  return JSON.parse(obj) as FirebaseConfig;
+}
+
 // Yalnızca yönetici ilk kurulumda görür: Firebase proje yapılandırmasını
 // yapıştırma ekranı. Değerler herkese açıktır (gizli değildir).
 export default function FirebaseSetup() {
@@ -12,15 +51,7 @@ export default function FirebaseSetup() {
   function parseAndSave() {
     setError(null);
     try {
-      // Firebase Console'un verdiği "const firebaseConfig = { ... }" bloğunu
-      // ya da düz JSON'u kabul et.
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error("Yapılandırma bulunamadı.");
-      const jsonish = match[0]
-        .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
-        .replace(/'/g, '"')
-        .replace(/,(\s*[}\]])/g, "$1");
-      const cfg = JSON.parse(jsonish) as FirebaseConfig;
+      const cfg = parseFirebaseConfig(raw);
       if (!cfg.apiKey || !cfg.projectId || !cfg.appId || !cfg.authDomain) {
         throw new Error(
           "apiKey, authDomain, projectId ve appId alanları gerekli."
