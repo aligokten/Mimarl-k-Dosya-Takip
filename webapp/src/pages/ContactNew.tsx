@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { mutate, now, uid } from "../store";
+import { addContact } from "../data";
 import { cardCls } from "../ui";
 import PageTitle from "../components/PageTitle";
 import { UsersIcon } from "../components/icons";
@@ -18,11 +18,8 @@ export default function ContactNew() {
       <div className={`${cardCls} p-6`}>
         <ContactForm
           submitLabel="Kişiyi Kaydet"
-          onSubmit={(values) => {
-            const id = uid();
-            mutate((db) => {
-              db.contacts.push({ id, createdAt: now(), ...values });
-            });
+          onSubmit={async (values) => {
+            const id = await addContact(values);
             navigate(`/kisiler/${id}`);
           }}
         />

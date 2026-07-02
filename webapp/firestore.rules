@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isMember() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/members/$(request.auth.uid));
+    }
+    function isAdmin() {
+      return isMember() &&
+        get(/databases/$(database)/documents/members/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+
+    // Ofis: girisli herkes okuyabilir (davet kodu dogrulamasi icin);
+    // ilk kez olusturan sahibi olur; sonrasinda yalnizca admin duzenler.
+    match /office/{doc} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      // Admin ofisi düzenler ama owner (ofis sahibi) değiştirilemez.
+      allow update: if isAdmin() &&
+        request.resource.data.ownerUid == resource.data.ownerUid;
+      allow delete: if isAdmin();
+    }
+
+    // Uyeler: her uye listeyi gorur; kisi kendi kaydini olusturur/gunceller
+    // (davet uygulama tarafinda dogrulanir); admin baskalarini yonetir.
+    match /members/{uid} {
+      allow read: if isMember();
+      allow create: if signedIn() && request.auth.uid == uid;
+      allow update: if request.auth.uid == uid || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /contacts/{id} { allow read, write: if isMember(); }
+    match /serviceTypes/{id} { allow read, write: if isMember(); }
+    match /docTemplates/{id} { allow read, write: if isMember(); }
+
+    match /projects/{id} {
+      allow read, write: if isMember();
+      match /activities/{aid} { allow read, write: if isMember(); }
+    }
+
+    match /notifications/{id} {
+      allow read: if signedIn() && resource.data.forUid == request.auth.uid;
+      allow create: if isMember();
+      allow update, delete: if signedIn() && resource.data.forUid == request.auth.uid;
+    }
+  }
+}

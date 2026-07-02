@@ -11,7 +11,7 @@ import {
 } from "date-fns";
 import { tr } from "date-fns/locale";
 import clsx from "clsx";
-import { useDb } from "../store";
+import { useApp } from "../data";
 import { useDrive } from "../drive";
 import { cardCls } from "../ui";
 import {
@@ -22,7 +22,7 @@ import {
   CloudIcon,
   FolderIcon,
 } from "../components/icons";
-import type { DB } from "../types";
+import type { AppState } from "../data";
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -89,7 +89,7 @@ interface DayEvent {
   date: string;
 }
 
-function collectEvents(db: DB): Map<string, DayEvent[]> {
+function collectEvents(db: AppState): Map<string, DayEvent[]> {
   const map = new Map<string, DayEvent[]>();
   for (const project of db.projects) {
     for (const service of project.services) {
@@ -110,7 +110,7 @@ function collectEvents(db: DB): Map<string, DayEvent[]> {
   return map;
 }
 
-function CalendarCard({ db }: { db: DB }) {
+function CalendarCard({ db }: { db: AppState }) {
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [selected, setSelected] = useState<string | null>(null);
   const events = useMemo(() => collectEvents(db), [db]);
@@ -226,7 +226,7 @@ function CalendarCard({ db }: { db: DB }) {
 }
 
 export default function Dashboard() {
-  const db = useDb();
+  const db = useApp();
   const drive = useDrive();
 
   const statusCounts = STATUS_SEGMENTS.map((s) => ({

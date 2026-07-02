@@ -1,2 +1,6 @@
 node_modules
 dist
+
+# firebase emulator debug logs
+*-debug.log
+.firebase/

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { DOC_TEMPLATES } from "../templates";
-import { mutate, useDb } from "../store";
+import { deleteDocTemplate, useApp } from "../data";
 import { cardCls } from "../ui";
 import PageTitle from "../components/PageTitle";
 import DeleteButton from "../components/DeleteButton";
@@ -18,7 +18,7 @@ const TEMPLATE_ICONS = {
 } as const;
 
 export default function Templates() {
-  const db = useDb();
+  const db = useApp();
 
   return (
     <div className="space-y-6">
@@ -79,11 +79,7 @@ export default function Templates() {
               <DeleteButton
                 confirmMessage={`"${template.title}" şablonunu silmek istediğinize emin misiniz?`}
                 onDelete={() => {
-                  mutate((draft) => {
-                    draft.docTemplates = draft.docTemplates.filter(
-                      (t) => t.id !== template.id
-                    );
-                  });
+                  deleteDocTemplate(template.id);
                 }}
               />
             </span>

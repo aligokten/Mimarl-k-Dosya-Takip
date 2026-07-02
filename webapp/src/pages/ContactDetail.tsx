@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { mutate, useDb } from "../store";
+import {
+  deleteContact,
+  patchProject,
+  updateContact,
+  useApp,
+} from "../data";
 import { uploadToDrive, useDrive } from "../drive";
 import { cardCls, secondaryBtnCls, smallLabelCls } from "../ui";
 import { CONTACT_ROLE_CHIP, CONTACT_ROLE_LABELS } from "../types";
@@ -33,10 +38,9 @@ function PoaUpload({
           setUploading(true);
           try {
             const uploaded = await uploadToDrive(file, "Vekaletnameler");
-            mutate((draft) => {
-              const target = draft.contacts.find((c) => c.id === contactId);
-              if (target && uploaded.url) target.poaUrl = uploaded.url;
-            });
+            if (uploaded.url) {
+              await updateContact(contactId, { poaUrl: uploaded.url });
+            }
             form.reset();
             window.alert("Vekaletname Drive'a yüklendi ve kayda bağlandı.");
           } catch (err) {
@@ -75,7 +79,7 @@ function PoaUpload({
 
 export default function ContactDetail() {
   const { id } = useParams<{ id: string }>();
-  const db = useDb();
+  const db = useApp();
   const navigate = useNavigate();
 
   const contact = db.contacts.find((c) => c.id === id);
@@ -124,7 +128,7 @@ export default function ContactDetail() {
         </div>
         <DeleteButton
           confirmMessage="Bu kişiyi silmek istediğinize emin misiniz?"
-          onDelete={() => {
+          onDelete={async () => {
             const usedAsClient = db.projects.some(
               (p) => p.clientId === contact.id
             );
@@ -134,15 +138,14 @@ export default function ContactDetail() {
               );
               return;
             }
-            mutate((draft) => {
-              draft.contacts = draft.contacts.filter(
-                (c) => c.id !== contact.id
-              );
-              draft.projects.forEach((p) => {
-                if (p.landOwnerId === contact.id) p.landOwnerId = undefined;
-                if (p.contractorId === contact.id) p.contractorId = undefined;
-              });
-            });
+            for (const p of db.projects) {
+              const patch: Partial<{ landOwnerId: string; contractorId: string }> =
+                {};
+              if (p.landOwnerId === contact.id) patch.landOwnerId = "";
+              if (p.contractorId === contact.id) patch.contractorId = "";
+              if (Object.keys(patch).length) await patchProject(p.id, patch);
+            }
+            await deleteContact(contact.id);
             navigate("/kisiler");
           }}
         />
@@ -156,11 +159,8 @@ export default function ContactDetail() {
         <ContactForm
           initialValues={contact}
           submitLabel="Değişiklikleri Kaydet"
-          onSubmit={(values) => {
-            mutate((draft) => {
-              const target = draft.contacts.find((c) => c.id === contact.id);
-              if (target) Object.assign(target, values);
-            });
+          onSubmit={async (values) => {
+            await updateContact(contact.id, values);
             window.alert("Kişi bilgileri kaydedildi.");
           }}
         />

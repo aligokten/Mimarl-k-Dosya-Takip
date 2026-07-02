@@ -1,16 +1,13 @@
-import { useRef, useState } from "react";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
-import { exportBackup, importBackup, mutate, uid, useDb } from "../store";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  backupToDrive,
-  connectDrive,
-  disconnectDrive,
-  getClientId,
-  restoreFromDrive,
-  setClientId,
-  useDrive,
-} from "../drive";
+  addServiceType,
+  addStage,
+  deleteServiceType,
+  deleteStage,
+  useApp,
+} from "../data";
+import { connectDrive, disconnectDrive, getClientId, setClientId, useDrive } from "../drive";
 import type { ServiceType } from "../types";
 import { cardCls, inputCls, primaryBtnCls, secondaryBtnCls, str } from "../ui";
 import PageTitle from "../components/PageTitle";
@@ -18,13 +15,33 @@ import { GearIcon } from "../components/icons";
 import DeleteButton from "../components/DeleteButton";
 
 export default function Settings() {
+  const app = useApp();
   return (
     <div className="max-w-3xl space-y-8">
-      <PageTitle icon={<GearIcon className="h-5 w-5" />} title="Ayarlar" subtitle="Google Drive bağlantısı, hizmet türleri ve veri yedekleme." />
+      <PageTitle
+        icon={<GearIcon className="h-5 w-5" />}
+        title="Ayarlar"
+        subtitle="Hizmet türleri, dosya depolama ve ekip."
+      />
+
+      {app.me?.role === "ADMIN" && (
+        <section className={`${cardCls} flex flex-wrap items-center gap-3 p-6`}>
+          <div className="flex-1">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+              Ekip & Davet
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Çalışanları davet edin, rolleri düzenleyin.
+            </p>
+          </div>
+          <Link to="/ekip" className={primaryBtnCls}>
+            Ekip Yönetimi
+          </Link>
+        </section>
+      )}
 
       <DriveSection />
       <ServiceTypesSection />
-      <BackupSection />
     </div>
   );
 }
@@ -32,27 +49,24 @@ export default function Settings() {
 function DriveSection() {
   const drive = useDrive();
   const [clientIdInput, setClientIdInput] = useState(getClientId());
-  const [message, setMessage] = useState<{
-    ok: boolean;
-    message: string;
-  } | null>(null);
+  const [message, setMessage] = useState<{ ok: boolean; message: string } | null>(
+    null
+  );
 
   return (
     <section className={`${cardCls} p-6`}>
       <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
-        Google Drive Bağlantısı
+        Google Drive (Dosya Depolama)
       </h2>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Bağlandığınızda dosyaları uygulama içinden doğrudan Drive&apos;ınıza
-        yükleyebilirsiniz; verileriniz de her değişiklikten sonra
-        Drive&apos;a otomatik yedeklenir. Uygulama yalnızca kendi
-        oluşturduğu &quot;{"Mimarlık Ofisi Dosya Takip"}&quot; klasörüne
-        erişir.
+        Evrak dosyaları uygulama içinden doğrudan Drive&apos;a yüklensin
+        istiyorsanız bağlanın. (Proje verileri artık bulut veritabanında
+        tutulur; Drive yalnızca dosyalar içindir.)
       </p>
 
       {!drive.configured && (
-        <div className="mt-4 rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-200">
-          <p className="font-semibold">Tek seferlik kurulum gerekli:</p>
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          <p className="font-semibold">Kurulum:</p>
           <ol className="mt-2 list-decimal space-y-1 pl-5">
             <li>
               <a
@@ -63,31 +77,17 @@ function DriveSection() {
               >
                 console.cloud.google.com
               </a>{" "}
-              adresine Google hesabınızla girin ve yeni bir proje oluşturun.
+              → proje → Google Drive API&apos;yi etkinleştirin.
             </li>
             <li>
-              <strong>APIs &amp; Services → Library</strong> bölümünden{" "}
-              <strong>Google Drive API</strong>&apos;yi bulup{" "}
-              <strong>Enable</strong> deyin.
+              OAuth consent screen (External) + Test users&apos;a e-postanızı
+              ekleyin.
             </li>
             <li>
-              <strong>APIs &amp; Services → OAuth consent screen</strong>:
-              External seçin, uygulama adı girin; &quot;Test users&quot;
-              kısmına kendi Gmail adresinizi ekleyin.
+              Credentials → OAuth client ID → Web application; Authorized
+              JavaScript origins: <code>https://aligokten.github.io</code>.
             </li>
-            <li>
-              <strong>APIs &amp; Services → Credentials → Create
-              Credentials → OAuth client ID</strong>: tür olarak{" "}
-              <strong>Web application</strong> seçin;{" "}
-              <strong>Authorized JavaScript origins</strong> kısmına{" "}
-              <code>https://aligokten.github.io</code> yazın (redirect URI
-              gerekmez).
-            </li>
-            <li>
-              Oluşan <strong>Client ID</strong>&apos;yi (
-              <code>...apps.googleusercontent.com</code> ile biter) aşağıya
-              yapıştırıp kaydedin.
-            </li>
+            <li>Client ID&apos;yi aşağıya yapıştırın.</li>
           </ol>
         </div>
       )}
@@ -106,7 +106,7 @@ function DriveSection() {
             setMessage({
               ok: true,
               message: clientIdInput.trim()
-                ? "Client ID kaydedildi. Şimdi \"Drive'a Bağlan\" butonuna tıklayın."
+                ? "Client ID kaydedildi. Şimdi \"Drive'a Bağlan\"a tıklayın."
                 : "Client ID silindi.",
             });
           }}
@@ -127,9 +127,7 @@ function DriveSection() {
                 .then(() =>
                   setMessage({ ok: true, message: "Google Drive bağlandı." })
                 )
-                .catch(() => {
-                  // hata drive.error üzerinden gösterilir
-                });
+                .catch(() => {});
             }}
             className={`${primaryBtnCls} disabled:opacity-50`}
           >
@@ -137,69 +135,26 @@ function DriveSection() {
           </button>
         ) : (
           <>
-            <span className="rounded-full border border-green-200 dark:border-green-500/30 bg-green-50 dark:bg-green-500/15 px-3 py-1 text-xs font-medium text-green-700 dark:text-green-300">
+            <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 dark:border-green-500/30 dark:bg-green-500/15 dark:text-green-300">
               Bağlı{drive.email ? `: ${drive.email}` : ""}
             </span>
-            <button
-              type="button"
-              disabled={drive.busy}
-              onClick={() => {
-                setMessage(null);
-                backupToDrive()
-                  .then(() =>
-                    setMessage({
-                      ok: true,
-                      message: "Veriler Drive'a yedeklendi.",
-                    })
-                  )
-                  .catch(() => {});
-              }}
-              className={secondaryBtnCls}
-            >
-              Verileri Şimdi Yedekle
-            </button>
-            <button
-              type="button"
-              disabled={drive.busy}
-              onClick={() => {
-                if (
-                  !window.confirm(
-                    "Drive'daki yedek, bu tarayıcıdaki mevcut verilerin üzerine yazılacak. Devam edilsin mi?"
-                  )
-                ) {
-                  return;
-                }
-                setMessage(null);
-                restoreFromDrive().then(setMessage);
-              }}
-              className={secondaryBtnCls}
-            >
-              Drive'daki Yedeği Geri Yükle
-            </button>
             <button
               type="button"
               onClick={() => {
                 disconnectDrive();
                 setMessage({ ok: true, message: "Drive bağlantısı kesildi." });
               }}
-              className="rounded-full border border-red-200 dark:border-red-500/40 px-3.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+              className="rounded-full border border-red-200 px-3.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:hover:bg-red-500/10"
             >
               Bağlantıyı Kes
             </button>
           </>
         )}
       </div>
-
-      {drive.connected && (
-        <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-          Otomatik yedekleme açık: her değişiklikten birkaç saniye sonra
-          veriler Drive&apos;a kaydedilir.
-          {drive.lastBackupAt &&
-            ` Son yedek: ${format(new Date(drive.lastBackupAt), "d MMMM yyyy HH:mm", { locale: tr })}`}
-        </p>
-      )}
       {drive.error && (
-        <p className="mt-3 text-sm text-red-600 dark:text-red-400">{drive.error}</p>
+        <p className="mt-3 text-sm text-red-600 dark:text-red-400">
+          {drive.error}
+        </p>
       )}
       {message && (
         <p
@@ -217,20 +172,24 @@ function DriveSection() {
 }
 
 function ServiceTypesSection() {
-  const db = useDb();
+  const db = useApp();
 
   return (
     <section className={`${cardCls} p-6`}>
-      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Hizmet Türleri</h2>
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+        Hizmet Türleri
+      </h2>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Her hizmet türü için proje sürecinde takip edilecek aşamaları
         tanımlayın (ör. Mimari Proje, Akustik Rapor, Yapı Ruhsatı).
       </p>
 
       <div className="mt-4 space-y-4">
-        {db.serviceTypes.map((serviceType) => (
-          <ServiceTypeCard key={serviceType.id} serviceType={serviceType} />
-        ))}
+        {[...db.serviceTypes]
+          .sort((a, b) => a.name.localeCompare(b.name, "tr"))
+          .map((serviceType) => (
+            <ServiceTypeCard key={serviceType.id} serviceType={serviceType} />
+          ))}
       </div>
 
       <form
@@ -238,18 +197,16 @@ function ServiceTypesSection() {
           e.preventDefault();
           const name = str(new FormData(e.currentTarget), "name");
           if (!name) return;
-          mutate((draft) => {
-            draft.serviceTypes.push({ id: uid(), name, stages: [] });
-          });
+          addServiceType(name);
           e.currentTarget.reset();
         }}
-        className="mt-5 flex items-center gap-2 border-t border-slate-100 dark:border-slate-700 pt-4"
+        className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4 dark:border-slate-700"
       >
         <input
           name="name"
           required
           placeholder="Yeni hizmet türü adı"
-          className="flex-1 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
         />
         <button type="submit" className={primaryBtnCls}>
           Ekle
@@ -260,7 +217,7 @@ function ServiceTypesSection() {
 }
 
 function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
-  const db = useDb();
+  const db = useApp();
   const [open, setOpen] = useState(false);
   const usedByProjects = db.projects.filter((p) =>
     p.services.some((s) => s.serviceTypeId === serviceType.id)
@@ -282,25 +239,14 @@ function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
         <DeleteButton
           confirmMessage={
             usedByProjects > 0
-              ? `"${serviceType.name}" ${usedByProjects} projede kullanılıyor. Silinirse bu projelerdeki hizmet kayıtları da kaldırılır. Emin misiniz?`
+              ? `"${serviceType.name}" ${usedByProjects} projede kullanılıyor. Yine de silinsin mi? (Projelerdeki mevcut hizmet kayıtları kalır.)`
               : `"${serviceType.name}" hizmet türünü silmek istediğinize emin misiniz?`
           }
-          onDelete={() => {
-            mutate((draft) => {
-              draft.serviceTypes = draft.serviceTypes.filter(
-                (st) => st.id !== serviceType.id
-              );
-              draft.projects.forEach((p) => {
-                p.services = p.services.filter(
-                  (s) => s.serviceTypeId !== serviceType.id
-                );
-              });
-            });
-          }}
+          onDelete={() => deleteServiceType(serviceType.id)}
         />
       </div>
       {open && (
-        <div className="border-t border-slate-100 dark:border-slate-700 px-4 py-3">
+        <div className="border-t border-slate-100 px-4 py-3 dark:border-slate-700">
           <ol className="space-y-1">
             {serviceType.stages.map((stage, idx) => (
               <li
@@ -312,23 +258,14 @@ function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
                 </span>
                 <DeleteButton
                   confirmMessage={`"${stage.name}" aşamasını silmek istediğinize emin misiniz?`}
-                  onDelete={() => {
-                    mutate((draft) => {
-                      const target = draft.serviceTypes.find(
-                        (st) => st.id === serviceType.id
-                      );
-                      if (target) {
-                        target.stages = target.stages.filter(
-                          (s) => s.id !== stage.id
-                        );
-                      }
-                    });
-                  }}
+                  onDelete={() => deleteStage(serviceType.id, stage.id)}
                 />
               </li>
             ))}
             {serviceType.stages.length === 0 && (
-              <li className="text-sm text-slate-400 dark:text-slate-500">Aşama eklenmemiş.</li>
+              <li className="text-sm text-slate-400 dark:text-slate-500">
+                Aşama eklenmemiş.
+              </li>
             )}
           </ol>
           <form
@@ -336,12 +273,7 @@ function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
               e.preventDefault();
               const name = str(new FormData(e.currentTarget), "name");
               if (!name) return;
-              mutate((draft) => {
-                const target = draft.serviceTypes.find(
-                  (st) => st.id === serviceType.id
-                );
-                if (target) target.stages.push({ id: uid(), name });
-              });
+              addStage(serviceType.id, name);
               e.currentTarget.reset();
             }}
             className="mt-3 flex items-center gap-2"
@@ -350,7 +282,7 @@ function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
               name="name"
               required
               placeholder="Yeni aşama adı"
-              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
             />
             <button type="submit" className={secondaryBtnCls}>
               Aşama Ekle
@@ -361,64 +293,3 @@ function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
     </div>
   );
 }
-
-function BackupSection() {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [message, setMessage] = useState<{
-    ok: boolean;
-    message: string;
-  } | null>(null);
-
-  return (
-    <section className={`${cardCls} p-6`}>
-      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Veri Yedekleme</h2>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Tüm veriler bu tarayıcıda saklanır. Bilgisayar değişikliği veya veri
-        kaybına karşı düzenli olarak yedek alın. Yedek dosyasını başka bir
-        bilgisayarda &quot;Yedeği Geri Yükle&quot; ile açabilirsiniz.
-      </p>
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button type="button" onClick={exportBackup} className={primaryBtnCls}>
-          Yedek Al (İndir)
-        </button>
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="rounded-lg border border-slate-200 dark:border-slate-600 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
-        >
-          Yedeği Geri Yükle
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            e.target.value = "";
-            if (!file) return;
-            if (
-              !window.confirm(
-                "Yedeği geri yüklemek buradaki mevcut verilerin üzerine yazar. Devam edilsin mi?"
-              )
-            ) {
-              return;
-            }
-            const text = await file.text();
-            setMessage(importBackup(text));
-          }}
-        />
-      </div>
-      {message && (
-        <p
-          className={
-            message.ok ? "mt-3 text-sm text-green-700 dark:text-green-300" : "mt-3 text-sm text-red-600 dark:text-red-400"
-          }
-        >
-          {message.message}
-        </p>
-      )}
-    </section>
-  );
-}
-

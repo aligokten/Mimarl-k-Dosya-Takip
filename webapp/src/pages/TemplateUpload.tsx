@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { mutate, now, uid } from "../store";
+import { addDocTemplate } from "../data";
 import { cardCls, inputCls, labelCls, primaryBtnCls, smallLabelCls } from "../ui";
 import PageTitle from "../components/PageTitle";
 import { FileIcon } from "../components/icons";
@@ -48,15 +48,7 @@ export default function TemplateUpload() {
   const [error, setError] = useState<string | null>(null);
 
   async function createTemplate(title: string, body: string) {
-    const id = uid();
-    mutate((draft) => {
-      draft.docTemplates.push({
-        id,
-        title,
-        body,
-        createdAt: now(),
-      });
-    });
+    const id = await addDocTemplate({ title, body });
     navigate(`/sablonlar/${id}`);
   }
 

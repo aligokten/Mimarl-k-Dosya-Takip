@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import clsx from "clsx";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { useDb } from "../store";
+import { useApp } from "../data";
 import { cardCls, chipCls, primaryBtnCls } from "../ui";
 import {
   PRIORITY_COLORS,
@@ -54,7 +54,7 @@ function projectProgress(
 }
 
 export default function Projects() {
-  const db = useDb();
+  const db = useApp();
   const [view, setView] = useState<"board" | "list">("board");
   const [query, setQuery] = useState("");
 
@@ -185,7 +185,7 @@ function ProjectCard({
   stageCountByType: Map<string, number>;
   wide?: boolean;
 }) {
-  const db = useDb();
+  const db = useApp();
   const client = db.contacts.find((c) => c.id === project.clientId);
   const { done, total } = projectProgress(project, stageCountByType);
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
