@@ -3,16 +3,13 @@
 // erişim alınır: uygulama yalnızca kendi oluşturduğu dosya ve klasörleri
 // görebilir/yönetebilir.
 import { useSyncExternalStore } from "react";
-import { getDb, importBackup, subscribe as subscribeDb } from "./store";
 
 const CLIENT_ID_KEY = "mimarlik-drive-client-id";
 const CONNECTED_KEY = "mimarlik-drive-connected";
 const EMAIL_KEY = "mimarlik-drive-email";
 const ROOT_FOLDER_KEY = "mimarlik-drive-root-folder-id";
-const BACKUP_FILE_KEY = "mimarlik-drive-backup-file-id";
 
 const ROOT_FOLDER_NAME = "Mimarlık Ofisi Dosya Takip";
-const BACKUP_FILE_NAME = "dosya-takip-verileri.json";
 const SCOPES =
   "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email";
 
@@ -24,7 +21,6 @@ export interface DriveState {
   email?: string;
   busy: boolean;
   error?: string;
-  lastBackupAt?: string;
 }
 
 let state: DriveState = {
@@ -273,7 +269,6 @@ export function disconnectDrive() {
   localStorage.removeItem(CONNECTED_KEY);
   localStorage.removeItem(EMAIL_KEY);
   localStorage.removeItem(ROOT_FOLDER_KEY);
-  localStorage.removeItem(BACKUP_FILE_KEY);
   setState({ connected: false, email: undefined, error: undefined });
 }
 
@@ -313,101 +308,6 @@ export async function uploadToDrive(
   return { id: data.id as string, url: data.webViewLink as string | undefined };
 }
 
-// ---- Veri yedekleme (JSON dosyası olarak Drive'a) ----
-
-async function findBackupFileId(): Promise<string | null> {
-  const cached = localStorage.getItem(BACKUP_FILE_KEY);
-  if (cached) return cached;
-  const rootId = await ensureRootFolder();
-  const existing = await findFiles(
-    `name = '${escapeQuery(BACKUP_FILE_NAME)}' and '${rootId}' in parents and trashed = false`
-  );
-  if (existing[0]) {
-    localStorage.setItem(BACKUP_FILE_KEY, existing[0].id);
-    return existing[0].id;
-  }
-  return null;
-}
-
-export async function backupToDrive(): Promise<void> {
-  setState({ busy: true, error: undefined });
-  try {
-    const json = JSON.stringify(getDb(), null, 2);
-    let fileId = await findBackupFileId();
-    if (!fileId) {
-      const rootId = await ensureRootFolder();
-      const createResp = await driveFetch(
-        "https://www.googleapis.com/drive/v3/files?fields=id",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: BACKUP_FILE_NAME,
-            parents: [rootId],
-            mimeType: "application/json",
-          }),
-        }
-      );
-      const created = await createResp.json();
-      fileId = created.id as string;
-      localStorage.setItem(BACKUP_FILE_KEY, fileId);
-    }
-    await driveFetch(
-      `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: json,
-      }
-    );
-    setState({ busy: false, lastBackupAt: new Date().toISOString() });
-  } catch (e) {
-    setState({ busy: false, error: e instanceof Error ? e.message : String(e) });
-    throw e;
-  }
-}
-
-export async function restoreFromDrive(): Promise<{
-  ok: boolean;
-  message: string;
-}> {
-  setState({ busy: true, error: undefined });
-  try {
-    const fileId = await findBackupFileId();
-    if (!fileId) {
-      setState({ busy: false });
-      return {
-        ok: false,
-        message: "Drive'da yedek bulunamadı. Önce bu uygulamadan yedekleme yapılmış olmalı.",
-      };
-    }
-    const resp = await driveFetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`
-    );
-    const text = await resp.text();
-    const result = importBackup(text);
-    setState({ busy: false });
-    return result;
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    setState({ busy: false, error: message });
-    return { ok: false, message };
-  }
-}
-
-// ---- Otomatik yedekleme: her veri değişikliğinden 5 sn sonra ----
-
-let backupTimer: ReturnType<typeof setTimeout> | null = null;
-
-subscribeDb(() => {
-  if (!state.connected) return;
-  if (backupTimer) clearTimeout(backupTimer);
-  backupTimer = setTimeout(() => {
-    backupToDrive().catch(() => {
-      // hata state.error'a yazıldı; kullanıcı Ayarlar'da görür
-    });
-  }, 5000);
-});
 
 // Client ID tanımlıysa Google betiğini uygulama açılışında yükle:
 // böylece "Drive'a Bağlan" tıklamasında popup gecikmeden (ve Safari

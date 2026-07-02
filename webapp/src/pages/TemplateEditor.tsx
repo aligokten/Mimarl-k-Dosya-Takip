@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { DOC_TEMPLATES } from "../templates";
-import { mutate, now, uid, useDb } from "../store";
+import { addDocTemplate, useApp } from "../data";
 import { cardCls, secondaryBtnCls } from "../ui";
 import { PrinterIcon } from "../components/icons";
 
@@ -18,7 +18,7 @@ function escapeHtml(value: string): string {
 
 export default function TemplateEditor() {
   const { id } = useParams<{ id: string }>();
-  const db = useDb();
+  const db = useApp();
   const sheetRef = useRef<HTMLDivElement>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
@@ -98,23 +98,15 @@ export default function TemplateEditor() {
     });
   }
 
-  function saveAsNewTemplate() {
+  async function saveAsNewTemplate() {
     if (!sheetRef.current) return;
     const title = window.prompt(
       "Yeni şablonun adı ne olsun?",
       `${template?.title ?? "Şablon"} (Kopya)`
     );
     if (!title?.trim()) return;
-    const newId = uid();
     const body = sheetRef.current.innerHTML;
-    mutate((draft) => {
-      draft.docTemplates.push({
-        id: newId,
-        title: title.trim(),
-        body,
-        createdAt: now(),
-      });
-    });
+    await addDocTemplate({ title: title.trim(), body });
     window.alert(
       `"${title.trim()}" şablonu kaydedildi. Şablonlar sayfasında görebilirsiniz.`
     );

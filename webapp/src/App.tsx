@@ -1,7 +1,8 @@
 import { Link, Navigate, NavLink, Route, Routes } from "react-router-dom";
 import clsx from "clsx";
-import { useDrive } from "./drive";
+import { signOutUser, useApp } from "./data";
 import { toggleTheme, useTheme } from "./theme";
+import NotificationBell from "./components/NotificationBell";
 import {
   FileIcon,
   FolderIcon,
@@ -22,6 +23,8 @@ import Settings from "./pages/Settings";
 import Templates from "./pages/Templates";
 import TemplateEditor from "./pages/TemplateEditor";
 import TemplateUpload from "./pages/TemplateUpload";
+import Profile from "./pages/Profile";
+import Team from "./pages/Team";
 
 const NAV_ITEMS = [
   { to: "/", label: "Panel", end: true, icon: GridIcon },
@@ -32,8 +35,9 @@ const NAV_ITEMS = [
 ];
 
 export default function App() {
-  const drive = useDrive();
+  const app = useApp();
   const theme = useTheme();
+  const me = app.me!;
 
   return (
     <div className="min-h-screen px-2 py-3 sm:px-4 sm:py-6">
@@ -41,13 +45,15 @@ export default function App() {
         <header className="no-print flex items-center justify-between gap-2 px-5 pt-5 sm:px-8 sm:pt-6">
           <Link to="/" className="leading-tight">
             <span className="block text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              dosyatakip<span className="text-orange-500">.</span>
+              {app.office?.name ?? "dosyatakip"}
+              <span className="text-orange-500">.</span>
             </span>
             <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400">
               mimarlık ofisi
             </span>
           </Link>
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <button
               type="button"
               onClick={toggleTheme}
@@ -61,21 +67,14 @@ export default function App() {
               )}
             </button>
             <Link
-              to="/ayarlar"
-              title={
-                drive.connected
-                  ? `Google Drive bağlı${drive.email ? `: ${drive.email}` : ""}`
-                  : "Google Drive bağlı değil"
-              }
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/80 px-3.5 py-2 text-xs font-medium text-slate-600 shadow-sm ring-1 ring-white/60 backdrop-blur hover:bg-white dark:bg-slate-800/80 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-700"
+              to="/profil"
+              title="Profilim"
+              className="flex items-center gap-2 rounded-full bg-white/80 py-1 pl-1 pr-3 text-xs font-medium text-slate-600 shadow-sm ring-1 ring-white/60 backdrop-blur hover:bg-white dark:bg-slate-800/80 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-700"
             >
-              <span
-                className={clsx(
-                  "h-2 w-2 rounded-full",
-                  drive.connected ? "bg-emerald-500" : "bg-slate-300"
-                )}
-              />
-              Drive
+              <Avatar member={me} />
+              <span className="hidden max-w-[7rem] truncate sm:block">
+                {me.displayName}
+              </span>
             </Link>
           </div>
         </header>
@@ -102,7 +101,6 @@ export default function App() {
         </nav>
 
         <div className="flex gap-3 px-3 pb-8 pt-5 sm:px-5 md:gap-6 md:pl-4">
-          {/* Masaüstü ikon rayı */}
           <aside className="no-print hidden w-20 shrink-0 flex-col items-center gap-3 pt-2 md:flex">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
@@ -141,6 +139,23 @@ export default function App() {
                 </NavLink>
               );
             })}
+            <button
+              onClick={() => signOutUser()}
+              title="Çıkış Yap"
+              className="mt-1 flex h-12 w-12 items-center justify-center rounded-full bg-white/70 text-slate-400 shadow-sm backdrop-blur hover:text-red-500 dark:bg-slate-800/70 dark:text-slate-500 dark:hover:text-red-400"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+              >
+                <path d="M15 12H4M10 7l-5 5 5 5M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+              </svg>
+            </button>
           </aside>
 
           <main className="min-w-0 flex-1">
@@ -152,25 +167,39 @@ export default function App() {
               <Route path="/kisiler" element={<Contacts />} />
               <Route path="/kisiler/yeni" element={<ContactNew />} />
               <Route path="/kisiler/:id" element={<ContactDetail />} />
-              <Route
-                path="/musteriler/*"
-                element={<Navigate to="/kisiler" replace />}
-              />
-              <Route
-                path="/arsa-sahipleri/*"
-                element={<Navigate to="/kisiler" replace />}
-              />
               <Route path="/sablonlar" element={<Templates />} />
               <Route path="/sablonlar/yukle" element={<TemplateUpload />} />
               <Route path="/sablonlar/:id" element={<TemplateEditor />} />
+              <Route path="/profil" element={<Profile />} />
+              <Route path="/ekip" element={<Team />} />
               <Route path="/ayarlar" element={<Settings />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
         </div>
       </div>
-      <p className="no-print mx-auto mt-3 hidden max-w-[1240px] px-4 text-center text-[11px] text-slate-500/70 sm:block dark:text-slate-400/60">
-        Veriler tarayıcınızda saklanır; Drive bağlıyken otomatik yedeklenir.
-      </p>
     </div>
+  );
+}
+
+export function Avatar({
+  member,
+}: {
+  member: { displayName: string; photoURL?: string };
+}) {
+  if (member.photoURL) {
+    return (
+      <img
+        src={member.photoURL}
+        alt=""
+        className="h-7 w-7 rounded-full object-cover"
+      />
+    );
+  }
+  const initial = member.displayName?.trim()?.[0]?.toUpperCase() ?? "?";
+  return (
+    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-slate-500 to-slate-700 text-[11px] font-bold text-white">
+      {initial}
+    </span>
   );
 }

@@ -1,5 +1,5 @@
 import { PRIORITY_LABELS, type Priority, type Project } from "../types";
-import { useDb } from "../store";
+import { useApp } from "../data";
 import { inputCls, labelCls, primaryBtnCls, smallLabelCls, str } from "../ui";
 
 export type ProjectFormValues = Pick<
@@ -52,7 +52,7 @@ export default function ProjectForm({
   submitLabel: string;
   onSubmit: (values: ProjectFormValues) => void;
 }) {
-  const db = useDb();
+  const db = useApp();
   const sorted = [...db.contacts].sort((a, b) =>
     a.name.localeCompare(b.name, "tr")
   );

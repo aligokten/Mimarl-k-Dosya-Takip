@@ -8,39 +8,88 @@ tek yerden yapmanızı sağlayan ofis içi web uygulaması.
 
 **https://aligokten.github.io/Mimarl-k-Dosya-Takip/**
 
-`webapp/` klasöründeki bu sürüm tarayıcıda çalışır; kurulum, sunucu ve
-veritabanı gerektirmez. Veriler kullanılan tarayıcıda saklanır — düzenli
-olarak **Ayarlar → Veri Yedekleme** bölümünden yedek alın; yedeği başka bir
-bilgisayarda geri yükleyebilirsiniz. `main` dalına yapılan her push,
-GitHub Actions ile otomatik yayınlanır (`.github/workflows/pages.yml`).
+`webapp/` klasöründeki bu sürüm tarayıcıda çalışır; kendi sunucunuzu
+kurmanız gerekmez. Veriler **Firebase (Google) bulut veritabanında**
+(Firestore) tutulur; böylece **aynı ofisteki 10 kullanıcıya kadar** ekip
+üyesi gerçek zamanlı olarak aynı verileri görür. `main` dalına yapılan her
+push, GitHub Actions ile otomatik yayınlanır (`.github/workflows/pages.yml`).
 
-**Google Drive entegrasyonu**: Ayarlar → Google Drive bölümünden, bir
-kerelik oluşturacağınız OAuth Client ID ile (adımlar uygulamanın içinde
-yazıyor) Google hesabınıza bağlanabilirsiniz. Bağlandıktan sonra evrak
-dosyaları uygulama içinden doğrudan Drive'daki proje klasörlerine
-yüklenir ve tüm veriler her değişiklikte Drive'a otomatik yedeklenir
-(başka bir cihazda "Drive'daki Yedeği Geri Yükle" ile açılabilir).
+**Çoklu kullanıcı / ofis**: Uygulamaya ilk giren kişi ofisi kurar ve
+**yönetici (admin)** olur. Yönetici, Ayarlar → Ekip Yönetimi'nden bir
+**davet linki** üretir; bu linki alan çalışanlar kendi **Gmail** hesabıyla
+giriş yapıp ofise katılır (en fazla 10 kişi). Her çalışan Profil
+ayarlarından kişisel bilgilerini doldurur, yönetici tarafından projelere
+**görevli** olarak atanır. Her projede **Proje Bilgileri**, **Notlar** ve
+**Geçmiş Aktiviteler** (kim hangi dosyayı yükledi/indirdi) sekmeleri
+bulunur; projedeki ilerlemeler, o projeye görevli tüm kullanıcılara
+**uygulama içi bildirim** olarak iletilir.
+
+**Google Drive entegrasyonu** (isteğe bağlı): Evrak dosyalarını
+doğrudan Drive'daki proje klasörlerine yüklemek için Ayarlar → Google
+Drive bölümünden bir kerelik OAuth Client ID ile bağlanabilirsiniz.
 Uygulama `drive.file` kapsamı kullanır: yalnızca kendi oluşturduğu
-"Mimarlık Ofisi Dosya Takip" klasörüne erişebilir.
+"Mimarlık Ofisi Dosya Takip" klasörüne erişir. (Proje verileri artık
+Firestore'da tutulur; Drive yalnızca dosya depolamak içindir.)
+
+### 🔧 İlk kurulum — Firebase (yalnızca bir kez, yönetici yapar)
+
+Uygulamanın çalışması için ücretsiz bir Firebase projesi bağlamanız gerekir:
+
+1. [console.firebase.google.com](https://console.firebase.google.com/) →
+   **Proje ekle** → bir ad verin (ör. `mimarlik-ofisi`) → oluşturun.
+2. Sol menüden **Build → Authentication → Get started** → **Sign-in
+   method** sekmesi → **Google**'ı etkinleştirin ve kaydedin.
+3. **Build → Firestore Database → Create database** → konum seçin →
+   **production mode** ile başlatın.
+4. Firestore güvenlik kurallarını yükleyin: **Firestore → Rules** sekmesine
+   gidip bu depodaki [`webapp/firestore.rules`](webapp/firestore.rules)
+   dosyasının içeriğini yapıştırın → **Publish**. (Bu kurallar; yalnızca
+   ofis üyelerinin veriye erişmesini, bildirimlerin yalnızca sahibi
+   tarafından okunmasını ve ofis sahibinin değiştirilememesini sağlar.)
+5. **Proje Ayarları (⚙️) → General → Your apps → Web (`</>`)** ile bir web
+   uygulaması ekleyin; size verilen `firebaseConfig` değerlerini kopyalayın.
+6. **Authentication → Settings → Authorized domains** listesine
+   `aligokten.github.io` alan adını ekleyin (Google girişinin GitHub Pages
+   üzerinde çalışması için gerekir).
+7. Yayınlanmış uygulamayı açın; ilk açılışta çıkan **Firebase Kurulumu**
+   ekranına 5. adımdaki config değerlerini yapıştırıp kaydedin. (Config
+   gizli değildir; isterseniz `webapp/src/firebase-config.ts` içindeki
+   `BUILTIN_FIREBASE_CONFIG`'e yazıp derlemeye gömebilirsiniz — o zaman
+   kurulum ekranı hiç görünmez.)
+
+> Firebase config değerleri **gizli değildir**; güvenlik, yukarıdaki
+> Firestore kuralları ve Google girişi ile sağlanır.
 
 > Not: Deponun geri kalanı (aşağıda anlatılan Next.js + PostgreSQL tam
-> sürüm), çok kullanıcılı/sunuculu kuruluma geçilmek istendiğinde hazır
-> bekleyen gelişmiş sürümdür; web sürümünü etkilemez.
+> sürüm), farklı bir kurulum senaryosu için hazır bekleyen alternatif
+> sürümdür; web sürümünü etkilemez.
 
 ## Özellikler
 
-- **Kullanıcılar ve roller**: Yönetici / Personel ayrımıyla çoklu kullanıcı girişi.
-- **Müşteriler**: İletişim ve fatura bilgileri, bağlı projeler.
-- **Arsa Sahipleri**: Vekaletname no/tarih/noter bilgisi ve taranmış vekaletname dosyası.
-- **Projeler**: Adres/ada/parsel/pafta bilgisi, müşteri ve arsa sahibi ilişkisi.
+- **Çoklu kullanıcı ofis**: Gmail ile giriş, davet linkiyle ofise katılma
+  (10 kişiye kadar), yönetici (admin) / çalışan (staff) rolleri, profil
+  ayarları. Yönetici çalışanları projelere görevli olarak atar.
+- **Kişiler**: Müşteri, arsa sahibi ve müteahhit tek "Kişi" kartında birden
+  fazla rolle tutulur; vekaletname no/tarih/noter bilgisi ve taranmış
+  vekaletname dosyası dahil.
+- **Projeler**: Adres/ada/parsel/pafta bilgisi, kişi ilişkileri; her projede
+  **Proje Bilgileri**, **Hizmetler ve Aşamalar**, **Evraklar**, **Notlar** ve
+  **Geçmiş Aktiviteler** sekmeleri.
 - **Hizmetler ve Aşamalar**: Her projeye Mimari Proje, Akustik Rapor, Yapı
   Ruhsatı, İskan, Zemin Etüdü gibi hizmetler eklenir; her hizmetin kendi
   aşama/checklist'i (Ayarlar sayfasından özelleştirilebilir) proje bazında
   işaretlenir, hedef tarih ve durum takibi yapılır.
-- **Evraklar**: Dijital evraklar Google Drive'a otomatik olarak proje
-  klasörüne yüklenir; fiziksel (basılı) evraklar için dolap/raf/klasör
-  konumu kaydedilir; bir evrak hem dijital hem fiziksel olarak işaretlenebilir.
-- **Panel**: Devam eden/tamamlanan proje sayıları, yaklaşan hedef tarihler.
+- **Evraklar**: Dijital evraklar Google Drive'a proje klasörüne yüklenir;
+  fiziksel (basılı) evraklar için dolap/raf/klasör konumu kaydedilir. Kim
+  hangi dosyayı yükledi/indirdi, aktivite geçmişinde tutulur.
+- **Bildirimler**: Projedeki ilerlemeler (aşama tamamlama, evrak yükleme,
+  not ekleme, görevli atama) o projeye görevli tüm kullanıcılara uygulama
+  içi bildirim olarak iletilir.
+- **Evrak şablonları**: Hazır dilekçe/sözleşme şablonları veya kendi
+  yüklediğiniz Word/metin şablonları; proje verileriyle otomatik doldurma,
+  PDF olarak yazdırma.
+- **Panel**: Devam eden/tamamlanan proje sayıları, yaklaşan hedef tarihler,
+  takvim ve koyu mod.
 
 ## Teknoloji
 

@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
-import { useDb } from "../store";
+import { useApp } from "../data";
 import { cardCls, primaryBtnCls, thCls } from "../ui";
 import PageTitle from "../components/PageTitle";
 import { UsersIcon } from "../components/icons";
 import { CONTACT_ROLE_CHIP, CONTACT_ROLE_LABELS } from "../types";
 
 export default function Contacts() {
-  const db = useDb();
+  const db = useApp();
   const contacts = [...db.contacts].sort((a, b) =>
     a.name.localeCompare(b.name, "tr")
   );

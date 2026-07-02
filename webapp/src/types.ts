@@ -49,6 +49,14 @@ export interface ProjectDocument {
   createdAt: string;
 }
 
+export interface ProjectNote {
+  id: string;
+  text: string;
+  authorUid: string;
+  authorName: string;
+  createdAt: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -67,8 +75,65 @@ export interface Project {
   priority?: Priority;
   services: ProjectService[];
   documents: ProjectDocument[];
+  noteList?: ProjectNote[];
+  memberIds?: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export type MemberRole = "ADMIN" | "STAFF";
+
+export interface Member {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  phone?: string;
+  title?: string;
+  role: MemberRole;
+  createdAt: string;
+}
+
+export interface Office {
+  name: string;
+  ownerUid: string;
+  inviteCode: string;
+  createdAt: string;
+}
+
+export type ActivityType =
+  | "PROJE_OLUSTURULDU"
+  | "PROJE_GUNCELLENDI"
+  | "DURUM_DEGISTI"
+  | "HIZMET_EKLENDI"
+  | "HIZMET_KALDIRILDI"
+  | "ASAMA_TAMAMLANDI"
+  | "ASAMA_GERI_ALINDI"
+  | "EVRAK_YUKLENDI"
+  | "EVRAK_INDIRILDI"
+  | "EVRAK_SILINDI"
+  | "NOT_EKLENDI"
+  | "GOREVLI_ATANDI";
+
+export interface Activity {
+  id: string;
+  projectId: string;
+  type: ActivityType;
+  text: string;
+  byUid: string;
+  byName: string;
+  at: string;
+}
+
+export interface AppNotification {
+  id: string;
+  forUid: string;
+  projectId: string;
+  projectName: string;
+  text: string;
+  byName: string;
+  read: boolean;
+  at: string;
 }
 
 export interface CustomTemplate {
@@ -131,3 +196,10 @@ export const CONTACT_ROLE_CHIP: Record<ContactRole, string> = {
   MUTEAHHIT:
     "bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
 };
+
+export const MEMBER_ROLE_LABELS: Record<MemberRole, string> = {
+  ADMIN: "Yönetici",
+  STAFF: "Çalışan",
+};
+
+export const MAX_MEMBERS = 10;
