@@ -112,7 +112,7 @@ export default function ProjectForm({
             ))}
           </select>
           {clients.length === 0 && (
-            <p className="mt-1 text-xs text-red-600">
+            <p className="mt-1 text-xs text-red-600 dark:text-red-400">
               Önce Müşteriler sayfasından bir müşteri ekleyin.
             </p>
           )}
@@ -134,7 +134,7 @@ export default function ProjectForm({
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 p-4">
+      <div className="rounded-lg border border-slate-200 dark:border-slate-600 p-4">
         <p className="text-sm font-semibold text-slate-800">
           Arsa / Adres Bilgileri
         </p>

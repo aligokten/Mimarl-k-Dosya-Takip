@@ -1,12 +1,15 @@
 import { Link, NavLink, Route, Routes } from "react-router-dom";
 import clsx from "clsx";
 import { useDrive } from "./drive";
+import { toggleTheme, useTheme } from "./theme";
 import {
   FileIcon,
   FolderIcon,
   GearIcon,
   GridIcon,
   HomeIcon,
+  MoonIcon,
+  SunIcon,
   UsersIcon,
 } from "./components/icons";
 import Dashboard from "./pages/Dashboard";
@@ -20,6 +23,8 @@ import ProjectDetail from "./pages/ProjectDetail";
 import ClientNew from "./pages/ClientNew";
 import LandOwnerNew from "./pages/LandOwnerNew";
 import Settings from "./pages/Settings";
+import Templates from "./pages/Templates";
+import TemplateEditor from "./pages/TemplateEditor";
 
 const NAV_ITEMS = [
   { to: "/", label: "Panel", end: true, icon: GridIcon },
@@ -31,45 +36,61 @@ const NAV_ITEMS = [
     end: false,
     icon: HomeIcon,
   },
+  { to: "/sablonlar", label: "Şablonlar", end: false, icon: FileIcon },
   { to: "/ayarlar", label: "Ayarlar", end: false, icon: GearIcon },
 ];
 
 export default function App() {
   const drive = useDrive();
+  const theme = useTheme();
 
   return (
     <div className="min-h-screen px-2 py-3 sm:px-4 sm:py-6">
-      <div className="mx-auto max-w-[1240px] rounded-[2rem] bg-[#f4f5f7]/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] ring-1 ring-white/70 backdrop-blur">
-        <header className="flex items-center justify-between px-5 pt-5 sm:px-8 sm:pt-6">
+      <div className="mx-auto max-w-[1240px] rounded-[2rem] bg-white/45 shadow-[0_24px_70px_rgba(15,23,42,0.18)] ring-1 ring-white/60 backdrop-blur-2xl dark:bg-slate-900/55 dark:ring-white/10">
+        <header className="no-print flex items-center justify-between gap-2 px-5 pt-5 sm:px-8 sm:pt-6">
           <Link to="/" className="leading-tight">
-            <span className="block text-xl font-extrabold tracking-tight text-slate-900">
+            <span className="block text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               dosyatakip<span className="text-orange-500">.</span>
             </span>
-            <span className="block text-[11px] font-medium text-slate-400">
+            <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400">
               mimarlık ofisi
             </span>
           </Link>
-          <Link
-            to="/ayarlar"
-            title={
-              drive.connected
-                ? `Google Drive bağlı${drive.email ? `: ${drive.email}` : ""}`
-                : "Google Drive bağlı değil"
-            }
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50"
-          >
-            <span
-              className={clsx(
-                "h-2 w-2 rounded-full",
-                drive.connected ? "bg-emerald-500" : "bg-slate-300"
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Açık moda geç" : "Koyu moda geç"}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-slate-600 shadow-sm ring-1 ring-white/60 backdrop-blur hover:bg-white dark:bg-slate-800/80 dark:text-amber-300 dark:ring-white/10 dark:hover:bg-slate-700"
+            >
+              {theme === "dark" ? (
+                <SunIcon className="h-4.5 w-4.5" />
+              ) : (
+                <MoonIcon className="h-4.5 w-4.5" />
               )}
-            />
-            Drive
-          </Link>
+            </button>
+            <Link
+              to="/ayarlar"
+              title={
+                drive.connected
+                  ? `Google Drive bağlı${drive.email ? `: ${drive.email}` : ""}`
+                  : "Google Drive bağlı değil"
+              }
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/80 px-3.5 py-2 text-xs font-medium text-slate-600 shadow-sm ring-1 ring-white/60 backdrop-blur hover:bg-white dark:bg-slate-800/80 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-700"
+            >
+              <span
+                className={clsx(
+                  "h-2 w-2 rounded-full",
+                  drive.connected ? "bg-emerald-500" : "bg-slate-300"
+                )}
+              />
+              Drive
+            </Link>
+          </div>
         </header>
 
         {/* Mobil gezinme */}
-        <nav className="mt-4 flex gap-1 overflow-x-auto px-4 md:hidden">
+        <nav className="no-print mt-4 flex gap-1 overflow-x-auto px-4 md:hidden">
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
@@ -79,8 +100,8 @@ export default function App() {
                 clsx(
                   "whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium",
                   isActive
-                    ? "bg-slate-900 text-white"
-                    : "bg-white text-slate-600 shadow-sm"
+                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+                    : "bg-white/70 text-slate-600 shadow-sm backdrop-blur dark:bg-slate-800/70 dark:text-slate-300"
                 )
               }
             >
@@ -91,7 +112,7 @@ export default function App() {
 
         <div className="flex gap-3 px-3 pb-8 pt-5 sm:px-5 md:gap-6 md:pl-4">
           {/* Masaüstü ikon rayı */}
-          <aside className="hidden w-20 shrink-0 flex-col items-center gap-3 pt-2 md:flex">
+          <aside className="no-print hidden w-20 shrink-0 flex-col items-center gap-3 pt-2 md:flex">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               return (
@@ -108,8 +129,8 @@ export default function App() {
                         className={clsx(
                           "flex h-12 w-12 items-center justify-center rounded-full transition",
                           isActive
-                            ? "bg-slate-900 text-white shadow-md"
-                            : "bg-white text-slate-500 shadow-sm group-hover:text-slate-900"
+                            ? "bg-slate-900 text-white shadow-md dark:bg-white dark:text-slate-900"
+                            : "bg-white/70 text-slate-500 shadow-sm backdrop-blur group-hover:text-slate-900 dark:bg-slate-800/70 dark:text-slate-400 dark:group-hover:text-white"
                         )}
                       >
                         <Icon className="h-5 w-5" />
@@ -117,7 +138,9 @@ export default function App() {
                       <span
                         className={clsx(
                           "max-w-[4.5rem] truncate text-center text-[10px] font-medium",
-                          isActive ? "text-slate-900" : "text-slate-400"
+                          isActive
+                            ? "text-slate-900 dark:text-white"
+                            : "text-slate-500 dark:text-slate-400"
                         )}
                       >
                         {item.label}
@@ -144,13 +167,14 @@ export default function App() {
                 path="/arsa-sahipleri/:id"
                 element={<LandOwnerDetail />}
               />
+              <Route path="/sablonlar" element={<Templates />} />
+              <Route path="/sablonlar/:id" element={<TemplateEditor />} />
               <Route path="/ayarlar" element={<Settings />} />
             </Routes>
           </main>
         </div>
       </div>
-      <p className="mx-auto mt-3 hidden max-w-[1240px] px-4 text-center text-[11px] text-slate-500/70 sm:block">
-        <FileIcon className="mr-1 inline h-3 w-3" />
+      <p className="no-print mx-auto mt-3 hidden max-w-[1240px] px-4 text-center text-[11px] text-slate-500/70 sm:block dark:text-slate-400/60">
         Veriler tarayıcınızda saklanır; Drive bağlıyken otomatik yedeklenir.
       </p>
     </div>

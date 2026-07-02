@@ -13,17 +13,14 @@ import {
 } from "../drive";
 import type { ServiceType } from "../types";
 import { cardCls, inputCls, primaryBtnCls, secondaryBtnCls, str } from "../ui";
+import PageTitle from "../components/PageTitle";
+import { GearIcon } from "../components/icons";
 import DeleteButton from "../components/DeleteButton";
 
 export default function Settings() {
   return (
     <div className="max-w-3xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ayarlar</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Google Drive bağlantısı, hizmet türleri ve veri yedekleme.
-        </p>
-      </div>
+      <PageTitle icon={<GearIcon className="h-5 w-5" />} title="Ayarlar" subtitle="Google Drive bağlantısı, hizmet türleri ve veri yedekleme." />
 
       <DriveSection />
       <ServiceTypesSection />
@@ -42,10 +39,10 @@ function DriveSection() {
 
   return (
     <section className={`${cardCls} p-6`}>
-      <h2 className="text-sm font-semibold text-slate-900">
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
         Google Drive Bağlantısı
       </h2>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Bağlandığınızda dosyaları uygulama içinden doğrudan Drive&apos;ınıza
         yükleyebilirsiniz; verileriniz de her değişiklikten sonra
         Drive&apos;a otomatik yedeklenir. Uygulama yalnızca kendi
@@ -54,7 +51,7 @@ function DriveSection() {
       </p>
 
       {!drive.configured && (
-        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <div className="mt-4 rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-200">
           <p className="font-semibold">Tek seferlik kurulum gerekli:</p>
           <ol className="mt-2 list-decimal space-y-1 pl-5">
             <li>
@@ -140,7 +137,7 @@ function DriveSection() {
           </button>
         ) : (
           <>
-            <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+            <span className="rounded-full border border-green-200 dark:border-green-500/30 bg-green-50 dark:bg-green-500/15 px-3 py-1 text-xs font-medium text-green-700 dark:text-green-300">
               Bağlı{drive.email ? `: ${drive.email}` : ""}
             </span>
             <button
@@ -185,7 +182,7 @@ function DriveSection() {
                 disconnectDrive();
                 setMessage({ ok: true, message: "Drive bağlantısı kesildi." });
               }}
-              className="rounded-full border border-red-200 px-3.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+              className="rounded-full border border-red-200 dark:border-red-500/40 px-3.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
             >
               Bağlantıyı Kes
             </button>
@@ -194,7 +191,7 @@ function DriveSection() {
       </div>
 
       {drive.connected && (
-        <p className="mt-3 text-xs text-slate-400">
+        <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
           Otomatik yedekleme açık: her değişiklikten birkaç saniye sonra
           veriler Drive&apos;a kaydedilir.
           {drive.lastBackupAt &&
@@ -202,14 +199,14 @@ function DriveSection() {
         </p>
       )}
       {drive.error && (
-        <p className="mt-3 text-sm text-red-600">{drive.error}</p>
+        <p className="mt-3 text-sm text-red-600 dark:text-red-400">{drive.error}</p>
       )}
       {message && (
         <p
           className={
             message.ok
-              ? "mt-3 text-sm text-green-700"
-              : "mt-3 text-sm text-red-600"
+              ? "mt-3 text-sm text-green-700 dark:text-green-300"
+              : "mt-3 text-sm text-red-600 dark:text-red-400"
           }
         >
           {message.message}
@@ -224,8 +221,8 @@ function ServiceTypesSection() {
 
   return (
     <section className={`${cardCls} p-6`}>
-      <h2 className="text-sm font-semibold text-slate-900">Hizmet Türleri</h2>
-      <p className="mt-1 text-sm text-slate-500">
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Hizmet Türleri</h2>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Her hizmet türü için proje sürecinde takip edilecek aşamaları
         tanımlayın (ör. Mimari Proje, Akustik Rapor, Yapı Ruhsatı).
       </p>
@@ -246,13 +243,13 @@ function ServiceTypesSection() {
           });
           e.currentTarget.reset();
         }}
-        className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4"
+        className="mt-5 flex items-center gap-2 border-t border-slate-100 dark:border-slate-700 pt-4"
       >
         <input
           name="name"
           required
           placeholder="Yeni hizmet türü adı"
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="flex-1 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
         />
         <button type="submit" className={primaryBtnCls}>
           Ekle
@@ -270,15 +267,15 @@ function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
   ).length;
 
   return (
-    <div className="rounded-lg border border-slate-200">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-600">
       <div className="flex items-center justify-between px-4 py-3">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="text-sm font-medium text-slate-900"
+          className="text-sm font-medium text-slate-900 dark:text-white"
         >
           {open ? "▾" : "▸"} {serviceType.name}{" "}
-          <span className="font-normal text-slate-400">
+          <span className="font-normal text-slate-400 dark:text-slate-500">
             ({serviceType.stages.length} aşama)
           </span>
         </button>
@@ -303,12 +300,12 @@ function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
         />
       </div>
       {open && (
-        <div className="border-t border-slate-100 px-4 py-3">
+        <div className="border-t border-slate-100 dark:border-slate-700 px-4 py-3">
           <ol className="space-y-1">
             {serviceType.stages.map((stage, idx) => (
               <li
                 key={stage.id}
-                className="flex items-center justify-between text-sm text-slate-700"
+                className="flex items-center justify-between text-sm text-slate-700 dark:text-slate-200"
               >
                 <span>
                   {idx + 1}. {stage.name}
@@ -331,7 +328,7 @@ function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
               </li>
             ))}
             {serviceType.stages.length === 0 && (
-              <li className="text-sm text-slate-400">Aşama eklenmemiş.</li>
+              <li className="text-sm text-slate-400 dark:text-slate-500">Aşama eklenmemiş.</li>
             )}
           </ol>
           <form
@@ -353,7 +350,7 @@ function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
               name="name"
               required
               placeholder="Yeni aşama adı"
-              className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
             />
             <button type="submit" className={secondaryBtnCls}>
               Aşama Ekle
@@ -374,8 +371,8 @@ function BackupSection() {
 
   return (
     <section className={`${cardCls} p-6`}>
-      <h2 className="text-sm font-semibold text-slate-900">Veri Yedekleme</h2>
-      <p className="mt-1 text-sm text-slate-500">
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Veri Yedekleme</h2>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Tüm veriler bu tarayıcıda saklanır. Bilgisayar değişikliği veya veri
         kaybına karşı düzenli olarak yedek alın. Yedek dosyasını başka bir
         bilgisayarda &quot;Yedeği Geri Yükle&quot; ile açabilirsiniz.
@@ -387,7 +384,7 @@ function BackupSection() {
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          className="rounded-lg border border-slate-200 dark:border-slate-600 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
         >
           Yedeği Geri Yükle
         </button>
@@ -415,7 +412,7 @@ function BackupSection() {
       {message && (
         <p
           className={
-            message.ok ? "mt-3 text-sm text-green-700" : "mt-3 text-sm text-red-600"
+            message.ok ? "mt-3 text-sm text-green-700 dark:text-green-300" : "mt-3 text-sm text-red-600 dark:text-red-400"
           }
         >
           {message.message}

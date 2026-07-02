@@ -3,6 +3,8 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { useDb } from "../store";
 import { cardCls, primaryBtnCls, thCls } from "../ui";
+import PageTitle from "../components/PageTitle";
+import { HomeIcon } from "../components/icons";
 
 export default function LandOwners() {
   const db = useDb();
@@ -13,14 +15,7 @@ export default function LandOwners() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Arsa Sahipleri
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Vekaletname alınan arsa sahipleri.
-          </p>
-        </div>
+        <PageTitle icon={<HomeIcon className="h-5 w-5" />} title="Arsa Sahipleri" subtitle="Vekaletname alınan arsa sahipleri." />
         <Link to="/arsa-sahipleri/yeni" className={primaryBtnCls}>
           Yeni Arsa Sahibi
         </Link>
@@ -28,7 +23,7 @@ export default function LandOwners() {
 
       <div className={`${cardCls} overflow-hidden`}>
         <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
+          <thead className="bg-slate-50 dark:bg-slate-800/60">
             <tr>
               <th className={thCls}>Ad Soyad</th>
               <th className={thCls}>Telefon</th>
@@ -37,12 +32,12 @@ export default function LandOwners() {
               <th className={thCls}>Proje Sayısı</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
             {landOwners.length === 0 && (
               <tr>
                 <td
                   colSpan={5}
-                  className="px-4 py-6 text-center text-sm text-slate-500"
+                  className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400"
                 >
                   Henüz arsa sahibi eklenmemiş.
                 </td>
@@ -54,7 +49,7 @@ export default function LandOwners() {
               ).length;
               return (
                 <tr key={owner.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                  <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">
                     <Link
                       to={`/arsa-sahipleri/${owner.id}`}
                       className="hover:underline"
@@ -62,20 +57,20 @@ export default function LandOwners() {
                       {owner.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                     {owner.phone || "-"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                     {owner.poaNo || "-"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                     {owner.poaDate
                       ? format(new Date(owner.poaDate), "d MMMM yyyy", {
                           locale: tr,
                         })
                       : "-"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                     {projectCount}
                   </td>
                 </tr>

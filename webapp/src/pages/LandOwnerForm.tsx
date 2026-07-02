@@ -87,8 +87,8 @@ export default function LandOwnerForm({
         </div>
       </div>
 
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-        <p className="text-sm font-semibold text-amber-900">
+      <div className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4">
+        <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
           Vekaletname Bilgileri
         </p>
         <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -129,7 +129,7 @@ export default function LandOwnerForm({
             defaultValue={initialValues?.poaUrl ?? ""}
             className={inputCls}
           />
-          <p className="mt-1 text-xs text-amber-800">
+          <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
             Dosyayı Drive&apos;a yükleyip paylaşım linkini buraya
             yapıştırabilirsiniz. Otomatik yükleme sonraki aşamada eklenecek.
           </p>

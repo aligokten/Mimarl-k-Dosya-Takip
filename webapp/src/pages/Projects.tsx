@@ -15,25 +15,27 @@ import {
 import {
   CalendarIcon,
   FlagIcon,
+  FolderIcon,
   PaperclipIcon,
   SearchIcon,
 } from "../components/icons";
+import PageTitle from "../components/PageTitle";
 
 const COLUMNS: { status: ProjectStatus; dot: string; pill: string }[] = [
   {
     status: "DEVAM_EDIYOR",
     dot: "bg-orange-500",
-    pill: "bg-orange-50 text-orange-600 border-orange-200",
+    pill: "bg-orange-50 dark:bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-500/30",
   },
   {
     status: "TAMAMLANDI",
     dot: "bg-blue-500",
-    pill: "bg-blue-50 text-blue-700 border-blue-200",
+    pill: "bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30",
   },
   {
     status: "DURDURULDU",
     dot: "bg-slate-400",
-    pill: "bg-slate-100 text-slate-600 border-slate-200",
+    pill: "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600",
   },
 ];
 
@@ -74,25 +76,22 @@ export default function Projects() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Projeler
-          </h1>
-          <p className="mt-0.5 text-sm text-slate-500">
-            Tüm mimarlık ve ruhsat projeleri.
-          </p>
-        </div>
+        <PageTitle
+          icon={<FolderIcon className="h-5 w-5" />}
+          title="Projeler"
+          subtitle="Tüm mimarlık ve ruhsat projeleri."
+        />
         <div className="flex flex-wrap items-center gap-2">
           <label className="relative">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Proje veya müşteri ara..."
-              className="w-44 rounded-full bg-white py-2 pl-9 pr-3 text-sm text-slate-700 shadow-sm ring-1 ring-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 sm:w-56"
+              className="w-44 rounded-full bg-white dark:bg-slate-800 py-2 pl-9 pr-3 text-sm text-slate-700 dark:text-slate-200 shadow-sm ring-1 ring-slate-200 dark:ring-slate-600 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 sm:w-56"
             />
           </label>
-          <div className="inline-flex rounded-full border border-slate-200 bg-white p-1">
+          <div className="inline-flex rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-1">
             {(
               [
                 ["board", "Pano"],
@@ -106,8 +105,8 @@ export default function Projects() {
                 className={clsx(
                   "rounded-full px-3.5 py-1 text-xs font-semibold",
                   view === key
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800"
                 )}
               >
                 {label}
@@ -121,7 +120,7 @@ export default function Projects() {
       </div>
 
       {projects.length === 0 ? (
-        <div className={`${cardCls} p-8 text-center text-sm text-slate-500`}>
+        <div className={`${cardCls} p-8 text-center text-sm text-slate-500 dark:text-slate-400`}>
           {normalizedQuery
             ? "Aramanızla eşleşen proje bulunamadı."
             : 'Henüz proje eklenmemiş. "+ Yeni Proje" ile başlayın.'}
@@ -141,7 +140,7 @@ export default function Projects() {
                     <span className={`h-1.5 w-1.5 rounded-full ${column.dot}`} />
                     {PROJECT_STATUS_LABELS[column.status]}
                   </span>
-                  <span className="text-xs font-semibold text-slate-400">
+                  <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
                     {columnProjects.length}
                   </span>
                 </div>
@@ -153,7 +152,7 @@ export default function Projects() {
                   />
                 ))}
                 {columnProjects.length === 0 && (
-                  <div className="rounded-2xl border border-dashed border-slate-200 p-5 text-center text-xs text-slate-400">
+                  <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-5 text-center text-xs text-slate-400 dark:text-slate-500">
                     Bu durumda proje yok.
                   </div>
                 )}
@@ -213,17 +212,17 @@ function ProjectCard({
         <FlagIcon className="h-3.5 w-3.5" />
         {PRIORITY_LABELS[priority]}
       </span>
-      <p className="mt-1.5 text-sm font-bold text-slate-900">{project.name}</p>
-      <p className="mt-0.5 text-xs text-slate-500">{client?.name ?? "-"}</p>
+      <p className="mt-1.5 text-sm font-bold text-slate-900 dark:text-white">{project.name}</p>
+      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{client?.name ?? "-"}</p>
 
       <div className={wide ? "mt-3 max-w-md" : "mt-3"}>
         <div className="flex items-center justify-between text-xs">
-          <span className="font-medium text-slate-500">İlerleme</span>
-          <span className="font-semibold text-slate-700">
+          <span className="font-medium text-slate-500 dark:text-slate-400">İlerleme</span>
+          <span className="font-semibold text-slate-700 dark:text-slate-200">
             {total > 0 ? `${done}/${total}` : "-"}
           </span>
         </div>
-        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
           <div
             className={`h-full rounded-full ${barColor}`}
             style={{ width: `${total > 0 ? Math.max(pct, 4) : 0}%` }}
@@ -231,7 +230,7 @@ function ProjectCard({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 dark:border-slate-700 pt-3">
         {nextTarget && (
           <span className={chipCls}>
             <CalendarIcon className="h-3.5 w-3.5" />
