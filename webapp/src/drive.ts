@@ -323,6 +323,37 @@ export async function uploadToDrive(
   return { id: data.id as string, url: data.webViewLink as string | undefined };
 }
 
+// Mevzuat/plan notu gibi ofis geneli PDF'ler: Drive'a yükler, "bağlantıya
+// sahip herkes görüntüleyebilir" izni verir ve gömülü önizleme (iframe)
+// bağlantısını döndürür. Böylece tüm çalışanlar uygulama içinde görebilir.
+export async function uploadSharedPdf(
+  file: File,
+  folderName: string
+): Promise<{ fileId: string; previewUrl: string; webViewLink: string }> {
+  const uploaded = await uploadToDrive(file, folderName);
+  // Herkese (bağlantıyla) okuma izni
+  await driveFetch(
+    `https://www.googleapis.com/drive/v3/files/${uploaded.id}/permissions`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "reader", type: "anyone" }),
+    }
+  );
+  return {
+    fileId: uploaded.id,
+    previewUrl: `https://drive.google.com/file/d/${uploaded.id}/preview`,
+    webViewLink:
+      uploaded.url ?? `https://drive.google.com/file/d/${uploaded.id}/view`,
+  };
+}
+
+export async function deleteDriveFile(fileId: string): Promise<void> {
+  await driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    method: "DELETE",
+  });
+}
+
 
 // Client ID tanımlıysa Google betiğini uygulama açılışında yükle:
 // böylece "Drive'a Bağlan" tıklamasında popup gecikmeden (ve Safari
