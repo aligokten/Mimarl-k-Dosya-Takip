@@ -1,0 +1,52 @@
+name: Windows Kurulum Dosyası
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        working-directory: desktop/dosyatakip
+        run: npm install
+
+      - name: Build installer (.exe)
+        working-directory: desktop/dosyatakip
+        run: npx electron-builder --win nsis
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MimarlikDosyaTakip-Windows
+          path: desktop/dosyatakip/release/*.exe
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows-v1.0.0
+          name: Windows Uygulaması v1.0.0
+          body: |
+            ## Mimarlık Ofisi Dosya Takip — Windows kurulum dosyası
+
+            **Kurulum:** Aşağıdaki `MimarlikDosyaTakip-Kurulum-1.0.0.exe`
+            dosyasını indirip çift tıklayın. Kurulum otomatik tamamlanır ve
+            masaüstüne kısayol ekler.
+
+            > Not: Uygulama imzasız olduğu için Windows SmartScreen uyarısı
+            > çıkabilir. **"Ek bilgi" → "Yine de çalıştır"** ile devam edin.
+
+            Uygulama, canlı sistemi yükler; web'e gelen güncellemeler
+            masaüstünde de otomatik geçerlidir. İnternet bağlantısı gerekir.
+          files: desktop/dosyatakip/release/*.exe
