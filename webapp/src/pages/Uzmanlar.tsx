@@ -17,7 +17,14 @@ import DeleteButton from "../components/DeleteButton";
 import { UsersIcon, SearchIcon } from "../components/icons";
 
 const ROLES: ProfessionalRole[] = [
-  "MUHENDIS",
+  "INSAAT_MUHENDISI",
+  "MAKINA_MUHENDISI",
+  "ELEKTRIK_MUHENDISI",
+  "JEOLOJI_MUHENDISI",
+  "JEOFIZIK_MUHENDISI",
+  "GEOTEKNIK_MUHENDISI",
+  "HARITA_MUHENDISI",
+  "PEYZAJ_MIMARI",
   "MIMAR",
   "SANTIYE_SEFI",
   "MUTEAHHIT",
@@ -237,7 +244,7 @@ function ProfessionalModal({
               <label className={labelCls}>Rol</label>
               <select
                 name="role"
-                defaultValue={initial?.role ?? "MUHENDIS"}
+                defaultValue={initial?.role ?? "INSAAT_MUHENDISI"}
                 className={inputCls}
               >
                 {ROLES.map((r) => (

@@ -145,7 +145,15 @@ export interface Activity {
 
 // Dış paydaşlar: birlikte çalışılan mühendis, mimar, şantiye şefi, müteahhit.
 export type ProfessionalRole =
-  | "MUHENDIS"
+  | "INSAAT_MUHENDISI"
+  | "MAKINA_MUHENDISI"
+  | "ELEKTRIK_MUHENDISI"
+  | "JEOLOJI_MUHENDISI"
+  | "JEOFIZIK_MUHENDISI"
+  | "GEOTEKNIK_MUHENDISI"
+  | "HARITA_MUHENDISI"
+  | "PEYZAJ_MIMARI"
+  | "MUHENDIS" // geriye dönük: eski genel "Mühendis" kayıtları
   | "MIMAR"
   | "SANTIYE_SEFI"
   | "MUTEAHHIT"
@@ -168,6 +176,14 @@ export interface Professional {
 }
 
 export const PROFESSIONAL_ROLE_LABELS: Record<ProfessionalRole, string> = {
+  INSAAT_MUHENDISI: "İnşaat Mühendisi",
+  MAKINA_MUHENDISI: "Makina Mühendisi",
+  ELEKTRIK_MUHENDISI: "Elektrik Mühendisi",
+  JEOLOJI_MUHENDISI: "Jeoloji Mühendisi",
+  JEOFIZIK_MUHENDISI: "Jeofizik Mühendisi",
+  GEOTEKNIK_MUHENDISI: "Geoteknik Mühendisi",
+  HARITA_MUHENDISI: "Harita Mühendisi",
+  PEYZAJ_MIMARI: "Peyzaj Mimarı",
   MUHENDIS: "Mühendis",
   MIMAR: "Mimar",
   SANTIYE_SEFI: "Şantiye Şefi",
@@ -175,8 +191,20 @@ export const PROFESSIONAL_ROLE_LABELS: Record<ProfessionalRole, string> = {
   DIGER: "Diğer",
 };
 
+const CHIP_BLUE =
+  "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300";
+
 export const PROFESSIONAL_ROLE_CHIP: Record<ProfessionalRole, string> = {
-  MUHENDIS: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  INSAAT_MUHENDISI: CHIP_BLUE,
+  MAKINA_MUHENDISI: CHIP_BLUE,
+  ELEKTRIK_MUHENDISI: CHIP_BLUE,
+  JEOLOJI_MUHENDISI: CHIP_BLUE,
+  JEOFIZIK_MUHENDISI: CHIP_BLUE,
+  GEOTEKNIK_MUHENDISI: CHIP_BLUE,
+  HARITA_MUHENDISI: CHIP_BLUE,
+  PEYZAJ_MIMARI:
+    "bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300",
+  MUHENDIS: CHIP_BLUE,
   MIMAR:
     "bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
   SANTIYE_SEFI:
