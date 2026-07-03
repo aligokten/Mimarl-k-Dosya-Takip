@@ -216,3 +216,12 @@ export function SendIcon({ className }: { className?: string }) {
     </Svg>
   );
 }
+
+export function ChatIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.8A8 8 0 1 1 21 12z" />
+      <path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01" />
+    </Svg>
+  );
+}

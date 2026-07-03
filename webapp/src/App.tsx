@@ -3,7 +3,9 @@ import clsx from "clsx";
 import { signOutUser, useApp } from "./data";
 import { toggleTheme, useTheme } from "./theme";
 import NotificationBell from "./components/NotificationBell";
+import ChatWidget from "./components/ChatWidget";
 import {
+  BuildingIcon,
   FileIcon,
   FolderIcon,
   GearIcon,
@@ -27,11 +29,13 @@ import TemplateUpload from "./pages/TemplateUpload";
 import Profile from "./pages/Profile";
 import Team from "./pages/Team";
 import Mevzuat from "./pages/Mevzuat";
+import Uzmanlar from "./pages/Uzmanlar";
 
 const NAV_ITEMS = [
   { to: "/", label: "Panel", end: true, icon: GridIcon },
   { to: "/projeler", label: "Projeler", end: false, icon: FolderIcon },
   { to: "/kisiler", label: "Kişiler", end: false, icon: UsersIcon },
+  { to: "/uzmanlar", label: "Uzmanlar", end: false, icon: BuildingIcon },
   { to: "/sablonlar", label: "Şablonlar", end: false, icon: FileIcon },
   { to: "/mevzuat", label: "Mevzuat", end: false, icon: ScaleIcon },
   { to: "/ayarlar", label: "Ayarlar", end: false, icon: GearIcon },
@@ -170,6 +174,7 @@ export default function App() {
               <Route path="/kisiler" element={<Contacts />} />
               <Route path="/kisiler/yeni" element={<ContactNew />} />
               <Route path="/kisiler/:id" element={<ContactDetail />} />
+              <Route path="/uzmanlar" element={<Uzmanlar />} />
               <Route path="/sablonlar" element={<Templates />} />
               <Route path="/sablonlar/yukle" element={<TemplateUpload />} />
               <Route path="/sablonlar/:id" element={<TemplateEditor />} />
@@ -182,6 +187,7 @@ export default function App() {
           </main>
         </div>
       </div>
+      <ChatWidget />
     </div>
   );
 }

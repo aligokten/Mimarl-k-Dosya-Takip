@@ -134,10 +134,78 @@ export type ActivityType =
 export interface Activity {
   id: string;
   projectId: string;
+  projectName?: string;
   type: ActivityType;
   text: string;
   byUid: string;
   byName: string;
+  at: string;
+}
+
+// Dış paydaşlar: birlikte çalışılan mühendis, mimar, şantiye şefi, müteahhit.
+export type ProfessionalRole =
+  | "MUHENDIS"
+  | "MIMAR"
+  | "SANTIYE_SEFI"
+  | "MUTEAHHIT"
+  | "DIGER";
+
+export interface Professional {
+  id: string;
+  name: string;
+  role: ProfessionalRole;
+  profession?: string; // ör. İnşaat Mühendisi, Elektrik Mühendisi
+  company?: string;
+  tcNo?: string;
+  odaSicilNo?: string; // meslek odası sicil no
+  buroTescilNo?: string; // büro tescil no
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export const PROFESSIONAL_ROLE_LABELS: Record<ProfessionalRole, string> = {
+  MUHENDIS: "Mühendis",
+  MIMAR: "Mimar",
+  SANTIYE_SEFI: "Şantiye Şefi",
+  MUTEAHHIT: "Müteahhit",
+  DIGER: "Diğer",
+};
+
+export const PROFESSIONAL_ROLE_CHIP: Record<ProfessionalRole, string> = {
+  MUHENDIS: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  MIMAR:
+    "bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+  SANTIYE_SEFI:
+    "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  MUTEAHHIT:
+    "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  DIGER: "bg-slate-100 text-slate-600 dark:bg-zinc-700 dark:text-slate-300",
+};
+
+// Mevzuat: yöneticinin yüklediği PDF mevzuat belgeleri (Firebase Storage'da).
+export interface MevzuatDoc {
+  id: string;
+  title: string;
+  category?: string;
+  fileUrl: string;
+  storagePath: string;
+  createdAt: string;
+  byName?: string;
+}
+
+// Sohbet mesajı (kalıcı değil; ofis üyeleri arası anlık yazışma).
+export interface ChatMessage {
+  id: string;
+  fromUid: string;
+  fromName: string;
+  text?: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileKind?: "image" | "pdf" | "file";
+  storagePath?: string;
   at: string;
 }
 
