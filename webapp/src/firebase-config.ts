@@ -16,10 +16,15 @@ export interface FirebaseConfig {
   appId: string;
 }
 
-// Kullanıcı kendi projesini kurup değerleri verdiğinde burası doldurulur.
+// Ofisin Firebase projesi derlemeye gömülüdür: böylece ilk kez girenler
+// kurulum ekranı görmeden doğrudan giriş ekranına düşer. Bu değerler gizli
+// DEĞİLDİR (Firebase web anahtarları herkese açıktır); güvenlik Firestore
+// kuralları ve yetkili alan adlarıyla sağlanır.
 export const BUILTIN_FIREBASE_CONFIG: Partial<FirebaseConfig> = {
-  // apiKey: "...",
-  // authDomain: "....firebaseapp.com",
-  // projectId: "...",
-  // appId: "...",
+  apiKey: "AIzaSyCF9Q1W-TlYfsoOxtF7lunmb1jrYOYRE5k",
+  authDomain: "artful-guru-474421-f9.firebaseapp.com",
+  projectId: "artful-guru-474421-f9",
+  storageBucket: "artful-guru-474421-f9.firebasestorage.app",
+  messagingSenderId: "370120433599",
+  appId: "1:370120433599:web:de08e01b07dac5ad34cb0a",
 };
