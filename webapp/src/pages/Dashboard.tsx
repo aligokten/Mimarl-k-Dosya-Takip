@@ -24,6 +24,7 @@ import {
   FolderIcon,
 } from "../components/icons";
 import type { AppState } from "../data";
+import { CONSTRUCTION_TERMS } from "../terms";
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -31,6 +32,41 @@ function greeting(): string {
   if (hour < 12) return "Günaydın";
   if (hour < 18) return "İyi günler";
   return "İyi akşamlar";
+}
+
+// Her sayfa yenilemesinde rastgele bir inşaat/mimarlık terimi ve açıklaması
+// içeren kayan yazı şeridi.
+function TermTicker() {
+  const t = useMemo(
+    () =>
+      CONSTRUCTION_TERMS[
+        Math.floor(Math.random() * CONSTRUCTION_TERMS.length)
+      ],
+    []
+  );
+  const Item = (
+    <span className="pr-16 text-sm text-slate-600 dark:text-slate-300">
+      <strong className="font-semibold text-slate-900 dark:text-white">
+        {t.term}
+      </strong>{" "}
+      — {t.def}
+    </span>
+  );
+  return (
+    <div className={`${cardCls} overflow-hidden`}>
+      <div className="flex items-center gap-3 px-4 py-2.5">
+        <span className="shrink-0 rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
+          Terim
+        </span>
+        <div className="relative min-w-0 flex-1 overflow-hidden">
+          <div className="flex w-max animate-marquee whitespace-nowrap">
+            {Item}
+            <span aria-hidden>{Item}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const STATUS_SEGMENTS = [
@@ -291,6 +327,8 @@ export default function Dashboard() {
           Proje Paneli
         </h1>
       </div>
+
+      <TermTicker />
 
       {!drive.connected && (
         <div className={`${cardCls} flex flex-wrap items-center gap-3 p-4`}>

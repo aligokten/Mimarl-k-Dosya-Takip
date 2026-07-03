@@ -23,9 +23,26 @@ async function fileToHtml(file: File): Promise<string> {
   const name = file.name.toLowerCase();
   if (name.endsWith(".docx")) {
     const mammoth = await import("mammoth/mammoth.browser");
-    const result = await mammoth.convertToHtml({
-      arrayBuffer: await file.arrayBuffer(),
-    });
+    // Tablolar, görseller (base64) ve başlıklar korunur; altı çizili/üstü
+    // çizili gibi biçimler de aktarılır. Sayfa/tablo yapısı bozulmaz.
+    // (Tür tanımı tek argüman bildiriyor; options çalışma zamanında geçerli.)
+    const convert = mammoth.convertToHtml as unknown as (
+      input: { arrayBuffer: ArrayBuffer },
+      options?: { styleMap?: string[]; includeDefaultStyleMap?: boolean }
+    ) => Promise<{ value: string }>;
+    const result = await convert(
+      { arrayBuffer: await file.arrayBuffer() },
+      {
+        styleMap: [
+          "u => u",
+          "strike => s",
+          "p[style-name='Title'] => h1:fresh",
+          "p[style-name='Heading 1'] => h1:fresh",
+          "p[style-name='Heading 2'] => h2:fresh",
+        ],
+        includeDefaultStyleMap: true,
+      }
+    );
     return result.value;
   }
   if (name.endsWith(".html") || name.endsWith(".htm")) {
@@ -170,7 +187,14 @@ export default function TemplateUpload() {
           [BELEDİYE] · [MÜŞTERİ ADI] · [MÜŞTERİ ADRESİ] · [MÜŞTERİ TELEFON] ·
           [ARSA SAHİBİ ADI] · [ARSA SAHİBİ TC] · [ARSA SAHİBİ ADRESİ] ·
           [MÜTEAHHİT ADI] · [MÜTEAHHİT ADRESİ] · [MÜTEAHHİT TELEFON] ·
-          [MÜTEAHHİT VERGİ NO] · [BAŞVURAN ADI] · [BAŞVURAN TC] · [TARİH]
+          [MÜTEAHHİT VERGİ NO] · [BAŞVURAN ADI] · [BAŞVURAN TC] · [TARİH] ·
+          [VEKİL ADI] · [VEKİL ÜNVAN] · [VEKİL TELEFON] · [VEKİL E-POSTA] ·
+          [İMZALAYAN ADI]
+        </p>
+        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+          İmza kısmına <strong>[VEKİL ADI]</strong> / <strong>[İMZALAYAN ADI]</strong>
+          yazın; düzenleme sayfasında &quot;Vekil (imzalayan üye) seç&quot;
+          ile ofis üyelerinden biri seçilerek otomatik doldurulur.
         </p>
       </div>
     </div>

@@ -14,6 +14,7 @@ import {
 import { uploadToDrive, useDrive } from "../drive";
 import {
   DOCUMENT_KIND_LABELS,
+  PROFESSIONAL_ROLE_LABELS,
   PROJECT_STATUS_LABELS,
   type Activity,
   type DocumentKind,
@@ -147,6 +148,7 @@ function GeneralTab({ project }: { project: Project }) {
   return (
     <div className="space-y-6">
       <AssigneesCard project={project} />
+      <AuthorsCard project={project} />
       <div className={`${cardCls} p-6`}>
         <ProjectForm
           initialValues={project}
@@ -225,6 +227,70 @@ function AssigneesCard({ project }: { project: Project }) {
         {members.length === 0 && (
           <p className="text-xs text-slate-400 dark:text-slate-500">
             Ekipte kimse yok.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AuthorsCard({ project }: { project: Project }) {
+  const db = useApp();
+  const selected = new Set(project.authorIds ?? []);
+  const pros = [...db.professionals].sort((a, b) =>
+    a.name.localeCompare(b.name, "tr")
+  );
+
+  return (
+    <div className={`${cardCls} p-6`}>
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+        Müellifler
+      </h2>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        Bu projeye müellif olarak eklenecek uzmanları seçin. (Uzmanlar
+        sekmesinden mühendis/mimar ekleyebilirsiniz.)
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {pros.map((p) => {
+          const isOn = selected.has(p.id);
+          const toggle = async () => {
+            const next = new Set(selected);
+            if (isOn) next.delete(p.id);
+            else next.add(p.id);
+            await patchProject(
+              project.id,
+              { authorIds: [...next] },
+              isOn
+                ? undefined
+                : {
+                    type: "PROJE_GUNCELLENDI",
+                    text: `${p.name} projeye müellif olarak eklendi`,
+                  }
+            );
+          };
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={toggle}
+              className={clsx(
+                "rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                isOn
+                  ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
+                  : "border-slate-200 bg-white text-slate-600 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-300"
+              )}
+            >
+              {p.name}
+              <span className="ml-1 opacity-60">
+                · {PROFESSIONAL_ROLE_LABELS[p.role]}
+              </span>
+              {isOn && " ✓"}
+            </button>
+          );
+        })}
+        {pros.length === 0 && (
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            Henüz uzman eklenmemiş. &quot;Uzmanlar&quot; sekmesinden ekleyin.
           </p>
         )}
       </div>
