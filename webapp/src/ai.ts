@@ -1,16 +1,13 @@
 // AI Asistan (imar mevzuatı) — statik/sunucusuz uygulama olduğundan
 // tarayıcıdan doğrudan Google Gemini API'sine (ücretsiz kotalı, CORS destekli)
-// çağrı yapılır. Kullanıcı kendi API anahtarını Ayarlar'dan girer; anahtar
-// yalnızca tarayıcıda (localStorage) saklanır.
+// çağrı yapılır. Anahtar ve model ofis genelinde (Firestore) yönetici
+// tarafından tanımlanır; tüm çalışanlar aynı ayarı otomatik kullanır.
 import { useSyncExternalStore } from "react";
 import { mevzuatContext } from "./mevzuat";
 
-const KEY_STORAGE = "mimarlik-gemini-key";
-const MODEL_STORAGE = "mimarlik-gemini-model";
-
 // Ücretsiz katmanda kullanılabilen modeller. Biri kotayı doldurursa
-// kullanıcı Ayarlar'dan başka bir modele geçebilir. "-lite" ve "flash"
-// modelleri en yüksek ücretsiz günlük kotaya sahiptir.
+// yönetici başka bir modele geçebilir. "-lite" ve "flash" modelleri en
+// yüksek ücretsiz günlük kotaya sahiptir.
 export const AI_MODELS: { id: string; label: string }[] = [
   { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash-Lite (en yüksek ücretsiz kota)" },
   { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash (dengeli)" },
@@ -19,14 +16,32 @@ export const AI_MODELS: { id: string; label: string }[] = [
 ];
 const DEFAULT_MODEL = "gemini-2.0-flash-lite";
 
-export function getAiModel(): string {
-  return localStorage.getItem(MODEL_STORAGE) || DEFAULT_MODEL;
+// ---- Ofis genelinde paylaşılan ayar (React'e yansıtılır) ----
+
+let sharedKey = "";
+let sharedModel = "";
+const listeners = new Set<() => void>();
+function emit() {
+  listeners.forEach((l) => l());
 }
 
-export function setAiModel(model: string) {
-  if (model) localStorage.setItem(MODEL_STORAGE, model);
-  else localStorage.removeItem(MODEL_STORAGE);
-  emit();
+// data.ts, ofis dokümanı yüklendiğinde çağırır.
+export function applySharedAiConfig(key?: string, model?: string) {
+  const k = (key ?? "").trim();
+  const m = (model ?? "").trim();
+  if (k !== sharedKey || m !== sharedModel) {
+    sharedKey = k;
+    sharedModel = m;
+    emit();
+  }
+}
+
+export function getAiKey(): string {
+  return sharedKey;
+}
+
+export function getAiModel(): string {
+  return sharedModel || DEFAULT_MODEL;
 }
 
 const ENDPOINT = (key: string) =>
@@ -37,24 +52,6 @@ export interface ChatMessage {
   text: string;
 }
 
-// ---- Anahtar durumu (React'e yansıtılır) ----
-
-const listeners = new Set<() => void>();
-function emit() {
-  listeners.forEach((l) => l());
-}
-
-export function getAiKey(): string {
-  return localStorage.getItem(KEY_STORAGE) ?? "";
-}
-
-export function setAiKey(key: string) {
-  const trimmed = key.trim();
-  if (trimmed) localStorage.setItem(KEY_STORAGE, trimmed);
-  else localStorage.removeItem(KEY_STORAGE);
-  emit();
-}
-
 export function useAiConfigured(): boolean {
   return useSyncExternalStore(
     (fn) => {
@@ -63,7 +60,7 @@ export function useAiConfigured(): boolean {
         listeners.delete(fn);
       };
     },
-    () => !!localStorage.getItem(KEY_STORAGE)
+    () => !!sharedKey
   );
 }
 

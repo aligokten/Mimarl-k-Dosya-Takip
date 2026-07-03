@@ -91,14 +91,30 @@ export interface Member {
   phone?: string;
   title?: string;
   role: MemberRole;
+  mustChangePassword?: boolean;
+  createdAt: string;
+}
+
+// Yönetici tarafından e-posta ile eklenen, henüz ilk girişini yapmamış
+// çalışan. tempPassword ilk hesabı oluşturmak için kullanılır; ilk girişte
+// çalışan kendi şifresini belirler.
+export interface Invite {
+  email: string;
+  tempPassword: string;
+  role: MemberRole;
+  displayName?: string;
   createdAt: string;
 }
 
 export interface Office {
   name: string;
   ownerUid: string;
-  inviteCode: string;
+  inviteCode?: string;
   createdAt: string;
+  // Ofis genelinde paylaşılan ayarlar (yalnızca yönetici düzenler).
+  geminiKey?: string;
+  geminiModel?: string;
+  driveClientId?: string;
 }
 
 export type ActivityType =

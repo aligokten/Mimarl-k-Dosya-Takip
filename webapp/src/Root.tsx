@@ -3,7 +3,12 @@ import { isConfigured } from "./firebase";
 import { initAuth, useApp } from "./data";
 import App from "./App";
 import FirebaseSetup from "./pages/FirebaseSetup";
-import { Login, CreateOffice, JoinOffice } from "./pages/Auth";
+import {
+  Login,
+  CreateOffice,
+  NotMember,
+  ChangePassword,
+} from "./pages/Auth";
 
 let authStarted = false;
 
@@ -36,7 +41,12 @@ export default function Root() {
   }
 
   if (!app.me) {
-    return <JoinOffice />;
+    return <NotMember />;
+  }
+
+  // İlk girişte geçici şifreyi değiştirmeden devam edilemez.
+  if (app.me.mustChangePassword) {
+    return <ChangePassword />;
   }
 
   return <App />;
