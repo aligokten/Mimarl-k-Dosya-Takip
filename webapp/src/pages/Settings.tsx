@@ -9,7 +9,6 @@ import {
   useApp,
 } from "../data";
 import { connectDrive, disconnectDrive, useDrive } from "../drive";
-import { AI_MODELS, getAiModel, useAiConfigured } from "../ai";
 import type { ServiceType } from "../types";
 import { cardCls, inputCls, primaryBtnCls, secondaryBtnCls, str } from "../ui";
 import PageTitle from "../components/PageTitle";
@@ -44,140 +43,9 @@ export default function Settings() {
         </section>
       )}
 
-      <AiSection />
       <DriveSection />
       <ServiceTypesSection />
     </div>
-  );
-}
-
-function AiSection() {
-  const app = useApp();
-  const isAdmin = app.me?.role === "ADMIN";
-  const configured = useAiConfigured();
-  const office = app.office;
-  const [keyInput, setKeyInput] = useState(office?.geminiKey ?? "");
-  const [model, setModel] = useState(office?.geminiModel || getAiModel());
-  const [message, setMessage] = useState<string | null>(null);
-
-  const statusChip = configured ? (
-    <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 dark:border-green-500/30 dark:bg-green-500/15 dark:text-green-300">
-      AI Asistan etkin
-    </span>
-  ) : (
-    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-400">
-      Henüz anahtar girilmedi
-    </span>
-  );
-
-  return (
-    <section className={`${cardCls} p-6`}>
-      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
-        AI Asistan (İmar Mevzuatı)
-      </h2>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Paneldeki İmar Asistanı, sorularınızı imar mevzuatından yararlanarak
-        yanıtlar. Anahtar ofis genelinde geçerlidir; tüm çalışanlar otomatik
-        kullanır.
-      </p>
-
-      {!isAdmin ? (
-        <div className="mt-4 space-y-2">
-          <div className="rounded-lg bg-slate-50 p-4 text-sm dark:bg-zinc-800/60">
-            <p className="text-slate-600 dark:text-slate-300">
-              Anahtar <strong>yönetici tarafından tanımlıdır</strong> ve
-              değiştirilemez.
-            </p>
-            <p className="mt-2 font-mono text-slate-500 dark:text-slate-400">
-              Anahtar: {office?.geminiKey ? MASK : "Tanımlı değil"}
-            </p>
-            <p className="font-mono text-slate-500 dark:text-slate-400">
-              Model: {office?.geminiModel || getAiModel()}
-            </p>
-          </div>
-          {statusChip}
-        </div>
-      ) : (
-        <>
-          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-            <p className="font-semibold">Anahtar nasıl alınır (ücretsiz):</p>
-            <ol className="mt-2 list-decimal space-y-1 pl-5">
-              <li>
-                <a
-                  href="https://aistudio.google.com/app/apikey"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline"
-                >
-                  aistudio.google.com/app/apikey
-                </a>{" "}
-                adresine Google hesabınızla girin.
-              </li>
-              <li>
-                <strong>Create API key</strong> deyin ve anahtarı kopyalayın.
-              </li>
-              <li>Anahtarı aşağıya yapıştırıp kaydedin (çalışanlara yansır).</li>
-            </ol>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <input
-              value={keyInput}
-              onChange={(e) => setKeyInput(e.target.value)}
-              type="password"
-              placeholder="Gemini API anahtarı (AIza...)"
-              className={`${inputCls} mt-0 flex-1`}
-            />
-            <button
-              type="button"
-              onClick={() => {
-                updateOfficeConfig({ geminiKey: keyInput.trim() });
-                setMessage(
-                  keyInput.trim()
-                    ? "AI anahtarı kaydedildi (tüm çalışanlar için geçerli)."
-                    : "AI anahtarı silindi."
-                );
-              }}
-              className={secondaryBtnCls}
-            >
-              Kaydet
-            </button>
-          </div>
-
-          <div className="mt-4">
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">
-              Model (kota dolarsa değiştirin)
-            </label>
-            <select
-              value={model}
-              onChange={(e) => {
-                setModel(e.target.value);
-                updateOfficeConfig({ geminiModel: e.target.value });
-                setMessage(`Model "${e.target.value}" olarak ayarlandı.`);
-              }}
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-100"
-            >
-              {AI_MODELS.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-              Ücretsiz katmanın günlük/dakikalık istek sınırı vardır. Bir model
-              &quot;kota doldu&quot; derse buradan başka bir modele geçebilirsiniz.
-            </p>
-          </div>
-
-          <div className="mt-3">{statusChip}</div>
-          {message && (
-            <p className="mt-3 text-sm text-green-700 dark:text-green-300">
-              {message}
-            </p>
-          )}
-        </>
-      )}
-    </section>
   );
 }
 

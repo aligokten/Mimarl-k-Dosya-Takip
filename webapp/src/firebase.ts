@@ -11,6 +11,11 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import {
+  getStorage,
+  connectStorageEmulator,
+  type FirebaseStorage,
+} from "firebase/storage";
+import {
   BUILTIN_FIREBASE_CONFIG,
   type FirebaseConfig,
 } from "./firebase-config";
@@ -58,6 +63,7 @@ export function useEmulator(): boolean {
 let app: FirebaseApp | null = null;
 let authInstance: Auth | null = null;
 let dbInstance: Firestore | null = null;
+let storageInstance: FirebaseStorage | null = null;
 
 export const googleProvider = new GoogleAuthProvider();
 
@@ -80,11 +86,13 @@ function ensureApp(): FirebaseApp {
   // ignoreUndefinedProperties: iç içe (ör. documents[].url) undefined alanlar
   // Firestore yazımını reddetmesin; tanımsız alanlar sessizce atlanır.
   dbInstance = initializeFirestore(app, { ignoreUndefinedProperties: true });
+  storageInstance = getStorage(app);
   if (emulator) {
     connectAuthEmulator(authInstance, "http://127.0.0.1:9099", {
       disableWarnings: true,
     });
     connectFirestoreEmulator(dbInstance, "127.0.0.1", 8085);
+    connectStorageEmulator(storageInstance, "127.0.0.1", 9199);
   }
   return app;
 }
@@ -97,4 +105,9 @@ export function auth(): Auth {
 export function db(): Firestore {
   ensureApp();
   return dbInstance!;
+}
+
+export function storage(): FirebaseStorage {
+  ensureApp();
+  return storageInstance!;
 }

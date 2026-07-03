@@ -58,6 +58,16 @@ service cloud.firestore {
     match /contacts/{id} { allow read, write: if isMember(); }
     match /serviceTypes/{id} { allow read, write: if isMember(); }
     match /docTemplates/{id} { allow read, write: if isMember(); }
+    match /professionals/{id} { allow read, write: if isMember(); }
+    // Ofis geneli aktivite akışı ("Son İşlemler")
+    match /activity/{id} { allow read, write: if isMember(); }
+    // Ofis içi sohbet (kalıcı değil; her üye yazabilir/temizleyebilir)
+    match /chat/{id} { allow read, write: if isMember(); }
+    // Mevzuat PDF kayıtları: herkes görür, yalnızca yönetici ekler/siler.
+    match /mevzuat/{id} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
 
     match /projects/{id} {
       allow read, write: if isMember();

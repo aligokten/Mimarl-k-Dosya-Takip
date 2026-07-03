@@ -4,6 +4,7 @@ import {
   addDays,
   addMonths,
   format,
+  formatDistanceToNow,
   isSameDay,
   isSameMonth,
   startOfMonth,
@@ -23,7 +24,6 @@ import {
   FolderIcon,
 } from "../components/icons";
 import type { AppState } from "../data";
-import AiAssistant from "../components/AiAssistant";
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -256,9 +256,7 @@ export default function Dashboard() {
     )
     .slice(0, 4);
 
-  const recentProjects = [...db.projects]
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .slice(0, 5);
+  const recentActivity = db.activityFeed.slice(0, 5);
 
   const serviceDistribution = db.serviceTypes
     .map((st) => ({
@@ -293,8 +291,6 @@ export default function Dashboard() {
           Proje Paneli
         </h1>
       </div>
-
-      <AiAssistant />
 
       {!drive.connected && (
         <div className={`${cardCls} flex flex-wrap items-center gap-3 p-4`}>
@@ -465,45 +461,43 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Son Projeler */}
+        {/* Son İşlemler */}
         <div className={`${cardCls} p-5`}>
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              Son Projeler
+              Son İşlemler
             </h2>
-            <Link
-              to="/projeler"
-              className="text-xs font-medium text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300"
-            >
-              Tümünü Gör
-            </Link>
           </div>
-          <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-700">
-            {recentProjects.length === 0 && (
+          <ul className="mt-3 divide-y divide-slate-100 dark:divide-zinc-700">
+            {recentActivity.length === 0 && (
               <li className="py-4 text-sm text-slate-500 dark:text-slate-400">
-                Henüz proje eklenmemiş.
+                Henüz işlem yok.
               </li>
             )}
-            {recentProjects.map((project) => {
-              const client = db.contacts.find(
-                (c) => c.id === project.clientId
-              );
-              return (
-                <li key={project.id}>
-                  <Link
-                    to={`/projeler/${project.id}`}
-                    className="block rounded-xl px-2 py-2.5 hover:bg-slate-50 dark:hover:bg-zinc-700/60"
-                  >
-                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
-                      {project.name}
-                    </p>
-                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                      {client?.name ?? "-"}
-                    </p>
-                  </Link>
-                </li>
-              );
-            })}
+            {recentActivity.map((act) => (
+              <li key={act.id}>
+                <Link
+                  to={`/projeler/${act.projectId}`}
+                  className="block rounded-xl px-2 py-2.5 hover:bg-slate-50 dark:hover:bg-zinc-700/60"
+                >
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                    {act.text}
+                  </p>
+                  <p className="mt-0.5 flex flex-wrap gap-x-2 truncate text-xs text-slate-500 dark:text-slate-400">
+                    {act.projectName && (
+                      <span className="font-medium">{act.projectName}</span>
+                    )}
+                    <span>
+                      {act.byName} ·{" "}
+                      {formatDistanceToNow(new Date(act.at), {
+                        addSuffix: true,
+                        locale: tr,
+                      })}
+                    </span>
+                  </p>
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
       </div>

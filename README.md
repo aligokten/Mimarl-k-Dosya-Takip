@@ -56,16 +56,19 @@ Uygulamanın çalışması için ücretsiz bir Firebase projesi bağlamanız ger
    dosyasının içeriğini yapıştırın → **Publish**. (Bu kurallar; yalnızca
    ofis üyelerinin veriye erişmesini, bildirimlerin yalnızca sahibi
    tarafından okunmasını ve ofis sahibinin değiştirilememesini sağlar.)
-5. **Proje Ayarları (⚙️) → General → Your apps → Web (`</>`)** ile bir web
+5. **Build → Storage → Get started** ile Cloud Storage'ı etkinleştirin, sonra
+   **Storage → Rules** sekmesine bu depodaki [`webapp/storage.rules`](webapp/storage.rules)
+   içeriğini yapıştırıp **Publish** deyin. (Mevzuat PDF'leri ve sohbet
+   dosyaları burada saklanır. Storage için Blaze planı gerekebilir; birkaç
+   PDF ve dosya ücretsiz kotayı aşmaz.)
+6. **Proje Ayarları (⚙️) → General → Your apps → Web (`</>`)** ile bir web
    uygulaması ekleyin; size verilen `firebaseConfig` değerlerini kopyalayın.
-6. **Authentication → Settings → Authorized domains** listesine
+7. **Authentication → Settings → Authorized domains** listesine
    `aligokten.github.io` alan adını ekleyin (Google girişinin GitHub Pages
    üzerinde çalışması için gerekir).
-7. Yayınlanmış uygulamayı açın; ilk açılışta çıkan **Firebase Kurulumu**
-   ekranına 5. adımdaki config değerlerini yapıştırıp kaydedin. (Config
-   gizli değildir; isterseniz `webapp/src/firebase-config.ts` içindeki
-   `BUILTIN_FIREBASE_CONFIG`'e yazıp derlemeye gömebilirsiniz — o zaman
-   kurulum ekranı hiç görünmez.)
+8. Config değerleri `webapp/src/firebase-config.ts` içindeki
+   `BUILTIN_FIREBASE_CONFIG`'e gömülüdür; kullanıcılar ilk açılışta doğrudan
+   giriş ekranını görür. (Config gizli değildir.)
 
 > Firebase config değerleri **gizli değildir**; güvenlik, yukarıdaki
 > Firestore kuralları ve Google girişi ile sağlanır.

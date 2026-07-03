@@ -17,6 +17,7 @@ import {
   onSnapshot,
   query,
   where,
+  limit,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -26,19 +27,27 @@ import {
   serverTimestamp,
   type Unsubscribe,
 } from "firebase/firestore";
-import { auth, db, googleProvider } from "./firebase";
-import { applySharedAiConfig } from "./ai";
+import {
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
+import { auth, db, storage, googleProvider } from "./firebase";
 import { applySharedDriveClientId } from "./drive";
 import type {
   Activity,
   ActivityType,
   AppNotification,
+  ChatMessage,
   Contact,
   CustomTemplate,
   Invite,
   Member,
   MemberRole,
+  MevzuatDoc,
   Office,
+  Professional,
   Project,
   ServiceType,
 } from "./types";
@@ -66,6 +75,10 @@ export interface AppState {
   docTemplates: CustomTemplate[];
   projects: Project[];
   notifications: AppNotification[];
+  activityFeed: Activity[];
+  professionals: Professional[];
+  mevzuat: MevzuatDoc[];
+  chat: ChatMessage[];
 }
 
 let state: AppState = {
@@ -81,6 +94,10 @@ let state: AppState = {
   docTemplates: [],
   projects: [],
   notifications: [],
+  activityFeed: [],
+  professionals: [],
+  mevzuat: [],
+  chat: [],
 };
 
 const listeners = new Set<() => void>();
@@ -117,9 +134,8 @@ function stripId<T>(d: { id: string; data: () => unknown }): T {
   return { id: d.id, ...(d.data() as object) } as T;
 }
 
-// Ofis genelinde paylaşılan AI/Drive ayarlarını ilgili modüllere yansıtır.
+// Ofis genelinde paylaşılan Drive ayarını ilgili modüle yansıtır.
 function applyOfficeSharedConfig(office: Office | null) {
-  applySharedAiConfig(office?.geminiKey, office?.geminiModel);
   applySharedDriveClientId(office?.driveClientId);
 }
 
@@ -189,6 +205,39 @@ async function startForMember(fbUser: FbUser) {
       }
     )
   );
+  // Son işlemler (ofis geneli aktivite akışı)
+  dataUnsubs.push(
+    onSnapshot(
+      query(collection(db(), "activity"), orderBy("at", "desc"), limit(30)),
+      (snap) => set({ activityFeed: snap.docs.map((d) => stripId<Activity>(d)) }),
+      () => set({ activityFeed: [] })
+    )
+  );
+  // Dış paydaşlar (uzmanlar)
+  dataUnsubs.push(
+    onSnapshot(collection(db(), "professionals"), (snap) => {
+      set({ professionals: snap.docs.map((d) => stripId<Professional>(d)) });
+    })
+  );
+  // Mevzuat PDF'leri
+  dataUnsubs.push(
+    onSnapshot(collection(db(), "mevzuat"), (snap) => {
+      set({ mevzuat: snap.docs.map((d) => stripId<MevzuatDoc>(d)) });
+    })
+  );
+  // Ofis içi sohbet (son 100 mesaj)
+  dataUnsubs.push(
+    onSnapshot(
+      query(collection(db(), "chat"), orderBy("at", "desc"), limit(100)),
+      (snap) => {
+        const list = snap.docs
+          .map((d) => stripId<ChatMessage>(d))
+          .sort((a, b) => a.at.localeCompare(b.at));
+        set({ chat: list });
+      },
+      () => set({ chat: [] })
+    )
+  );
 }
 
 export function initAuth() {
@@ -209,6 +258,10 @@ export function initAuth() {
         docTemplates: [],
         projects: [],
         notifications: [],
+        activityFeed: [],
+        professionals: [],
+        mevzuat: [],
+        chat: [],
       });
       return;
     }
@@ -452,11 +505,118 @@ export async function deleteInvite(emailRaw: string) {
 // ---- Ofis paylaşımlı ayarları (yalnızca yönetici) ----
 
 export async function updateOfficeConfig(patch: {
-  geminiKey?: string;
-  geminiModel?: string;
   driveClientId?: string;
 }) {
   await updateDoc(doc(db(), "office", "main"), patch);
+}
+
+// ---- Dış paydaşlar (uzmanlar) ----
+
+export async function addProfessional(
+  data: Omit<Professional, "id" | "createdAt">
+) {
+  const id = uid();
+  await setDoc(
+    doc(db(), "professionals", id),
+    stripUndefined({ ...data, createdAt: now() })
+  );
+  return id;
+}
+export async function updateProfessional(
+  id: string,
+  data: Partial<Omit<Professional, "id" | "createdAt">>
+) {
+  await setDoc(doc(db(), "professionals", id), stripUndefined(data), {
+    merge: true,
+  });
+}
+export async function deleteProfessional(id: string) {
+  await deleteDoc(doc(db(), "professionals", id));
+}
+
+// ---- Mevzuat (PDF yükleme; Firebase Storage) ----
+
+export async function addMevzuat(
+  file: File,
+  title: string,
+  category?: string
+): Promise<string> {
+  const id = uid();
+  const path = `mevzuat/${id}-${file.name}`;
+  const r = storageRef(storage(), path);
+  await uploadBytes(r, file, { contentType: file.type || "application/pdf" });
+  const fileUrl = await getDownloadURL(r);
+  await setDoc(
+    doc(db(), "mevzuat", id),
+    stripUndefined({
+      title: title.trim() || file.name,
+      category: category?.trim() || undefined,
+      fileUrl,
+      storagePath: path,
+      byName: currentName().name,
+      createdAt: now(),
+    })
+  );
+  return id;
+}
+
+export async function deleteMevzuat(item: MevzuatDoc) {
+  await deleteObject(storageRef(storage(), item.storagePath)).catch(() => {});
+  await deleteDoc(doc(db(), "mevzuat", item.id));
+}
+
+// ---- Ofis içi sohbet ----
+
+export async function sendChatMessage(text: string) {
+  const t = text.trim();
+  if (!t) return;
+  const who = currentName();
+  await addDoc(collection(db(), "chat"), {
+    fromUid: who.uid,
+    fromName: who.name,
+    text: t,
+    at: now(),
+    ts: serverTimestamp(),
+  });
+}
+
+export async function sendChatFile(file: File) {
+  const who = currentName();
+  const id = uid();
+  const path = `chat/${id}-${file.name}`;
+  const r = storageRef(storage(), path);
+  await uploadBytes(r, file, {
+    contentType: file.type || "application/octet-stream",
+  });
+  const fileUrl = await getDownloadURL(r);
+  const kind = file.type.startsWith("image/")
+    ? "image"
+    : file.type === "application/pdf"
+      ? "pdf"
+      : "file";
+  await addDoc(collection(db(), "chat"), {
+    fromUid: who.uid,
+    fromName: who.name,
+    fileUrl,
+    fileName: file.name,
+    fileKind: kind,
+    storagePath: path,
+    at: now(),
+    ts: serverTimestamp(),
+  });
+}
+
+// Sohbeti temizle (mesajları ve yüklenen dosyaları siler).
+export async function clearChat() {
+  const snap = await getDocs(collection(db(), "chat"));
+  await Promise.all(
+    snap.docs.map(async (d) => {
+      const path = (d.data() as ChatMessage).storagePath;
+      if (path)
+        await deleteObject(storageRef(storage(), path)).catch(() => {});
+      await deleteDoc(d.ref);
+    })
+  );
 }
 
 // ---- Üye / profil ----
@@ -507,15 +667,27 @@ export async function addActivity(
   text: string
 ) {
   const who = currentName();
-  await addDoc(collection(db(), "projects", projectId, "activities"), {
+  const at = now();
+  const projectName = state.projects.find((p) => p.id === projectId)?.name;
+  const payload = {
     projectId,
+    projectName,
     type,
     text,
     byUid: who.uid,
     byName: who.name,
-    at: now(),
+    at,
+  };
+  // Projeye ait aktivite geçmişi
+  await addDoc(collection(db(), "projects", projectId, "activities"), {
+    ...stripUndefined(payload),
     ts: serverTimestamp(),
   });
+  // Panel "Son İşlemler" için ofis geneli akış (hata olsa da ana akışı kesme)
+  await addDoc(
+    collection(db(), "activity"),
+    stripUndefined({ ...payload, ts: serverTimestamp() })
+  ).catch(() => {});
 }
 
 async function notifyMembers(project: Project, text: string) {

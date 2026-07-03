@@ -1,0 +1,17 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+    // Mevzuat PDF'leri ve sohbet dosyaları: girişli kullanıcılar okuyup
+    // yükleyebilir. (Yönetici-yalnızca gibi ince kontroller uygulama
+    // tarafında yapılır; Storage kuralları Firestore üyeliğini göremez.)
+    match /mevzuat/{allPaths=**} {
+      allow read, write: if signedIn();
+    }
+    match /chat/{allPaths=**} {
+      allow read, write: if signedIn();
+    }
+  }
+}

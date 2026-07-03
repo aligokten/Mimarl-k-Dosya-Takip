@@ -1,24 +1,30 @@
-import { useState } from "react";
-import { MEVZUAT, type MevzuatItem } from "../mevzuat";
-import { cardCls } from "../ui";
+import { useMemo, useState } from "react";
+import { addMevzuat, deleteMevzuat, useApp } from "../data";
+import type { MevzuatDoc } from "../types";
+import { cardCls, inputCls, labelCls, primaryBtnCls, secondaryBtnCls } from "../ui";
 import PageTitle from "../components/PageTitle";
-import { ScaleIcon, SearchIcon } from "../components/icons";
+import DeleteButton from "../components/DeleteButton";
+import { ScaleIcon, SearchIcon, FileIcon } from "../components/icons";
 
 export default function Mevzuat() {
+  const app = useApp();
+  const isAdmin = app.me?.role === "ADMIN";
   const [query, setQuery] = useState("");
-  const q = query.trim().toLocaleLowerCase("tr");
+  const [viewing, setViewing] = useState<MevzuatDoc | null>(null);
 
-  const groups = MEVZUAT.map((g) => ({
-    ...g,
-    items: g.items.filter((it) => {
-      if (!q) return true;
-      return (
-        it.title.toLocaleLowerCase("tr").includes(q) ||
-        it.summary.toLocaleLowerCase("tr").includes(q) ||
-        it.keyPoints.some((k) => k.toLocaleLowerCase("tr").includes(q))
-      );
-    }),
-  })).filter((g) => g.items.length > 0);
+  const q = query.trim().toLocaleLowerCase("tr");
+  const items = useMemo(
+    () =>
+      [...app.mevzuat]
+        .filter(
+          (m) =>
+            !q ||
+            m.title.toLocaleLowerCase("tr").includes(q) ||
+            (m.category ?? "").toLocaleLowerCase("tr").includes(q)
+        )
+        .sort((a, b) => a.title.localeCompare(b.title, "tr")),
+    [app.mevzuat, q]
+  );
 
   return (
     <div className="space-y-6">
@@ -26,7 +32,7 @@ export default function Mevzuat() {
         <PageTitle
           icon={<ScaleIcon className="h-5 w-5" />}
           title="Mevzuat"
-          subtitle="İmar Kanunu ve ilgili yönetmeliklere hızlı başvuru."
+          subtitle="Yüklenen mevzuat PDF'lerini uygulama içinde görüntüleyin."
         />
         <label className="relative">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
@@ -39,90 +45,207 @@ export default function Mevzuat() {
         </label>
       </div>
 
-      {groups.length === 0 && (
+      {isAdmin && <UploadMevzuat />}
+
+      {items.length === 0 ? (
         <div className={`${cardCls} p-8 text-center text-sm text-slate-500 dark:text-slate-400`}>
-          Aramanızla eşleşen mevzuat bulunamadı.
+          {q
+            ? "Aramanızla eşleşen mevzuat yok."
+            : isAdmin
+              ? "Henüz mevzuat yüklenmedi. Yukarıdan PDF ekleyin."
+              : "Henüz mevzuat yüklenmedi."}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {items.map((item) => (
+            <div key={item.id} className={`${cardCls} flex flex-col p-5`}>
+              <button
+                type="button"
+                onClick={() => setViewing(item)}
+                className="flex flex-1 items-start gap-3 text-left"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-red-700 text-white shadow-md">
+                  <FileIcon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  {item.category && (
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-zinc-700 dark:text-slate-300">
+                      {item.category}
+                    </span>
+                  )}
+                  <p className="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                    {item.title}
+                  </p>
+                </div>
+              </button>
+              <div className="mt-4 flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setViewing(item)}
+                  className="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  Görüntüle
+                </button>
+                {isAdmin && (
+                  <span className="ml-auto">
+                    <DeleteButton
+                      confirmMessage={`"${item.title}" mevzuatını silmek istediğinize emin misiniz?`}
+                      onDelete={() => deleteMevzuat(item)}
+                    />
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {groups.map((group) => (
-        <section key={group.group} className="space-y-3">
-          <h2 className="px-1 text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            {group.group}
-          </h2>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {group.items.map((item) => (
-              <MevzuatCard key={item.id} item={item} />
-            ))}
-          </div>
-        </section>
-      ))}
-
-      <p className="text-xs text-slate-500/80 dark:text-slate-400/80">
-        Not: Özetler bilgilendirme amaçlıdır ve mevzuat zaman içinde değişebilir.
-        Bağlayıcı metin daima resmi kaynaktır (mevzuat.gov.tr / Resmî Gazete).
-      </p>
+      {viewing && (
+        <PdfViewer item={viewing} onClose={() => setViewing(null)} />
+      )}
     </div>
   );
 }
 
-function MevzuatCard({ item }: { item: MevzuatItem }) {
-  const [open, setOpen] = useState(false);
+function UploadMevzuat() {
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
   return (
-    <div className={`${cardCls} flex flex-col p-5`}>
-      <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-600 to-slate-800 text-white shadow-md dark:from-zinc-600 dark:to-zinc-800">
-          <ScaleIcon className="h-5 w-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span
-              className={
-                item.kind === "Kanun"
-                  ? "rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
-                  : "rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-              }
-            >
-              {item.kind}
-            </span>
+    <section className={`${cardCls} p-6`}>
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+        Mevzuat Ekle (PDF)
+      </h2>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        Yüklediğiniz PDF tüm ofis çalışanlarında görünür ve uygulama içinde
+        açılır.
+      </p>
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const form = e.currentTarget;
+          const file = new FormData(form).get("file");
+          if (!(file instanceof File) || file.size === 0) {
+            setMsg({ ok: false, text: "Bir PDF dosyası seçin." });
+            return;
+          }
+          if (file.type && file.type !== "application/pdf") {
+            setMsg({ ok: false, text: "Yalnızca PDF yükleyebilirsiniz." });
+            return;
+          }
+          setBusy(true);
+          setMsg(null);
+          try {
+            await addMevzuat(file, title || file.name, category);
+            setTitle("");
+            setCategory("");
+            form.reset();
+            setMsg({ ok: true, text: "Mevzuat yüklendi." });
+          } catch (err) {
+            setMsg({
+              ok: false,
+              text:
+                "Yüklenemedi: " +
+                (err instanceof Error ? err.message : String(err)) +
+                " (Firebase Storage etkin mi?)",
+            });
+          } finally {
+            setBusy(false);
+          }
+        }}
+        className="mt-4 space-y-3"
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className={labelCls}>Başlık</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ör: İmar Kanunu (3194)"
+              className={inputCls}
+            />
           </div>
-          <h3 className="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+          <div>
+            <label className={labelCls}>Kategori (isteğe bağlı)</label>
+            <input
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Ör: İmar, Yangın, Deprem"
+              className={inputCls}
+            />
+          </div>
+        </div>
+        <div>
+          <label className={labelCls}>PDF Dosyası</label>
+          <input
+            type="file"
+            name="file"
+            accept="application/pdf,.pdf"
+            className="mt-1 text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-zinc-700 dark:file:text-slate-200"
+          />
+        </div>
+        {msg && (
+          <p
+            className={
+              msg.ok
+                ? "text-sm text-green-700 dark:text-green-300"
+                : "text-sm text-red-600 dark:text-red-400"
+            }
+          >
+            {msg.text}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={busy}
+          className={`${primaryBtnCls} disabled:opacity-60`}
+        >
+          {busy ? "Yükleniyor..." : "PDF Yükle"}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function PdfViewer({ item, onClose }: { item: MevzuatDoc; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-zinc-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3 dark:border-zinc-700">
+          <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">
             {item.title}
           </h3>
+          <div className="flex items-center gap-2">
+            <a
+              href={item.fileUrl}
+              download
+              className={secondaryBtnCls}
+            >
+              İndir
+            </a>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-zinc-800"
+              title="Kapat"
+            >
+              ✕
+            </button>
+          </div>
         </div>
-      </div>
-
-      <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-        {item.summary}
-      </p>
-
-      {open && (
-        <ul className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-sm text-slate-600 dark:border-zinc-700 dark:text-slate-300">
-          {item.keyPoints.map((kp, i) => (
-            <li key={i} className="flex gap-2">
-              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
-              <span>{kp}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-3 pt-1">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-        >
-          {open ? "Önemli noktaları gizle" : "Önemli noktalar"}
-        </button>
-        <a
-          href={item.url}
-          target="_blank"
-          rel="noreferrer"
-          className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
-        >
-          Resmi metni aç ↗
-        </a>
+        <iframe
+          src={item.fileUrl}
+          title={item.title}
+          className="min-h-0 flex-1 bg-slate-100 dark:bg-zinc-800"
+        />
       </div>
     </div>
   );
