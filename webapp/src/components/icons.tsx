@@ -182,6 +182,16 @@ export function ScaleIcon({ className }: { className?: string }) {
   );
 }
 
+export function CoinsIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <circle cx="8" cy="8" r="5" />
+      <path d="M18.09 10.37A5 5 0 1 1 12.5 18.5" />
+      <path d="M7 6h1v4M17 14h-1v4" />
+    </Svg>
+  );
+}
+
 export function BuildingIcon({ className }: { className?: string }) {
   return (
     <Svg className={className}>

@@ -186,13 +186,21 @@ export const PROFESSIONAL_ROLE_CHIP: Record<ProfessionalRole, string> = {
   DIGER: "bg-slate-100 text-slate-600 dark:bg-zinc-700 dark:text-slate-300",
 };
 
-// Mevzuat: yöneticinin yüklediği PDF mevzuat belgeleri (Firebase Storage'da).
+// Mevzuat / İmar Plan Notu: yöneticinin yüklediği PDF belgeleri.
+// Dosyalar Google Drive'da tutulur (anyone-with-link ile görüntülenir).
+export type MevzuatKind = "MEVZUAT" | "PLAN_NOTU";
+
 export interface MevzuatDoc {
   id: string;
+  kind?: MevzuatKind; // tanımsız = MEVZUAT (geriye dönük)
   title: string;
   category?: string;
-  fileUrl: string;
-  storagePath: string;
+  fileId?: string; // Drive dosya kimliği
+  previewUrl?: string; // Drive gömülü önizleme (iframe)
+  webViewLink?: string; // Drive görüntüleme/indirme bağlantısı
+  // Eski Firebase Storage alanları (geriye dönük uyumluluk):
+  fileUrl?: string;
+  storagePath?: string;
   createdAt: string;
   byName?: string;
 }

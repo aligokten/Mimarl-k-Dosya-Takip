@@ -34,7 +34,7 @@ import {
   deleteObject,
 } from "firebase/storage";
 import { auth, db, storage, googleProvider } from "./firebase";
-import { applySharedDriveClientId } from "./drive";
+import { applySharedDriveClientId, deleteDriveFile } from "./drive";
 import type {
   Activity,
   ActivityType,
@@ -46,6 +46,7 @@ import type {
   Member,
   MemberRole,
   MevzuatDoc,
+  MevzuatKind,
   Office,
   Professional,
   Project,
@@ -534,25 +535,26 @@ export async function deleteProfessional(id: string) {
   await deleteDoc(doc(db(), "professionals", id));
 }
 
-// ---- Mevzuat (PDF yükleme; Firebase Storage) ----
+// ---- Mevzuat / İmar Plan Notu (PDF Google Drive'da) ----
 
-export async function addMevzuat(
-  file: File,
-  title: string,
-  category?: string
-): Promise<string> {
+export async function addMevzuat(meta: {
+  title: string;
+  category?: string;
+  kind: MevzuatKind;
+  fileId?: string;
+  previewUrl?: string;
+  webViewLink?: string;
+}): Promise<string> {
   const id = uid();
-  const path = `mevzuat/${id}-${file.name}`;
-  const r = storageRef(storage(), path);
-  await uploadBytes(r, file, { contentType: file.type || "application/pdf" });
-  const fileUrl = await getDownloadURL(r);
   await setDoc(
     doc(db(), "mevzuat", id),
     stripUndefined({
-      title: title.trim() || file.name,
-      category: category?.trim() || undefined,
-      fileUrl,
-      storagePath: path,
+      kind: meta.kind,
+      title: meta.title.trim(),
+      category: meta.category?.trim() || undefined,
+      fileId: meta.fileId,
+      previewUrl: meta.previewUrl,
+      webViewLink: meta.webViewLink,
       byName: currentName().name,
       createdAt: now(),
     })
@@ -561,8 +563,11 @@ export async function addMevzuat(
 }
 
 export async function deleteMevzuat(item: MevzuatDoc) {
-  await deleteObject(storageRef(storage(), item.storagePath)).catch(() => {});
   await deleteDoc(doc(db(), "mevzuat", item.id));
+  // Drive dosyasını da temizle (bağlıysa); eski Storage dosyalarını da sil.
+  if (item.fileId) await deleteDriveFile(item.fileId).catch(() => {});
+  if (item.storagePath)
+    await deleteObject(storageRef(storage(), item.storagePath)).catch(() => {});
 }
 
 // ---- Ofis içi sohbet ----
