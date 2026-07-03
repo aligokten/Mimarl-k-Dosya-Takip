@@ -4,6 +4,16 @@ Mimari proje, akustik rapor ve yapı ruhsatı süreçlerinin; müşteri, arsa
 sahibi/vekaletname, hizmet aşamaları ve evrak (dijital + fiziksel) takibini
 tek yerden yapmanızı sağlayan ofis içi web uygulaması.
 
+## 🖥️ Windows Uygulaması
+
+Kurulum dosyası (.exe) [**Releases**](../../releases) sayfasından indirilir:
+`MimarlikDosyaTakip-Kurulum-x.y.z.exe` dosyasını çalıştırmanız yeterli;
+masaüstüne kısayol eklenir. Uygulama canlı sistemi yüklediği için web'e
+gelen güncellemeler masaüstünde de otomatik geçerlidir (internet gerekir).
+İmzasız olduğu için Windows SmartScreen uyarısında **"Ek bilgi" → "Yine de
+çalıştır"** deyin. Yeni kurulum dosyası üretmek için: GitHub → Actions →
+**"Windows Kurulum Dosyası"** → Run workflow (kaynak: `desktop/dosyatakip/`).
+
 ## 🌐 Web Sürümü (kullanımda) — GitHub Pages
 
 **https://aligokten.github.io/Mimarl-k-Dosya-Takip/**
