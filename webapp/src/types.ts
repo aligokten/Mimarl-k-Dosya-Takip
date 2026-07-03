@@ -77,6 +77,7 @@ export interface Project {
   documents: ProjectDocument[];
   noteList?: ProjectNote[];
   memberIds?: string[];
+  authorIds?: string[]; // müellif olarak eklenen uzman (professional) id'leri
   createdAt: string;
   updatedAt: string;
 }

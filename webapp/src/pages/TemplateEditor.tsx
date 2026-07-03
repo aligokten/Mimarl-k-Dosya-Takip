@@ -95,6 +95,19 @@ export default function TemplateEditor() {
     });
   }
 
+  function fillVekil(memberUid: string) {
+    const m = db.members.find((x) => x.uid === memberUid);
+    if (!m) return;
+    fillTokens({
+      "VEKİL ADI": m.displayName,
+      "VEKİL ÜNVAN": m.title,
+      "VEKİL TELEFON": m.phone,
+      "VEKİL E-POSTA": m.email,
+      "İMZALAYAN ADI": m.displayName,
+      "İMZA": m.displayName,
+    });
+  }
+
   async function saveAsNewTemplate() {
     if (!sheetRef.current) return;
     const title = window.prompt(
@@ -158,6 +171,25 @@ export default function TemplateEditor() {
           {db.projects.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
+            </option>
+          ))}
+        </select>
+        <select
+          defaultValue=""
+          onChange={(e) => {
+            if (e.target.value) fillVekil(e.target.value);
+            e.target.value = "";
+          }}
+          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-200"
+          title="İmza kısmında vekil olarak dolduracak ofis üyesini seçin"
+        >
+          <option value="" disabled>
+            Vekil (imzalayan üye) seç
+          </option>
+          {db.members.map((m) => (
+            <option key={m.uid} value={m.uid}>
+              {m.displayName}
+              {m.title ? ` — ${m.title}` : ""}
             </option>
           ))}
         </select>

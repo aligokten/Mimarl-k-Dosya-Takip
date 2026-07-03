@@ -11,6 +11,22 @@
   --donut-track: #3f3f46;
 }
 
+/* Panel terim şeridi (kayan yazı) */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee 26s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
 body {
   background: linear-gradient(125deg, #f8d9bc 0%, #f2e6dc 22%, #e8edf3 55%, #c9d9ec 100%)
     fixed;
@@ -59,6 +75,29 @@ body {
 }
 .doc-sheet ol {
   list-style: decimal;
+}
+/* Word'den aktarılan tablolar: yapı ve çerçeveler korunur */
+.doc-sheet table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.7em 0;
+  table-layout: fixed;
+}
+.doc-sheet th,
+.doc-sheet td {
+  border: 1px solid #555;
+  padding: 4px 7px;
+  vertical-align: top;
+  text-align: left;
+  word-wrap: break-word;
+}
+.doc-sheet th {
+  font-weight: 700;
+  background: #f3f4f6;
+}
+.doc-sheet img {
+  max-width: 100%;
+  height: auto;
 }
 .doc-sheet .sag {
   text-align: right;
