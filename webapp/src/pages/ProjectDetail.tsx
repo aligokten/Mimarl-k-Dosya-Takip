@@ -496,15 +496,23 @@ function DocumentsTab({ project }: { project: Project }) {
             projectServiceId,
             createdAt: new Date().toISOString(),
           };
-          await patchProject(
-            project.id,
-            { documents: [...project.documents, newDoc] },
-            {
-              type: "EVRAK_YUKLENDI",
-              text: `"${name}" evrakı eklendi`,
-              notify: true,
-            }
-          );
+          try {
+            await patchProject(
+              project.id,
+              { documents: [...project.documents, newDoc] },
+              {
+                type: "EVRAK_YUKLENDI",
+                text: `"${name}" evrakı eklendi`,
+                notify: true,
+              }
+            );
+          } catch (err) {
+            window.alert(
+              "Evrak kaydedilemedi: " +
+                (err instanceof Error ? err.message : String(err))
+            );
+            return;
+          }
           form.reset();
           setKind("DIJITAL");
         }}

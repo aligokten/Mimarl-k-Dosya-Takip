@@ -6,7 +6,7 @@ import {
   type Auth,
 } from "firebase/auth";
 import {
-  getFirestore,
+  initializeFirestore,
   connectFirestoreEmulator,
   type Firestore,
 } from "firebase/firestore";
@@ -77,7 +77,9 @@ function ensureApp(): FirebaseApp {
   }
   app = initializeApp(config);
   authInstance = getAuth(app);
-  dbInstance = getFirestore(app);
+  // ignoreUndefinedProperties: iç içe (ör. documents[].url) undefined alanlar
+  // Firestore yazımını reddetmesin; tanımsız alanlar sessizce atlanır.
+  dbInstance = initializeFirestore(app, { ignoreUndefinedProperties: true });
   if (emulator) {
     connectAuthEmulator(authInstance, "http://127.0.0.1:9099", {
       disableWarnings: true,
