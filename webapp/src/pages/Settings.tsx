@@ -5,22 +5,18 @@ import {
   addStage,
   deleteServiceType,
   deleteStage,
+  updateOfficeConfig,
   useApp,
 } from "../data";
-import { connectDrive, disconnectDrive, getClientId, setClientId, useDrive } from "../drive";
-import {
-  AI_MODELS,
-  getAiKey,
-  getAiModel,
-  setAiKey,
-  setAiModel,
-  useAiConfigured,
-} from "../ai";
+import { connectDrive, disconnectDrive, useDrive } from "../drive";
+import { AI_MODELS, getAiModel, useAiConfigured } from "../ai";
 import type { ServiceType } from "../types";
 import { cardCls, inputCls, primaryBtnCls, secondaryBtnCls, str } from "../ui";
 import PageTitle from "../components/PageTitle";
 import { GearIcon } from "../components/icons";
 import DeleteButton from "../components/DeleteButton";
+
+const MASK = "••••••••••••";
 
 export default function Settings() {
   const app = useApp();
@@ -36,10 +32,10 @@ export default function Settings() {
         <section className={`${cardCls} flex flex-wrap items-center gap-3 p-6`}>
           <div className="flex-1">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
-              Ekip & Davet
+              Ekip & Çalışanlar
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Çalışanları davet edin, rolleri düzenleyin.
+              Çalışanları e-posta ile ekleyin, rolleri düzenleyin.
             </p>
           </div>
           <Link to="/ekip" className={primaryBtnCls}>
@@ -56,10 +52,23 @@ export default function Settings() {
 }
 
 function AiSection() {
+  const app = useApp();
+  const isAdmin = app.me?.role === "ADMIN";
   const configured = useAiConfigured();
-  const [keyInput, setKeyInput] = useState(getAiKey());
-  const [model, setModel] = useState(getAiModel());
+  const office = app.office;
+  const [keyInput, setKeyInput] = useState(office?.geminiKey ?? "");
+  const [model, setModel] = useState(office?.geminiModel || getAiModel());
   const [message, setMessage] = useState<string | null>(null);
+
+  const statusChip = configured ? (
+    <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 dark:border-green-500/30 dark:bg-green-500/15 dark:text-green-300">
+      AI Asistan etkin
+    </span>
+  ) : (
+    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-400">
+      Henüz anahtar girilmedi
+    </span>
+  );
 
   return (
     <section className={`${cardCls} p-6`}>
@@ -68,103 +77,116 @@ function AiSection() {
       </h2>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Paneldeki İmar Asistanı, sorularınızı imar mevzuatından yararlanarak
-        yanıtlar. Çalışması için ücretsiz bir Google Gemini API anahtarı girin.
-        Anahtar yalnızca bu tarayıcıda saklanır.
+        yanıtlar. Anahtar ofis genelinde geçerlidir; tüm çalışanlar otomatik
+        kullanır.
       </p>
 
-      <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-        <p className="font-semibold">Anahtar nasıl alınır (ücretsiz):</p>
-        <ol className="mt-2 list-decimal space-y-1 pl-5">
-          <li>
-            <a
-              href="https://aistudio.google.com/app/apikey"
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
+      {!isAdmin ? (
+        <div className="mt-4 space-y-2">
+          <div className="rounded-lg bg-slate-50 p-4 text-sm dark:bg-zinc-800/60">
+            <p className="text-slate-600 dark:text-slate-300">
+              Anahtar <strong>yönetici tarafından tanımlıdır</strong> ve
+              değiştirilemez.
+            </p>
+            <p className="mt-2 font-mono text-slate-500 dark:text-slate-400">
+              Anahtar: {office?.geminiKey ? MASK : "Tanımlı değil"}
+            </p>
+            <p className="font-mono text-slate-500 dark:text-slate-400">
+              Model: {office?.geminiModel || getAiModel()}
+            </p>
+          </div>
+          {statusChip}
+        </div>
+      ) : (
+        <>
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            <p className="font-semibold">Anahtar nasıl alınır (ücretsiz):</p>
+            <ol className="mt-2 list-decimal space-y-1 pl-5">
+              <li>
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline"
+                >
+                  aistudio.google.com/app/apikey
+                </a>{" "}
+                adresine Google hesabınızla girin.
+              </li>
+              <li>
+                <strong>Create API key</strong> deyin ve anahtarı kopyalayın.
+              </li>
+              <li>Anahtarı aşağıya yapıştırıp kaydedin (çalışanlara yansır).</li>
+            </ol>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <input
+              value={keyInput}
+              onChange={(e) => setKeyInput(e.target.value)}
+              type="password"
+              placeholder="Gemini API anahtarı (AIza...)"
+              className={`${inputCls} mt-0 flex-1`}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                updateOfficeConfig({ geminiKey: keyInput.trim() });
+                setMessage(
+                  keyInput.trim()
+                    ? "AI anahtarı kaydedildi (tüm çalışanlar için geçerli)."
+                    : "AI anahtarı silindi."
+                );
+              }}
+              className={secondaryBtnCls}
             >
-              aistudio.google.com/app/apikey
-            </a>{" "}
-            adresine Google hesabınızla girin.
-          </li>
-          <li>
-            <strong>Create API key</strong> deyin ve verilen anahtarı kopyalayın.
-          </li>
-          <li>Anahtarı aşağıya yapıştırıp kaydedin.</li>
-        </ol>
-      </div>
+              Kaydet
+            </button>
+          </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <input
-          value={keyInput}
-          onChange={(e) => setKeyInput(e.target.value)}
-          type="password"
-          placeholder="Gemini API anahtarı (AIza...)"
-          className={`${inputCls} mt-0 flex-1`}
-        />
-        <button
-          type="button"
-          onClick={() => {
-            setAiKey(keyInput);
-            setMessage(
-              keyInput.trim()
-                ? "AI anahtarı kaydedildi. Panelde İmar Asistanı'na soru sorabilirsiniz."
-                : "AI anahtarı silindi."
-            );
-          }}
-          className={secondaryBtnCls}
-        >
-          Kaydet
-        </button>
-      </div>
+          <div className="mt-4">
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+              Model (kota dolarsa değiştirin)
+            </label>
+            <select
+              value={model}
+              onChange={(e) => {
+                setModel(e.target.value);
+                updateOfficeConfig({ geminiModel: e.target.value });
+                setMessage(`Model "${e.target.value}" olarak ayarlandı.`);
+              }}
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-100"
+            >
+              {AI_MODELS.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+              Ücretsiz katmanın günlük/dakikalık istek sınırı vardır. Bir model
+              &quot;kota doldu&quot; derse buradan başka bir modele geçebilirsiniz.
+            </p>
+          </div>
 
-      <div className="mt-4">
-        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">
-          Model (kota dolarsa değiştirin)
-        </label>
-        <select
-          value={model}
-          onChange={(e) => {
-            setModel(e.target.value);
-            setAiModel(e.target.value);
-            setMessage(`Model "${e.target.value}" olarak ayarlandı.`);
-          }}
-          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-100"
-        >
-          {AI_MODELS.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
-        </select>
-        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-          Ücretsiz katmanın günlük/dakikalık istek sınırı vardır. Bir model
-          &quot;kota doldu&quot; derse buradan başka bir modele geçebilirsiniz.
-        </p>
-      </div>
-
-      <div className="mt-3">
-        {configured ? (
-          <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 dark:border-green-500/30 dark:bg-green-500/15 dark:text-green-300">
-            AI Asistan etkin
-          </span>
-        ) : (
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-400">
-            Henüz anahtar girilmedi
-          </span>
-        )}
-      </div>
-      {message && (
-        <p className="mt-3 text-sm text-green-700 dark:text-green-300">
-          {message}
-        </p>
+          <div className="mt-3">{statusChip}</div>
+          {message && (
+            <p className="mt-3 text-sm text-green-700 dark:text-green-300">
+              {message}
+            </p>
+          )}
+        </>
       )}
     </section>
   );
 }
 
 function DriveSection() {
+  const app = useApp();
+  const isAdmin = app.me?.role === "ADMIN";
+  const office = app.office;
   const drive = useDrive();
-  const [clientIdInput, setClientIdInput] = useState(getClientId());
+  const [clientIdInput, setClientIdInput] = useState(office?.driveClientId ?? "");
   const [message, setMessage] = useState<{ ok: boolean; message: string } | null>(
     null
   );
@@ -175,62 +197,75 @@ function DriveSection() {
         Google Drive (Dosya Depolama)
       </h2>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Evrak dosyaları uygulama içinden doğrudan Drive&apos;a yüklensin
-        istiyorsanız bağlanın. (Proje verileri artık bulut veritabanında
-        tutulur; Drive yalnızca dosyalar içindir.)
+        Evrak dosyaları uygulama içinden doğrudan Drive&apos;a yüklenir. Client
+        ID yönetici tarafından tanımlanır; her kullanıcı &quot;Bağlan&quot; ile
+        kendi Google hesabını yetkilendirir.
       </p>
 
-      {!drive.configured && (
-        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-          <p className="font-semibold">Kurulum:</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-5">
-            <li>
-              <a
-                href="https://console.cloud.google.com/"
-                target="_blank"
-                rel="noreferrer"
-                className="underline"
-              >
-                console.cloud.google.com
-              </a>{" "}
-              → proje → Google Drive API&apos;yi etkinleştirin.
-            </li>
-            <li>
-              OAuth consent screen (External) + Test users&apos;a e-postanızı
-              ekleyin.
-            </li>
-            <li>
-              Credentials → OAuth client ID → Web application; Authorized
-              JavaScript origins: <code>https://aligokten.github.io</code>.
-            </li>
-            <li>Client ID&apos;yi aşağıya yapıştırın.</li>
-          </ol>
+      {isAdmin ? (
+        <>
+          {!drive.configured && (
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+              <p className="font-semibold">Kurulum (bir kez, yönetici):</p>
+              <ol className="mt-2 list-decimal space-y-1 pl-5">
+                <li>
+                  <a
+                    href="https://console.cloud.google.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline"
+                  >
+                    console.cloud.google.com
+                  </a>{" "}
+                  → proje → Google Drive API&apos;yi etkinleştirin.
+                </li>
+                <li>
+                  OAuth consent screen (External) + Test users&apos;a
+                  çalışanların e-postalarını ekleyin.
+                </li>
+                <li>
+                  Credentials → OAuth client ID → Web application; Authorized
+                  JavaScript origins: <code>https://aligokten.github.io</code>.
+                </li>
+                <li>Client ID&apos;yi aşağıya yapıştırın.</li>
+              </ol>
+            </div>
+          )}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <input
+              value={clientIdInput}
+              onChange={(e) => setClientIdInput(e.target.value)}
+              placeholder="Google Client ID (....apps.googleusercontent.com)"
+              className={`${inputCls} mt-0 flex-1`}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                updateOfficeConfig({ driveClientId: clientIdInput.trim() });
+                setMessage({
+                  ok: true,
+                  message: clientIdInput.trim()
+                    ? "Client ID kaydedildi (tüm çalışanlar için geçerli)."
+                    : "Client ID silindi.",
+                });
+              }}
+              className={secondaryBtnCls}
+            >
+              Kaydet
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm dark:bg-zinc-800/60">
+          <p className="text-slate-600 dark:text-slate-300">
+            Client ID <strong>yönetici tarafından tanımlıdır</strong> ve
+            değiştirilemez.
+          </p>
+          <p className="mt-2 font-mono text-slate-500 dark:text-slate-400">
+            Client ID: {office?.driveClientId ? MASK : "Tanımlı değil"}
+          </p>
         </div>
       )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <input
-          value={clientIdInput}
-          onChange={(e) => setClientIdInput(e.target.value)}
-          placeholder="Google Client ID (....apps.googleusercontent.com)"
-          className={`${inputCls} mt-0 flex-1`}
-        />
-        <button
-          type="button"
-          onClick={() => {
-            setClientId(clientIdInput);
-            setMessage({
-              ok: true,
-              message: clientIdInput.trim()
-                ? "Client ID kaydedildi. Şimdi \"Drive'a Bağlan\"a tıklayın."
-                : "Client ID silindi.",
-            });
-          }}
-          className={secondaryBtnCls}
-        >
-          Kaydet
-        </button>
-      </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         {!drive.connected ? (
@@ -265,6 +300,11 @@ function DriveSection() {
               Bağlantıyı Kes
             </button>
           </>
+        )}
+        {!drive.configured && (
+          <span className="text-xs text-slate-400 dark:text-slate-500">
+            Bağlanmak için önce yöneticinin Client ID tanımlaması gerekir.
+          </span>
         )}
       </div>
       {drive.error && (
@@ -316,7 +356,7 @@ function ServiceTypesSection() {
           addServiceType(name);
           e.currentTarget.reset();
         }}
-        className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4 dark:border-slate-700"
+        className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4 dark:border-zinc-700"
       >
         <input
           name="name"
@@ -362,7 +402,7 @@ function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
         />
       </div>
       {open && (
-        <div className="border-t border-slate-100 px-4 py-3 dark:border-slate-700">
+        <div className="border-t border-slate-100 px-4 py-3 dark:border-zinc-700">
           <ol className="space-y-1">
             {serviceType.stages.map((stage, idx) => (
               <li

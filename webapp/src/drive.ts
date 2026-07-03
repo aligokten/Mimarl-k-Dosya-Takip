@@ -23,6 +23,10 @@ export interface DriveState {
   error?: string;
 }
 
+// Client ID artık ofis genelinde (yönetici tarafından) tanımlanır ve tüm
+// çalışanlara yansır. Geriye dönük uyumluluk için localStorage yedeği tutulur.
+let sharedClientId = "";
+
 let state: DriveState = {
   configured: !!localStorage.getItem(CLIENT_ID_KEY),
   connected: localStorage.getItem(CONNECTED_KEY) === "1",
@@ -50,7 +54,18 @@ export function useDrive(): DriveState {
 }
 
 export function getClientId(): string {
-  return localStorage.getItem(CLIENT_ID_KEY) ?? "";
+  return sharedClientId || (localStorage.getItem(CLIENT_ID_KEY) ?? "");
+}
+
+// data.ts, ofis dokümanı yüklendiğinde çağırır: yöneticinin tanımladığı
+// Client ID tüm çalışanlara yansır (dosyalar yine her kullanıcının kendi
+// Google Drive'ına gider).
+export function applySharedDriveClientId(id?: string) {
+  const trimmed = (id ?? "").trim();
+  if (trimmed === sharedClientId) return;
+  sharedClientId = trimmed;
+  if (trimmed) void loadGis().catch(() => {});
+  setState({ configured: !!getClientId() });
 }
 
 export function setClientId(clientId: string) {

@@ -24,13 +24,35 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Uyeler: her uye listeyi gorur; kisi kendi kaydini olusturur/gunceller
-    // (davet uygulama tarafinda dogrulanir); admin baskalarini yonetir.
+    function isOfficeOwner() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/office/main) &&
+        get(/databases/$(database)/documents/office/main).data.ownerUid == request.auth.uid;
+    }
+    function hasInvite() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/invites/$(request.auth.token.email));
+    }
+
+    // Uyeler: her uye listeyi gorur. Kisi yalnizca kendi kaydini olusturabilir
+    // ve bunu icin ya ofis sahibi olmali ya da e-postasina davet bulunmali.
     match /members/{uid} {
       allow read: if isMember();
-      allow create: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid &&
+        (isOfficeOwner() || hasInvite());
       allow update: if request.auth.uid == uid || isAdmin();
       allow delete: if isAdmin();
+    }
+
+    // Davetler: yonetici e-posta ile calisan ekler. Davet dokumaninin kimligi
+    // (dogrudan) calisanin e-postasidir. Yonetici tumunu yonetir; davet edilen
+    // kisi yalnizca kendi davetini okuyup (ilk giriste) silebilir.
+    match /invites/{email} {
+      allow read: if isAdmin() ||
+        (signedIn() && request.auth.token.email == email);
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin() ||
+        (signedIn() && request.auth.token.email == email);
     }
 
     match /contacts/{id} { allow read, write: if isMember(); }
