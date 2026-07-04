@@ -117,6 +117,11 @@ export default function ProjectDetail() {
         </div>
       </div>
 
+      <ProgressWidget
+        project={project}
+        onDetails={() => setTab("hizmetler")}
+      />
+
       <div className="inline-flex max-w-full overflow-x-auto rounded-full border border-slate-200 bg-white p-1 dark:border-slate-600 dark:bg-zinc-800">
         {TABS.map((t) => (
           <button
@@ -141,6 +146,143 @@ export default function ProjectDetail() {
       {tab === "notlar" && <NotesTab project={project} />}
       {tab === "aktivite" && <ActivityTab project={project} />}
     </div>
+  );
+}
+
+// Proje ilerleme widget'ı — Ruhsat360 marka kimliği (lacivert zemin,
+// turuncu degrade). İlerleme, hizmetlerin tamamlanan aşamalarından hesaplanır.
+function ProgressWidget({
+  project,
+  onDetails,
+}: {
+  project: Project;
+  onDetails: () => void;
+}) {
+  const db = useApp();
+
+  let total = 0;
+  let done = 0;
+  for (const s of project.services) {
+    const st = db.serviceTypes.find((t) => t.id === s.serviceTypeId);
+    const stages = st?.stages ?? [];
+    if (stages.length > 0) {
+      total += stages.length;
+      const completed = new Set(s.completedStageIds);
+      done += stages.filter((x) => completed.has(x.id)).length;
+    } else {
+      total += 1;
+      if (s.status === "TAMAMLANDI") done += 1;
+    }
+  }
+  const pct =
+    total > 0
+      ? Math.round((done / total) * 100)
+      : project.status === "TAMAMLANDI"
+        ? 100
+        : 0;
+
+  // Hedef tarih: devam eden hizmetlerin en yakın hedefi (yoksa herhangi biri)
+  const dates = project.services
+    .filter((s) => s.status === "DEVAM_EDIYOR" && s.targetDate)
+    .map((s) => s.targetDate!)
+    .sort();
+  const anyDates = project.services
+    .filter((s) => s.targetDate)
+    .map((s) => s.targetDate!)
+    .sort();
+  const due = dates[0] ?? anyDates[0];
+
+  const firstService = db.serviceTypes.find(
+    (t) => t.id === project.services[0]?.serviceTypeId
+  );
+  const chip = firstService?.name ?? PROJECT_STATUS_LABELS[project.status];
+
+  const team = (project.memberIds ?? [])
+    .map((uid) => db.members.find((m) => m.uid === uid))
+    .filter((m): m is NonNullable<typeof m> => !!m);
+  const shown = team.slice(0, 4);
+
+  return (
+    <section className="rounded-[1.75rem] bg-[#0c1a2e] p-6 shadow-[0_18px_50px_rgba(8,15,30,0.35)] ring-1 ring-white/10 sm:p-7">
+      <img
+        src={`${import.meta.env.BASE_URL}brand/app-icon-512.png`}
+        alt=""
+        className="h-6 w-6 rounded-md opacity-90"
+      />
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+          Proje İlerlemesi
+        </h2>
+        <span className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-slate-300 ring-1 ring-white/10">
+          {chip}
+        </span>
+      </div>
+      <p className="mt-1 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+        {pct}
+        <span className="font-semibold text-slate-500">%</span>
+      </p>
+
+      <div className="relative mt-4 h-11 overflow-hidden rounded-full bg-white/10">
+        {pct > 0 && (
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-orange-600 shadow-[0_0_24px_rgba(249,115,22,0.55)]"
+            style={{ width: `${Math.max(pct, 5)}%` }}
+          />
+        )}
+        {due && (
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-[#0c1a2e]/70 px-3.5 py-1.5 text-sm font-semibold text-slate-200 backdrop-blur">
+            Hedef: {format(new Date(due), "d MMMM", { locale: tr })}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-slate-300">
+            Görevliler{" "}
+            <span className="font-medium text-slate-500">{team.length}</span>
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            {shown.map((m) =>
+              m.photoURL ? (
+                <img
+                  key={m.uid}
+                  src={m.photoURL}
+                  alt={m.displayName}
+                  title={m.displayName}
+                  className="h-10 w-10 rounded-xl object-cover ring-1 ring-white/15"
+                />
+              ) : (
+                <span
+                  key={m.uid}
+                  title={m.displayName}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-slate-600 to-slate-800 text-sm font-bold text-white ring-1 ring-white/15"
+                >
+                  {m.displayName.trim()[0]?.toUpperCase() ?? "?"}
+                </span>
+              )
+            )}
+            {team.length > 4 && (
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold text-slate-300 ring-1 ring-white/15">
+                +{team.length - 4}
+              </span>
+            )}
+            {team.length === 0 && (
+              <p className="text-xs text-slate-500">
+                Henüz görevli atanmadı.
+              </p>
+            )}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onDetails}
+          className="rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 transition hover:bg-white/20"
+        >
+          Detaylar →
+        </button>
+      </div>
+    </section>
   );
 }
 
