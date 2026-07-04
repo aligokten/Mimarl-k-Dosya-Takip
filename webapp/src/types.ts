@@ -82,7 +82,7 @@ export interface Project {
   updatedAt: string;
 }
 
-export type MemberRole = "ADMIN" | "STAFF";
+export type MemberRole = "ADMIN" | "STAFF" | "STAJYER";
 
 export interface Member {
   uid: string;
@@ -321,6 +321,7 @@ export const CONTACT_ROLE_CHIP: Record<ContactRole, string> = {
 export const MEMBER_ROLE_LABELS: Record<MemberRole, string> = {
   ADMIN: "Yönetici",
   STAFF: "Çalışan",
+  STAJYER: "Stajyer",
 };
 
 export const MAX_MEMBERS = 10;

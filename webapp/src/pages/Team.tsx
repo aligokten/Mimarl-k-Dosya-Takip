@@ -132,17 +132,18 @@ export default function Team() {
               </span>
               {m.uid !== me.uid && (
                 <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() =>
-                      setMemberRole(
-                        m.uid,
-                        m.role === "ADMIN" ? "STAFF" : "ADMIN"
-                      )
+                  <select
+                    value={m.role}
+                    onChange={(e) =>
+                      setMemberRole(m.uid, e.target.value as MemberRole)
                     }
-                    className={secondaryBtnCls}
+                    title="Rolü değiştir"
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-100"
                   >
-                    {m.role === "ADMIN" ? "Çalışan yap" : "Yönetici yap"}
-                  </button>
+                    <option value="STAFF">Çalışan</option>
+                    <option value="STAJYER">Stajyer</option>
+                    <option value="ADMIN">Yönetici</option>
+                  </select>
                   <button
                     onClick={() => {
                       if (
@@ -259,6 +260,7 @@ function AddEmployee({ full }: { full: boolean }) {
               className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-100"
             >
               <option value="STAFF">Çalışan</option>
+              <option value="STAJYER">Stajyer</option>
               <option value="ADMIN">Yönetici</option>
             </select>
           </div>

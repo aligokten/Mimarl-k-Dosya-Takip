@@ -636,7 +636,7 @@ export async function updateMyProfile(patch: {
   await updateDoc(doc(db(), "members", u.uid), stripUndefined(patch));
 }
 
-export async function setMemberRole(uidToSet: string, role: "ADMIN" | "STAFF") {
+export async function setMemberRole(uidToSet: string, role: MemberRole) {
   await updateDoc(doc(db(), "members", uidToSet), { role });
 }
 
