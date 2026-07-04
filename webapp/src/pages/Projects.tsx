@@ -158,7 +158,7 @@ export default function Projects() {
             : 'Henüz proje eklenmemiş. "+ Yeni Proje" ile başlayın.'}
         </div>
       ) : view === "klasor" ? (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
           {groups.map((group) => (
             <OwnerFolder
               key={group.ownerId}
@@ -219,6 +219,10 @@ export default function Projects() {
   );
 }
 
+// Klasör kartı — referans tasarım: degrade üst alan, sekme çentikli koyu
+// klasör gövdesi, altta büyük proje sayısı ve evrak sayısı (Ruhsat360 paleti).
+const FOLDER_BODY = "#0e1c31";
+
 function OwnerFolder({
   name,
   projects,
@@ -228,41 +232,112 @@ function OwnerFolder({
   projects: Project[];
   stageCountByType: Map<string, number>;
 }) {
+  const db = useApp();
   const [open, setOpen] = useState(true);
+  const docCount = projects.reduce((s, p) => s + p.documents.length, 0);
+
   return (
-    <div className={`${cardCls} overflow-hidden`}>
+    <div className="overflow-hidden rounded-[1.9rem] shadow-[0_18px_45px_rgba(8,15,30,0.35)] ring-1 ring-white/10">
+      {/* Degrade üst alan */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition hover:bg-white/40 dark:hover:bg-zinc-700/30"
+        className="relative block h-28 w-full overflow-hidden text-left"
+        title={open ? "Klasörü kapat" : "Klasörü aç"}
       >
-        <ChevronRightIcon
-          className={clsx(
-            "h-4 w-4 shrink-0 text-slate-400 transition-transform dark:text-slate-500",
-            open && "rotate-90"
-          )}
-        />
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm">
-          <FolderIcon className="h-4 w-4" />
-        </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-bold text-slate-900 dark:text-white">
-          {name}
-        </span>
-        <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-zinc-700 dark:text-slate-300">
-          {projects.length} proje
+        <span className="absolute inset-0 bg-gradient-to-br from-amber-400 via-orange-500 to-red-600" />
+        <span className="absolute -left-8 -top-10 h-36 w-36 rounded-full bg-white/30 blur-2xl" />
+        <span className="absolute -top-6 right-16 h-24 w-24 rounded-full bg-red-800/50 blur-xl" />
+        <span className="absolute bottom-4 left-1/3 h-16 w-16 rounded-full bg-amber-200/40 blur-xl" />
+        <span className="absolute right-5 top-4 text-right text-sm font-bold leading-snug text-white drop-shadow-sm">
+          Ruhsat360
+          <span className="block text-xs font-semibold text-white/80">
+            Proje Klasörü
+          </span>
         </span>
       </button>
-      {open && (
-        <div className="grid grid-cols-1 gap-3 border-t border-slate-100 px-4 py-4 dark:border-zinc-700 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              stageCountByType={stageCountByType}
-            />
-          ))}
+
+      {/* Sekme çentiği */}
+      <div className="-mt-14 flex h-9 items-stretch">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-[52%] items-center rounded-t-2xl pl-5 text-left"
+          style={{ backgroundColor: FOLDER_BODY }}
+          title={open ? "Klasörü kapat" : "Klasörü aç"}
+        >
+          <ChevronRightIcon
+            className={clsx(
+              "h-4 w-4 text-slate-400 transition-transform",
+              open && "rotate-90"
+            )}
+          />
+        </button>
+        <svg
+          viewBox="0 0 36 36"
+          className="h-full w-9 shrink-0"
+          aria-hidden
+          preserveAspectRatio="none"
+        >
+          <path d="M0 0 C 14 2 20 34 36 36 L 0 36 Z" fill={FOLDER_BODY} />
+        </svg>
+      </div>
+
+      {/* Klasör gövdesi */}
+      <div
+        className="relative rounded-tr-3xl px-5 pb-5 pt-1.5"
+        style={{ backgroundColor: FOLDER_BODY }}
+      >
+        <p className="truncate text-lg font-bold text-white">{name}</p>
+        <p className="text-sm text-slate-400">
+          Arsa sahibi klasörü · {projects.length} proje
+        </p>
+
+        {open && (
+          <div className="mt-4 space-y-2">
+            {projects.map((project) => {
+              const client = db.contacts.find(
+                (c) => c.id === project.clientId
+              );
+              const { done, total } = projectProgress(
+                project,
+                stageCountByType
+              );
+              const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+              return (
+                <Link
+                  key={project.id}
+                  to={`/projeler/${project.id}`}
+                  className="flex items-center gap-3 rounded-xl bg-white/5 px-3.5 py-2.5 ring-1 ring-white/10 transition hover:bg-white/10"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-white">
+                      {project.name}
+                    </span>
+                    <span className="block truncate text-xs text-slate-400">
+                      {client?.name ?? "-"} ·{" "}
+                      {PROJECT_STATUS_LABELS[project.status]}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-sm font-bold text-orange-400">
+                    {total > 0 ? `%${pct}` : "—"}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="mt-6 flex items-end justify-between gap-3">
+          <p className="leading-none">
+            <span className="text-4xl font-extrabold tracking-tight text-white">
+              {String(projects.length).padStart(2, "0")}
+            </span>{" "}
+            <span className="text-sm font-semibold text-slate-400">Proje</span>
+          </p>
+          <p className="text-sm font-bold text-white">{docCount} Evrak</p>
         </div>
-      )}
+      </div>
     </div>
   );
 }
