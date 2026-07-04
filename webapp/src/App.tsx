@@ -54,13 +54,23 @@ export default function App() {
     <div className="min-h-screen px-2 py-3 sm:px-4 sm:py-6">
       <div className="mx-auto max-w-[1240px] rounded-[2rem] bg-white/45 shadow-[0_24px_70px_rgba(15,23,42,0.18)] ring-1 ring-white/60 backdrop-blur-2xl dark:bg-zinc-900/55 dark:ring-white/10">
         <header className="no-print flex items-center justify-between gap-2 px-5 pt-5 sm:px-8 sm:pt-6">
-          <Link to="/" className="leading-tight">
-            <span className="block text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              {app.office?.name ?? "dosyatakip"}
-              <span className="text-orange-500">.</span>
-            </span>
-            <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400">
-              mimarlık ofisi
+          <Link to="/" className="flex items-center gap-2.5">
+            <img
+              src={`${import.meta.env.BASE_URL}brand/app-icon-512.png`}
+              alt="Ruhsat360"
+              className="h-10 w-10 rounded-xl shadow-sm"
+            />
+            <span className="leading-tight">
+              <span className="block text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                {app.office?.name ?? (
+                  <>
+                    Ruhsat<span className="text-orange-500">360</span>
+                  </>
+                )}
+              </span>
+              <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                Ruhsat360 · mimarlık ofisi
+              </span>
             </span>
           </Link>
           <div className="flex items-center gap-2">

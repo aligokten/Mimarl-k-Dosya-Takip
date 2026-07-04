@@ -13,16 +13,18 @@ function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8">
       <div className={`${cardCls} w-full max-w-md p-8`}>
-        <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-sm font-bold text-white">
-            M
-          </span>
+        <div className="flex items-center gap-2.5">
+          <img
+            src={`${import.meta.env.BASE_URL}brand/app-icon-512.png`}
+            alt="Ruhsat360"
+            className="h-10 w-10 rounded-xl shadow-sm"
+          />
           <div className="leading-tight">
             <p className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
-              dosyatakip<span className="text-orange-500">.</span>
+              Ruhsat<span className="text-orange-500">360</span>
             </p>
             <p className="text-[11px] font-medium text-slate-400">
-              mimarlık ofisi
+              mimarlık ofisi dosya takip
             </p>
           </div>
         </div>
