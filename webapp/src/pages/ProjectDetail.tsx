@@ -34,6 +34,7 @@ import {
 } from "../ui";
 import ProjectForm from "./ProjectForm";
 import DeleteButton from "../components/DeleteButton";
+import DocScanner from "../components/DocScanner";
 import { ChevronLeftIcon } from "../components/icons";
 import { Avatar } from "../App";
 
@@ -650,6 +651,8 @@ function DocumentsTab({ project }: { project: Project }) {
   const drive = useDrive();
   const [kind, setKind] = useState<DocumentKind>("DIJITAL");
   const [uploading, setUploading] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scannedFile, setScannedFile] = useState<File | null>(null);
 
   const documents = [...project.documents].sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt)
@@ -670,20 +673,23 @@ function DocumentsTab({ project }: { project: Project }) {
           e.preventDefault();
           const form = e.currentTarget;
           const formData = new FormData(form);
-          const file = formData.get("file");
-          const hasFile = file instanceof File && file.size > 0;
+          const picked = formData.get("file");
+          // Taranan PDF (Belge Tara) varsa onu, yoksa seçilen dosyayı kullan
+          const file =
+            scannedFile ??
+            (picked instanceof File && picked.size > 0 ? picked : null);
           let name = str(formData, "name");
-          if (!name && hasFile) name = (file as File).name;
+          if (!name && file) name = file.name;
           if (!name) return;
           let url = kind === "FIZIKSEL" ? undefined : str(formData, "url");
           const physicalLocation =
             kind === "DIJITAL" ? undefined : str(formData, "physicalLocation");
           const projectServiceId = str(formData, "projectServiceId");
 
-          if (kind !== "FIZIKSEL" && hasFile) {
+          if (kind !== "FIZIKSEL" && file) {
             setUploading(true);
             try {
-              const uploaded = await uploadToDrive(file as File, project.name);
+              const uploaded = await uploadToDrive(file, project.name);
               url = uploaded.url ?? url;
             } catch (err) {
               window.alert(
@@ -723,6 +729,7 @@ function DocumentsTab({ project }: { project: Project }) {
           }
           form.reset();
           setKind("DIJITAL");
+          setScannedFile(null);
         }}
         className={`${cardCls} space-y-3 p-5`}
       >
@@ -781,6 +788,28 @@ function DocumentsTab({ project }: { project: Project }) {
                   Dosya, Drive&apos;daki &quot;{project.name}&quot; klasörüne
                   yüklenir. Evrak adı boşsa dosya adı kullanılır.
                 </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScanOpen(true)}
+                    className={secondaryBtnCls}
+                  >
+                    📷 Belge Tara (kamera ile A4 PDF)
+                  </button>
+                  {scannedFile && (
+                    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                      {scannedFile.name}
+                      <button
+                        type="button"
+                        onClick={() => setScannedFile(null)}
+                        title="Taramayı kaldır"
+                        className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-300"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  )}
+                </div>
               </div>
             ) : (
               <p className="text-xs text-slate-400 dark:text-slate-500">
@@ -824,6 +853,16 @@ function DocumentsTab({ project }: { project: Project }) {
           {uploading ? "Drive'a yükleniyor..." : "Evrakı Kaydet"}
         </button>
       </form>
+
+      {scanOpen && (
+        <DocScanner
+          onDone={(file) => {
+            setScannedFile(file);
+            setScanOpen(false);
+          }}
+          onClose={() => setScanOpen(false)}
+        />
+      )}
 
       <div className={`${cardCls} overflow-hidden`}>
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-600">
