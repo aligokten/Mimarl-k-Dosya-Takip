@@ -4,55 +4,44 @@ import { primaryBtnCls, secondaryBtnCls } from "../ui";
 // Belge tarayıcı: telefon kamerasıyla çekilen evrak fotoğrafının köşelerini
 // OpenCV.js ile otomatik algılar, elle düzeltmeye izin verir, perspektifi
 // düzeltip A4 boyutunda PDF üretir. Her şey tarayıcıda çalışır (sunucusuz).
-// OpenCV.js (~8 MB) yalnızca tarayıcı açıldığında yüklenir ve önbelleğe girer.
+// OpenCV (~9 MB) uygulamayla birlikte kendi sitemizden gelir ve yalnızca
+// tarayıcı açıldığında dinamik olarak yüklenir (sonra önbellekte kalır).
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-declare global {
-  interface Window {
-    cv?: any;
-  }
-}
-
-const OPENCV_URL = "https://docs.opencv.org/4.8.0/opencv.js";
 
 let cvPromise: Promise<any> | null = null;
 
 function loadOpenCV(): Promise<any> {
   if (!cvPromise) {
-    cvPromise = new Promise((resolve, reject) => {
-      const finish = () => {
-        const cv = window.cv;
-        if (cv && typeof cv.then === "function") {
-          // Yeni sürümlerde cv bir Promise olarak gelir
-          cv.then((real: any) => {
-            window.cv = real;
-            resolve(real);
-          });
-        } else if (cv && cv.Mat) {
-          resolve(cv);
-        } else if (cv) {
-          cv.onRuntimeInitialized = () => resolve(cv);
-        } else {
-          reject(new Error("OpenCV yüklenemedi."));
-        }
-      };
-      if (window.cv) {
-        finish();
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = OPENCV_URL;
-      script.async = true;
-      script.onload = finish;
-      script.onerror = () => {
-        cvPromise = null;
-        reject(
-          new Error(
-            "Tarama motoru indirilemedi. İnternet bağlantınızı kontrol edin."
-          )
-        );
-      };
-      document.head.appendChild(script);
+    cvPromise = (async () => {
+      const mod: any = await import("@techstark/opencv-js");
+      const cv: any = mod.default ?? mod;
+      if (cv.Mat) return cv; // WASM zaten hazır
+      // Hazır olmayı hem callback hem yoklama ile bekle (sürüm farklarına
+      // karşı); 40 sn içinde hazır olmazsa net bir hatayla vazgeç.
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          clearInterval(poll);
+          reject(
+            new Error(
+              "Tarama motoru başlatılamadı. Sayfayı yenileyip tekrar deneyin."
+            )
+          );
+        }, 40_000);
+        const done = () => {
+          clearTimeout(timer);
+          clearInterval(poll);
+          resolve();
+        };
+        const poll = setInterval(() => {
+          if (cv.Mat) done();
+        }, 100);
+        cv.onRuntimeInitialized = done;
+      });
+      return cv;
+    })().catch((err) => {
+      cvPromise = null; // sonraki denemede baştan yükle
+      throw err;
     });
   }
   return cvPromise;
