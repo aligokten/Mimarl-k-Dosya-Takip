@@ -11,7 +11,7 @@ import {
   uid,
   useApp,
 } from "../data";
-import { uploadToDrive, useDrive } from "../drive";
+import { uploadSharedPdf, useDrive } from "../drive";
 import {
   DOCUMENT_KIND_LABELS,
   PROFESSIONAL_ROLE_LABELS,
@@ -653,6 +653,7 @@ function DocumentsTab({ project }: { project: Project }) {
   const [uploading, setUploading] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [scannedFile, setScannedFile] = useState<File | null>(null);
+  const [previewing, setPreviewing] = useState<ProjectDocument | null>(null);
 
   const documents = [...project.documents].sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt)
@@ -682,6 +683,7 @@ function DocumentsTab({ project }: { project: Project }) {
           if (!name && file) name = file.name;
           if (!name) return;
           let url = kind === "FIZIKSEL" ? undefined : str(formData, "url");
+          let previewUrl: string | undefined;
           const physicalLocation =
             kind === "DIJITAL" ? undefined : str(formData, "physicalLocation");
           const projectServiceId = str(formData, "projectServiceId");
@@ -689,8 +691,12 @@ function DocumentsTab({ project }: { project: Project }) {
           if (kind !== "FIZIKSEL" && file) {
             setUploading(true);
             try {
-              const uploaded = await uploadToDrive(file, project.name);
-              url = uploaded.url ?? url;
+              // "Bağlantıya sahip herkes görüntüleyebilir" izniyle yüklenir;
+              // böylece ekip üyeleri dosyayı kimin yüklediğine bakılmaksızın
+              // uygulama içi önizlemede (Mevzuat'taki gibi) açabilir.
+              const uploaded = await uploadSharedPdf(file, project.name);
+              url = uploaded.webViewLink ?? url;
+              previewUrl = uploaded.previewUrl;
             } catch (err) {
               window.alert(
                 err instanceof Error ? err.message : "Dosya yüklenemedi."
@@ -706,6 +712,7 @@ function DocumentsTab({ project }: { project: Project }) {
             name: name!,
             kind,
             url,
+            previewUrl,
             physicalLocation,
             projectServiceId,
             createdAt: new Date().toISOString(),
@@ -909,13 +916,29 @@ function DocumentsTab({ project }: { project: Project }) {
                     {serviceType?.name ?? "Genel"}
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
+                    {docItem.previewUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewing(docItem);
+                          void onDownload(docItem);
+                        }}
+                        className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        Önizle
+                      </button>
+                    )}
                     {docItem.url && (
                       <a
                         href={docItem.url}
                         target="_blank"
                         rel="noreferrer"
                         onClick={() => onDownload(docItem)}
-                        className="text-blue-600 hover:underline dark:text-blue-400"
+                        className={
+                          docItem.previewUrl
+                            ? "ml-2 text-blue-600 hover:underline dark:text-blue-400"
+                            : "text-blue-600 hover:underline dark:text-blue-400"
+                        }
                       >
                         Bağlantıyı Aç
                       </a>
@@ -956,6 +979,67 @@ function DocumentsTab({ project }: { project: Project }) {
             })}
           </tbody>
         </table>
+      </div>
+
+      {previewing && (
+        <DocPreviewModal
+          docItem={previewing}
+          onClose={() => setPreviewing(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Mevzuat sayfasındaki gibi Drive gömülü önizleme (iframe). Dosya yine
+// Drive'da (bağlantıya sahip herkes görüntüleyebilir izniyle) durur;
+// burada yalnızca uygulama içinde görüntüleme sağlanır.
+function DocPreviewModal({
+  docItem,
+  onClose,
+}: {
+  docItem: ProjectDocument;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-zinc-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3 dark:border-zinc-700">
+          <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">
+            {docItem.name}
+          </h3>
+          <div className="flex items-center gap-2">
+            {docItem.url && (
+              <a
+                href={docItem.url}
+                target="_blank"
+                rel="noreferrer"
+                className={secondaryBtnCls}
+              >
+                Yeni sekmede aç
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-zinc-800"
+              title="Kapat"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+        <iframe
+          src={docItem.previewUrl}
+          title={docItem.name}
+          className="min-h-0 flex-1 bg-slate-100 dark:bg-zinc-800"
+        />
       </div>
     </div>
   );
