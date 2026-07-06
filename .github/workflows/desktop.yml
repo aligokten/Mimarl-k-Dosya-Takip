@@ -29,18 +29,18 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MimarlikDosyaTakip-Windows
+          name: Ruhsat360-Windows
           path: desktop/dosyatakip/release/*.exe
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: windows-v1.0.0
-          name: Windows Uygulaması v1.0.0
+          tag_name: windows-v1.1.0
+          name: Ruhsat360 — Windows Uygulaması v1.1.0
           body: |
-            ## Mimarlık Ofisi Dosya Takip — Windows kurulum dosyası
+            ## Ruhsat360 — Windows kurulum dosyası
 
-            **Kurulum:** Aşağıdaki `MimarlikDosyaTakip-Kurulum-1.0.0.exe`
+            **Kurulum:** Aşağıdaki `Ruhsat360-Kurulum-1.1.0.exe`
             dosyasını indirip çift tıklayın. Kurulum otomatik tamamlanır ve
             masaüstüne kısayol ekler.
 

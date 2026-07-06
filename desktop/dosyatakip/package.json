@@ -1,8 +1,8 @@
 {
-  "name": "mimarlik-dosya-takip",
-  "productName": "Mimarlık Ofisi Dosya Takip",
-  "version": "1.0.0",
-  "description": "Mimarlık ofisi proje ve evrak takip sistemi — Windows masaüstü uygulaması",
+  "name": "ruhsat360",
+  "productName": "Ruhsat360",
+  "version": "1.1.0",
+  "description": "Ruhsat360 — mimarlık ofisi proje ve evrak takip sistemi (Windows masaüstü uygulaması)",
   "author": "SAGG İnşaat Mimarlık Akustik",
   "license": "UNLICENSED",
   "main": "main.js",
@@ -15,8 +15,8 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.sagg.mimarlik-dosya-takip",
-    "productName": "Mimarlık Ofisi Dosya Takip",
+    "appId": "com.sagg.ruhsat360",
+    "productName": "Ruhsat360",
     "directories": {
       "output": "release"
     },
@@ -39,8 +39,8 @@
       "perMachine": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Mimarlık Dosya Takip",
-      "artifactName": "MimarlikDosyaTakip-Kurulum-${version}.exe"
+      "shortcutName": "Ruhsat360",
+      "artifactName": "Ruhsat360-Kurulum-${version}.exe"
     }
   }
 }

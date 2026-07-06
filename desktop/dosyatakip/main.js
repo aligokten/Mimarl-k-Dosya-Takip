@@ -1,4 +1,4 @@
-// Mimarlık Ofisi Dosya Takip — Windows masaüstü kabuğu.
+// Ruhsat360 — Windows masaüstü kabuğu.
 // Canlı uygulamayı (GitHub Pages) yükler: veriler zaten Firebase'de
 // olduğundan uygulama internet gerektirir; bu sayede web'e gelen her
 // güncelleme masaüstünde de otomatik geçerli olur.
