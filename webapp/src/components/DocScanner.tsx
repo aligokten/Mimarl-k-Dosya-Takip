@@ -11,34 +11,36 @@ import { primaryBtnCls, secondaryBtnCls } from "../ui";
 
 let cvPromise: Promise<any> | null = null;
 
+function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+}
+
 function loadOpenCV(): Promise<any> {
   if (!cvPromise) {
     cvPromise = (async () => {
       const mod: any = await import("@techstark/opencv-js");
-      const cv: any = mod.default ?? mod;
-      if (cv.Mat) return cv; // WASM zaten hazır
-      // Hazır olmayı hem callback hem yoklama ile bekle (sürüm farklarına
-      // karşı); 40 sn içinde hazır olmazsa net bir hatayla vazgeç.
-      await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          clearInterval(poll);
-          reject(
-            new Error(
+      const cvOrPromise: any = mod.default ?? mod;
+      // Bu paketin tarayıcı derlemesi, cv nesnesinin kendisini değil; WASM
+      // çalışma zamanı hazır olunca çözülen bir Promise dışa aktarır
+      // (emscripten "moduleRtn" deseni). Thenable ise doğrudan bekleriz —
+      // üzerinde .Mat yoklamak asla sonuçlanmaz çünkü o bir Promise'tir.
+      const ready =
+        typeof cvOrPromise?.then === "function"
+          ? await withTimeout(
+              cvOrPromise,
+              40_000,
               "Tarama motoru başlatılamadı. Sayfayı yenileyip tekrar deneyin."
             )
-          );
-        }, 40_000);
-        const done = () => {
-          clearTimeout(timer);
-          clearInterval(poll);
-          resolve();
-        };
-        const poll = setInterval(() => {
-          if (cv.Mat) done();
-        }, 100);
-        cv.onRuntimeInitialized = done;
-      });
-      return cv;
+          : cvOrPromise;
+      if (!ready?.Mat) {
+        throw new Error(
+          "Tarama motoru başlatılamadı. Sayfayı yenileyip tekrar deneyin."
+        );
+      }
+      return ready;
     })().catch((err) => {
       cvPromise = null; // sonraki denemede baştan yükle
       throw err;
