@@ -44,6 +44,7 @@ export interface ProjectDocument {
   name: string;
   kind: DocumentKind;
   url?: string;
+  previewUrl?: string; // Drive gömülü önizleme (iframe) — eski kayıtlarda yok
   physicalLocation?: string;
   projectServiceId?: string;
   createdAt: string;
