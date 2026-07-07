@@ -1,5 +1,11 @@
-// Firebase web yapılandırmaları. Bu değerler GİZLİ DEĞİLDİR.
-// Güvenlik Firestore Rules, Authentication ve yetkili domain ayarlarıyla sağlanır.
+// Firebase web yapılandırması. Bu değerler GİZLİ DEĞİLDİR — Firebase web
+// uygulamaları için herkese açık olması normaldir; güvenlik Firestore
+// kuralları ve Authentication ile sağlanır.
+//
+// Kurulum: Firebase Console > Proje Ayarları > "Web uygulaması" bölümünden
+// aldığınız config değerlerini buraya yazın (ya da uygulama içindeki
+// Ayarlar > Ekip & Giriş ekranından yapıştırın; oradan girilen değer bu
+// dosyadakinden önceliklidir ve tarayıcıya kaydedilir).
 
 export interface FirebaseConfig {
   apiKey: string;
@@ -10,7 +16,11 @@ export interface FirebaseConfig {
   appId: string;
 }
 
-const LIVE_FIREBASE_CONFIG: FirebaseConfig = {
+// Ofisin Firebase projesi derlemeye gömülüdür: böylece ilk kez girenler
+// kurulum ekranı görmeden doğrudan giriş ekranına düşer. Bu değerler gizli
+// DEĞİLDİR (Firebase web anahtarları herkese açıktır); güvenlik Firestore
+// kuralları ve yetkili alan adlarıyla sağlanır.
+export const BUILTIN_FIREBASE_CONFIG: Partial<FirebaseConfig> = {
   apiKey: "AIzaSyCF9Q1W-TlYfsoOxtF7lunmb1jrYOYRE5k",
   authDomain: "artful-guru-474421-f9.firebaseapp.com",
   projectId: "artful-guru-474421-f9",
@@ -18,31 +28,3 @@ const LIVE_FIREBASE_CONFIG: FirebaseConfig = {
   messagingSenderId: "370120433599",
   appId: "1:370120433599:web:de08e01b07dac5ad34cb0a",
 };
-
-const STAGING_FIREBASE_CONFIG: FirebaseConfig = {
-  apiKey: "AIzaSyAdMzeP6GRILD0icD2QCbZrLhBLrbAVpeo",
-  authDomain: "directed-potion-425913-g4.firebaseapp.com",
-  projectId: "directed-potion-425913-g4",
-  storageBucket: "directed-potion-425913-g4.firebasestorage.app",
-  messagingSenderId: "469666419262",
-  appId: "1:469666419262:web:a0ec78710c954be12bf76f",
-};
-
-function resolveFirebaseConfig(): FirebaseConfig {
-  const host = window.location.hostname;
-
-  const isStaging =
-    host === "directed-potion-425913-g4.web.app" ||
-    host === "directed-potion-425913-g4.firebaseapp.com" ||
-    host === "localhost" ||
-    host === "127.0.0.1";
-
-  if (isStaging) {
-    return STAGING_FIREBASE_CONFIG;
-  }
-
-  return LIVE_FIREBASE_CONFIG;
-}
-
-export const BUILTIN_FIREBASE_CONFIG: Partial<FirebaseConfig> =
-  resolveFirebaseConfig();
