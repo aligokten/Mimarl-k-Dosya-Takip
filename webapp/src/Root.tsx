@@ -35,12 +35,16 @@ export default function Root() {
     return <Login />;
   }
 
-  // Giriş yapıldı; ofis var mı, üye mi?
-  if (app.officeChecked && !app.office) {
+  // Giriş yapıldı; kullanıcının bağlı olduğu ofis veya ofis kurma daveti kontrol edilir.
+  if (!app.officeChecked) {
+    return <Splash text="Ofis kontrol ediliyor..." />;
+  }
+
+  if (!app.office && app.canCreateOffice) {
     return <CreateOffice />;
   }
 
-  if (!app.me) {
+  if (!app.office || !app.me) {
     return <NotMember />;
   }
 
