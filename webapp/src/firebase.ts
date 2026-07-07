@@ -61,6 +61,7 @@ let app: FirebaseApp | null = null;
 let authInstance: Auth | null = null;
 let dbInstance: Firestore | null = null;
 let storageInstance: FirebaseStorage | null = null;
+let employeeAuthInstance: Auth | null = null;
 
 export const googleProvider = new GoogleAuthProvider();
 
@@ -98,6 +99,21 @@ export function auth(): Auth {
   ensureApp();
   return authInstance!;
 }
+
+export function secondaryAuth(): Auth {
+  const config = getStoredConfig();
+  if (!config) {
+    throw new Error("Firebase yapılandırması bulunamadı.");
+  }
+
+  if (!employeeAuthInstance) {
+    const employeeApp = initializeApp(config, "employee-creation");
+    employeeAuthInstance = getAuth(employeeApp);
+  }
+
+  return employeeAuthInstance;
+}
+
 
 export function db(): Firestore {
   ensureApp();

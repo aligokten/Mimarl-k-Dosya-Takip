@@ -30,12 +30,18 @@ export default function Team() {
     return <Navigate to="/profil" replace />;
   }
 
-  const members = [...app.members].sort((a, b) =>
-    a.createdAt.localeCompare(b.createdAt)
-  );
-  const invites = [...app.invites].sort((a, b) =>
-    a.createdAt.localeCompare(b.createdAt)
-  );
+  const members = [...app.members]
+    .filter((m) => m && m.uid && m.email)
+    .sort((a, b) =>
+      String(a.createdAt ?? "").localeCompare(String(b.createdAt ?? ""))
+    );
+
+  const invites = [...app.invites]
+    .filter((i) => i && i.email)
+    .sort((a, b) =>
+      String(a.createdAt ?? "").localeCompare(String(b.createdAt ?? ""))
+    );
+
   const total = members.length + invites.length;
 
   return (
@@ -77,7 +83,7 @@ export default function Team() {
                   Geçici şifre: {inv.tempPassword}
                 </span>
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-zinc-700 dark:text-slate-300">
-                  {MEMBER_ROLE_LABELS[inv.role]}
+                  {MEMBER_ROLE_LABELS[inv.role] ?? inv.role ?? "Rol"}
                 </span>
                 <button
                   onClick={() => {
@@ -128,7 +134,7 @@ export default function Team() {
                     : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-zinc-700 dark:text-slate-300"
                 }
               >
-                {MEMBER_ROLE_LABELS[m.role]}
+                {MEMBER_ROLE_LABELS[m.role] ?? m.role ?? "Rol"}
               </span>
               {m.uid !== me.uid && (
                 <div className="flex items-center gap-1.5">
@@ -201,11 +207,26 @@ function AddEmployee({ full }: { full: boolean }) {
           createInvite(email, tempPassword, role, name)
             .then((r) => {
               setResult(r);
+              if (!r.ok) {
+                alert(r.message);
+              }
               if (r.ok) {
+                alert(r.message);
                 setEmail("");
                 setName("");
                 setTempPassword(randomPassword());
               }
+            })
+            .catch((err) => {
+              console.error("Çalışan ekleme hatası:", err);
+              const message =
+                err?.message ||
+                "Çalışan eklenemedi. Firestore izinlerini ve bağlantıyı kontrol edin.";
+              alert(message);
+              setResult({
+                ok: false,
+                message,
+              });
             })
             .finally(() => setBusy(false));
         }}

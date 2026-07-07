@@ -140,17 +140,62 @@ function applyOfficeSharedConfig(office: Office | null) {
   applySharedDriveClientId(office?.driveClientId);
 }
 
-async function startForMember(fbUser: FbUser, officeId: string) {
+async function resolveOfficeIdForUser(fbUser: FbUser): Promise<string> {
+  const indexSnap = await getDoc(doc(db(), "userOfficeIndex", fbUser.uid));
+
+  if (!indexSnap.exists()) {
+    return "";
+  }
+
+  const index = indexSnap.data() as {
+    primaryOfficeId?: string;
+    officeIds?: string[];
+    offices?: Record<string, unknown>;
+  };
+
+  return (
+    index.primaryOfficeId ||
+    index.officeIds?.[0] ||
+    Object.keys(index.offices ?? {})[0] ||
+    ""
+  );
+}
+
+async function startForMember(fbUser: FbUser, officeIdArg?: string) {
   clearDataSubs();
+
+  const officeId = officeIdArg || (await resolveOfficeIdForUser(fbUser));
+
+  if (!officeId) {
+    set({
+      office: null,
+      officeChecked: true,
+      me: null,
+      members: [],
+      invites: [],
+      contacts: [],
+      serviceTypes: [],
+      docTemplates: [],
+      projects: [],
+      notifications: [],
+      activityFeed: [],
+      professionals: [],
+      mevzuat: [],
+      chat: [],
+    });
+    return;
+  }
 
   const officeRef = doc(db(), "offices", officeId);
   const meRef = doc(db(), "offices", officeId, "members", fbUser.uid);
+  const officeCol = (name: string) => collection(db(), "offices", officeId, name);
 
   dataUnsubs.push(
     onSnapshot(officeRef, (snap) => {
       const office = snap.exists()
-        ? ({ id: officeId, ...(snap.data() as object) } as Office)
+        ? ({ id: officeId, officeId, ...(snap.data() as object) } as Office)
         : null;
+
       applyOfficeSharedConfig(office);
       set({ office, officeChecked: true });
     })
@@ -163,93 +208,95 @@ async function startForMember(fbUser: FbUser, officeId: string) {
   );
 
   dataUnsubs.push(
-    onSnapshot(collection(db(), "offices", officeId, "members"), (snap) => {
-      set({ members: snap.docs.map((d) => d.data() as Member) });
+    onSnapshot(officeCol("members"), (snap) => {
+      const members = snap.docs
+        .map((d) => d.data() as Member)
+        .filter((m) => !!m?.uid && !!m?.email);
+
+      set({ members });
     })
   );
 
   dataUnsubs.push(
     onSnapshot(
-      collection(db(), "offices", officeId, "invites"),
-      (snap) => set({ invites: snap.docs.map((d) => d.data() as Invite) }),
+      officeCol("invites"),
+      (snap) => {
+        const invites = snap.docs
+          .map((d) => d.data() as Invite)
+          .filter((i) => !!i?.email);
+
+        set({ invites });
+      },
       () => set({ invites: [] })
     )
   );
 
   dataUnsubs.push(
-    onSnapshot(collection(db(), "offices", officeId, "contacts"), (snap) => {
+    onSnapshot(officeCol("contacts"), (snap) => {
       set({ contacts: snap.docs.map((d) => stripId<Contact>(d)) });
     })
   );
 
   dataUnsubs.push(
-    onSnapshot(collection(db(), "offices", officeId, "serviceTypes"), (snap) => {
+    onSnapshot(officeCol("serviceTypes"), (snap) => {
       set({ serviceTypes: snap.docs.map((d) => stripId<ServiceType>(d)) });
     })
   );
 
   dataUnsubs.push(
-    onSnapshot(collection(db(), "offices", officeId, "docTemplates"), (snap) => {
+    onSnapshot(officeCol("docTemplates"), (snap) => {
       set({ docTemplates: snap.docs.map((d) => stripId<CustomTemplate>(d)) });
     })
   );
 
   dataUnsubs.push(
-    onSnapshot(collection(db(), "offices", officeId, "projects"), (snap) => {
+    onSnapshot(officeCol("projects"), (snap) => {
       set({ projects: snap.docs.map((d) => stripId<Project>(d)) });
     })
   );
 
   dataUnsubs.push(
     onSnapshot(
-      query(
-        collection(db(), "offices", officeId, "notifications"),
-        where("forUid", "==", fbUser.uid)
-      ),
+      query(officeCol("notifications"), where("forUid", "==", fbUser.uid)),
       (snap) => {
         const list = snap.docs
           .map((d) => stripId<AppNotification>(d))
-          .sort((a, b) => b.at.localeCompare(a.at));
+          .sort((a, b) => (b.at || "").localeCompare(a.at || ""));
+
         set({ notifications: list });
-      }
+      },
+      () => set({ notifications: [] })
     )
   );
 
   dataUnsubs.push(
     onSnapshot(
-      query(
-        collection(db(), "offices", officeId, "activity"),
-        orderBy("at", "desc"),
-        limit(30)
-      ),
+      query(officeCol("activity"), orderBy("at", "desc"), limit(30)),
       (snap) => set({ activityFeed: snap.docs.map((d) => stripId<Activity>(d)) }),
       () => set({ activityFeed: [] })
     )
   );
 
   dataUnsubs.push(
-    onSnapshot(collection(db(), "offices", officeId, "professionals"), (snap) => {
+    onSnapshot(officeCol("professionals"), (snap) => {
       set({ professionals: snap.docs.map((d) => stripId<Professional>(d)) });
     })
   );
 
   dataUnsubs.push(
-    onSnapshot(collection(db(), "offices", officeId, "mevzuat"), (snap) => {
+    onSnapshot(officeCol("mevzuat"), (snap) => {
       set({ mevzuat: snap.docs.map((d) => stripId<MevzuatDoc>(d)) });
     })
   );
 
   dataUnsubs.push(
     onSnapshot(
-      query(
-        collection(db(), "offices", officeId, "chat"),
-        orderBy("at", "desc"),
-        limit(100)
-      ),
+      query(officeCol("chat"), orderBy("at", "desc"), limit(100)),
       (snap) => {
         const list = snap.docs
           .map((d) => stripId<ChatMessage>(d))
-          .sort((a, b) => a.at.localeCompare(b.at));
+          .sort((a, b) => (a.at || "").localeCompare(b.at || ""));
+
         set({ chat: list });
       },
       () => set({ chat: [] })
@@ -262,6 +309,7 @@ export function initAuth() {
     if (!fbUser) {
       clearDataSubs();
       applyOfficeSharedConfig(null);
+
       set({
         authReady: true,
         user: null,
@@ -280,52 +328,59 @@ export function initAuth() {
         mevzuat: [],
         chat: [],
       });
+
       return;
     }
 
-    const indexSnap = await getDoc(doc(db(), "userOfficeIndex", fbUser.uid));
-    const index = indexSnap.exists() ? (indexSnap.data() as any) : null;
+    try {
+      const officeId = await resolveOfficeIdForUser(fbUser);
 
-    const officeId =
-      index?.primaryOfficeId ||
-      index?.officeIds?.[0] ||
-      Object.keys(index?.offices ?? {})[0];
+      if (!officeId) {
+        set({
+          authReady: true,
+          user: fbUser,
+          office: null,
+          officeChecked: true,
+          me: null,
+        });
 
-    if (!officeId) {
-      applyOfficeSharedConfig(null);
+        return;
+      }
+
+      const [officeSnap, meSnap] = await Promise.all([
+        getDoc(doc(db(), "offices", officeId)),
+        getDoc(doc(db(), "offices", officeId, "members", fbUser.uid)),
+      ]);
+
+      const office = officeSnap.exists()
+        ? ({ id: officeId, officeId, ...(officeSnap.data() as object) } as Office)
+        : null;
+
+      const me = meSnap.exists() ? (meSnap.data() as Member) : null;
+
+      applyOfficeSharedConfig(office);
+
       set({
-        user: fbUser,
         authReady: true,
+        user: fbUser,
+        office,
+        officeChecked: true,
+        me,
+      });
+
+      if (office && me) {
+        startForMember(fbUser, officeId);
+      }
+    } catch (err) {
+      console.error("initAuth SaaS hata:", err);
+
+      set({
+        authReady: true,
+        user: fbUser,
         office: null,
         officeChecked: true,
         me: null,
       });
-      return;
-    }
-
-    const officeSnap = await getDoc(doc(db(), "offices", officeId));
-    const office = officeSnap.exists()
-      ? ({ id: officeId, ...(officeSnap.data() as object) } as Office)
-      : null;
-
-    applyOfficeSharedConfig(office);
-
-    set({
-      user: fbUser,
-      authReady: true,
-      office,
-      officeChecked: true,
-    });
-
-    const meSnap = await getDoc(
-      doc(db(), "offices", officeId, "members", fbUser.uid)
-    );
-
-    if (meSnap.exists()) {
-      set({ me: meSnap.data() as Member });
-      startForMember(fbUser, officeId);
-    } else {
-      set({ me: null });
     }
   });
 }
@@ -477,86 +532,232 @@ export async function createOffice(officeName: string) {
 
 // Çalışan girişi: e-posta + (ilk seferde geçici) şifre. İlk girişte hesap
 // yoksa davet doğrulanıp Firebase hesabı ve üye kaydı oluşturulur.
+async function completeInvitedEmployeeLogin(
+  user: FbUser,
+  email: string,
+  password: string,
+  deleteUserOnFailure: boolean
+): Promise<{ ok: boolean; message: string }> {
+  const existingIndex = await getDoc(doc(db(), "userOfficeIndex", user.uid));
+
+  if (existingIndex.exists()) {
+    return { ok: true, message: "" };
+  }
+
+  const inviteSnap = await getDoc(doc(db(), "platformInvites", email));
+
+  if (!inviteSnap.exists()) {
+    if (deleteUserOnFailure) await deleteUser(user).catch(() => {});
+    else await fbSignOut(auth()).catch(() => {});
+
+    return {
+      ok: false,
+      message:
+        "Bu e-posta herhangi bir ofise davet edilmemiş. Lütfen yöneticinizle görüşün.",
+    };
+  }
+
+  const invite = inviteSnap.data() as Invite & {
+    officeId?: string;
+    officeName?: string;
+  };
+
+  const officeId = invite.officeId;
+
+  if (!officeId) {
+    if (deleteUserOnFailure) await deleteUser(user).catch(() => {});
+    else await fbSignOut(auth()).catch(() => {});
+
+    return {
+      ok: false,
+      message: "Davet kaydı eksik. Lütfen yöneticinizden yeniden davet isteyin.",
+    };
+  }
+
+  if (invite.tempPassword !== password) {
+    if (deleteUserOnFailure) await deleteUser(user).catch(() => {});
+    else await fbSignOut(auth()).catch(() => {});
+
+    return { ok: false, message: "Geçici şifre hatalı." };
+  }
+
+  const me: Member = {
+    uid: user.uid,
+    email,
+    displayName: invite.displayName?.trim() || email.split("@")[0],
+    role: invite.role,
+    mustChangePassword: true,
+    createdAt: now(),
+  };
+
+  // Önce üyeliği ve ofis bağlantısını oluştur.
+  // Daveti silme işlemi ayrı ve hataya dayanıklı yapılır.
+  const batch = writeBatch(db());
+
+  batch.set(
+    doc(db(), "offices", officeId, "members", user.uid),
+    stripUndefined(me)
+  );
+
+  batch.set(doc(db(), "userOfficeIndex", user.uid), {
+    uid: user.uid,
+    email,
+    primaryOfficeId: officeId,
+    officeIds: [officeId],
+    offices: {
+      [officeId]: {
+        officeId,
+        role: invite.role,
+        status: "ACTIVE",
+      },
+    },
+    createdAt: now(),
+    updatedAt: now(),
+  });
+
+  await batch.commit();
+
+  await deleteDoc(doc(db(), "platformInvites", email)).catch(() => {});
+  await deleteDoc(doc(db(), "offices", officeId, "invites", email)).catch(() => {});
+
+  const officeSnap = await getDoc(doc(db(), "offices", officeId));
+  const office = officeSnap.exists()
+    ? ({ id: officeId, ...(officeSnap.data() as object) } as Office)
+    : null;
+
+  set({
+    office,
+    officeChecked: true,
+    me,
+  });
+
+  startForMember(user, officeId);
+
+  return { ok: true, message: "" };
+}
+
 export async function signInWithEmail(
   emailRaw: string,
   password: string
 ): Promise<{ ok: boolean; message: string }> {
   const email = emailRaw.trim().toLowerCase();
+
   if (!email || !password) {
     return { ok: false, message: "E-posta ve şifre gerekli." };
   }
-  // Önce normal giriş dene (hesap zaten varsa).
+
   try {
-    await signInWithEmailAndPassword(auth(), email, password);
-    return { ok: true, message: "" };
+    const cred = await signInWithEmailAndPassword(auth(), email, password);
+    return await completeInvitedEmployeeLogin(
+      cred.user,
+      email,
+      password,
+      false
+    );
   } catch {
-    // Hesap yok (ilk giriş) ya da şifre yanlış — ayırt etmek için hesabı
-    // oluşturmayı deneriz.
+    // Hesap yoksa ilk çalışan girişi olabilir; Firebase Auth kullanıcısı oluşturulur.
   }
+
   let cred;
+
   try {
     cred = await createUserWithEmailAndPassword(auth(), email, password);
   } catch (err) {
     const code = (err as { code?: string })?.code ?? "";
+
     if (code === "auth/email-already-in-use") {
       return { ok: false, message: "E-posta veya şifre hatalı." };
     }
+
     if (code === "auth/weak-password") {
       return { ok: false, message: "Şifre en az 6 karakter olmalı." };
     }
+
     if (code === "auth/invalid-email") {
       return { ok: false, message: "Geçersiz e-posta adresi." };
     }
+
     if (code === "auth/operation-not-allowed") {
       return {
         ok: false,
         message:
-          "E-posta/şifre girişi Firebase'de etkin değil. Yönetici Firebase Console > Authentication'dan etkinleştirmeli.",
+          "E-posta/şifre girişi Firebase'de etkin değil. Authentication > Sign-in method içinden Email/Password açılmalı.",
       };
     }
-    return { ok: false, message: "Giriş yapılamadı. Bilgileri kontrol edin." };
-  }
-  // Hesap yeni oluşturuldu → davet var mı ve geçici şifre doğru mu?
-  try {
-    const inviteSnap = await getDoc(doc(db(), "invites", email));
-    if (!inviteSnap.exists()) {
-      await deleteUser(cred.user).catch(() => {});
-      return {
-        ok: false,
-        message:
-          "Bu e-posta ofise davet edilmemiş. Lütfen yöneticinizle görüşün.",
-      };
-    }
-    const invite = inviteSnap.data() as Invite;
-    if (invite.tempPassword !== password) {
-      await deleteUser(cred.user).catch(() => {});
-      return { ok: false, message: "Geçici şifre hatalı." };
-    }
-    const me: Member = {
-      uid: cred.user.uid,
-      email,
-      displayName: invite.displayName?.trim() || email.split("@")[0],
-      role: invite.role,
-      mustChangePassword: true,
-      createdAt: now(),
+
+    return {
+      ok: false,
+      message: "Giriş yapılamadı. Bilgileri kontrol edin.",
     };
-    await setDoc(doc(db(), "members", cred.user.uid), stripUndefined(me));
-    await deleteDoc(doc(db(), "invites", email)).catch(() => {});
-    set({ me });
-    startForMember(cred.user);
-    return { ok: true, message: "" };
-  } catch {
+  }
+
+  try {
+    return await completeInvitedEmployeeLogin(
+      cred.user,
+      email,
+      password,
+      true
+    );
+  } catch (err) {
     await deleteUser(cred.user).catch(() => {});
-    return { ok: false, message: "Üyelik oluşturulamadı, tekrar deneyin." };
+
+    return {
+      ok: false,
+      message:
+        "Üyelik oluşturulamadı: " +
+        ((err as { message?: string })?.message ?? "Bilinmeyen hata"),
+    };
   }
 }
 
-// İlk girişte (ya da istediğinde) şifre değiştirme.
+// İlk girişte geçici şifreyi değiştir.
 export async function changeMyPassword(newPassword: string) {
   const u = auth().currentUser;
-  if (!u) throw new Error("Oturum bulunamadı.");
+
+  if (!u) {
+    throw new Error("Oturum bulunamadı.");
+  }
+
   await updatePassword(u, newPassword);
-  await updateDoc(doc(db(), "members", u.uid), { mustChangePassword: false });
+
+  let officeId = "";
+
+  try {
+    const indexSnap = await getDoc(doc(db(), "userOfficeIndex", u.uid));
+
+    if (indexSnap.exists()) {
+      const data = indexSnap.data() as {
+        primaryOfficeId?: string;
+        officeIds?: string[];
+      };
+
+      officeId = data.primaryOfficeId || data.officeIds?.[0] || "";
+    }
+  } catch {
+    // Devam et; aşağıda state.office fallback'i kullanılacak.
+  }
+
+  if (!officeId) {
+    const office = state.office as (Office & { id?: string; officeId?: string }) | null;
+    officeId = office?.id || office?.officeId || "";
+  }
+
+  if (!officeId) {
+    throw new Error("Aktif ofis bulunamadı.");
+  }
+
+  await updateDoc(doc(db(), "offices", officeId, "members", u.uid), {
+    mustChangePassword: false,
+  });
+
+  // Eski root members kaydı varsa güncellemeyi dener; yetki yoksa süreci bozmaz.
+  await updateDoc(doc(db(), "members", u.uid), {
+    mustChangePassword: false,
+  }).catch(() => {});
+
+  set({
+    me: state.me ? { ...state.me, mustChangePassword: false } : state.me,
+  });
 }
 
 // ---- Davet (yönetici e-posta ile çalışan ekler) ----
