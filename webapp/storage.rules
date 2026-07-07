@@ -4,12 +4,15 @@ service firebase.storage {
     function signedIn() {
       return request.auth != null;
     }
-    // Mevzuat PDF'leri ve sohbet dosyaları: girişli kullanıcılar okuyup
-    // yükleyebilir. (Yönetici-yalnızca gibi ince kontroller uygulama
-    // tarafında yapılır; Storage kuralları Firestore üyeliğini göremez.)
+
+    match /offices/{officeId}/{allPaths=**} {
+      allow read, write: if signedIn();
+    }
+
     match /mevzuat/{allPaths=**} {
       allow read, write: if signedIn();
     }
+
     match /chat/{allPaths=**} {
       allow read, write: if signedIn();
     }
