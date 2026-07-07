@@ -108,34 +108,10 @@ export interface Invite {
   createdAt: string;
 }
 
-export type PlanCode = "STARTER" | "PRO" | "ENTERPRISE";
-export type SubscriptionStatus = "TRIAL" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "SUSPENDED";
-
-export interface PlatformInvite {
-  email: string;
-  plan: PlanCode;
-  maxMembers: number;
-  status: "PENDING" | "USED";
-  createdAt: string;
-}
-
-export interface UserOfficeIndex {
-  officeId: string;
-  role: MemberRole;
-  email: string;
-  createdAt: string;
-}
-
 export interface Office {
-  id?: string;
   name: string;
   ownerUid: string;
-  ownerEmail?: string;
   inviteCode?: string;
-  plan?: PlanCode;
-  maxMembers?: number;
-  subscriptionStatus?: SubscriptionStatus;
-  currentPeriodEnd?: string;
   createdAt: string;
   // Ofis genelinde paylaşılan ayarlar (yalnızca yönetici düzenler).
   geminiKey?: string;
