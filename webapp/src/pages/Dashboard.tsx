@@ -324,7 +324,7 @@ export default function Dashboard() {
           {greeting()} — projelerinizi yönetin ve takip edin
         </p>
         <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-          Proje Paneli
+          Proje Paneli.
         </h1>
       </div>
 
