@@ -4,80 +4,100 @@ service cloud.firestore {
     function signedIn() {
       return request.auth != null;
     }
-    function isMember() {
+
+    function platformAdmin() {
       return signedIn() &&
-        exists(/databases/$(database)/documents/members/$(request.auth.uid));
-    }
-    function isAdmin() {
-      return isMember() &&
-        get(/databases/$(database)/documents/members/$(request.auth.uid)).data.role == 'ADMIN';
+        exists(/databases/$(database)/documents/platformAdmins/$(request.auth.uid));
     }
 
-    // Ofis: girisli herkes okuyabilir (davet kodu dogrulamasi icin);
-    // ilk kez olusturan sahibi olur; sonrasinda yalnizca admin duzenler.
-    match /office/{doc} {
-      allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
-      // Admin ofisi düzenler ama owner (ofis sahibi) değiştirilemez.
-      allow update: if isAdmin() &&
-        request.resource.data.ownerUid == resource.data.ownerUid;
-      allow delete: if isAdmin();
-    }
-
-    function isOfficeOwner() {
+    function hasPlatformInvite() {
       return signedIn() &&
-        exists(/databases/$(database)/documents/office/main) &&
-        get(/databases/$(database)/documents/office/main).data.ownerUid == request.auth.uid;
+        exists(/databases/$(database)/documents/platformInvites/$(request.auth.token.email));
     }
-    function hasInvite() {
+
+    function isOfficeMember(officeId) {
       return signedIn() &&
-        exists(/databases/$(database)/documents/invites/$(request.auth.token.email));
+        exists(/databases/$(database)/documents/offices/$(officeId)/members/$(request.auth.uid));
     }
 
-    // Uyeler: her uye listeyi gorur. Kisi yalnizca kendi kaydini olusturabilir
-    // ve bunu icin ya ofis sahibi olmali ya da e-postasina davet bulunmali.
-    match /members/{uid} {
-      allow read: if isMember();
-      allow create: if signedIn() && request.auth.uid == uid &&
-        (isOfficeOwner() || hasInvite());
-      allow update: if request.auth.uid == uid || isAdmin();
-      allow delete: if isAdmin();
+    function isOfficeAdmin(officeId) {
+      return isOfficeMember(officeId) &&
+        get(/databases/$(database)/documents/offices/$(officeId)/members/$(request.auth.uid)).data.role == 'ADMIN';
     }
 
-    // Davetler: yonetici e-posta ile calisan ekler. Davet dokumaninin kimligi
-    // (dogrudan) calisanin e-postasidir. Yonetici tumunu yonetir; davet edilen
-    // kisi yalnizca kendi davetini okuyup (ilk giriste) silebilir.
-    match /invites/{email} {
-      allow read: if isAdmin() ||
-        (signedIn() && request.auth.token.email == email);
-      allow create, update: if isAdmin();
-      allow delete: if isAdmin() ||
-        (signedIn() && request.auth.token.email == email);
+    function officeActive(officeId) {
+      return get(/databases/$(database)/documents/offices/$(officeId)).data.subscriptionStatus in ['TRIAL', 'ACTIVE'];
     }
 
-    match /contacts/{id} { allow read, write: if isMember(); }
-    match /serviceTypes/{id} { allow read, write: if isMember(); }
-    match /docTemplates/{id} { allow read, write: if isMember(); }
-    match /professionals/{id} { allow read, write: if isMember(); }
-    // Ofis geneli aktivite akışı ("Son İşlemler")
-    match /activity/{id} { allow read, write: if isMember(); }
-    // Ofis içi sohbet (kalıcı değil; her üye yazabilir/temizleyebilir)
-    match /chat/{id} { allow read, write: if isMember(); }
-    // Mevzuat PDF kayıtları: herkes görür, yalnızca yönetici ekler/siler.
-    match /mevzuat/{id} {
-      allow read: if isMember();
-      allow write: if isAdmin();
+    function hasOfficeInvite(officeId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/offices/$(officeId)/invites/$(request.auth.token.email));
     }
 
-    match /projects/{id} {
-      allow read, write: if isMember();
-      match /activities/{aid} { allow read, write: if isMember(); }
+    match /platformAdmins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if platformAdmin();
     }
 
-    match /notifications/{id} {
-      allow read: if signedIn() && resource.data.forUid == request.auth.uid;
-      allow create: if isMember();
-      allow update, delete: if signedIn() && resource.data.forUid == request.auth.uid;
+    match /platformInvites/{email} {
+      allow read: if platformAdmin() || (signedIn() && request.auth.token.email == email);
+      allow create, update: if platformAdmin();
+      allow delete: if platformAdmin() || (signedIn() && request.auth.token.email == email);
+    }
+
+    match /userOfficeIndex/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid &&
+        getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)/members/$(uid)).data.email == request.auth.token.email;
+      allow delete: if platformAdmin();
+    }
+
+    match /offices/{officeId} {
+      allow read: if isOfficeMember(officeId);
+      allow create: if signedIn() && hasPlatformInvite() && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isOfficeAdmin(officeId) && request.resource.data.ownerUid == resource.data.ownerUid;
+      allow delete: if platformAdmin();
+
+      match /members/{uid} {
+        allow read: if isOfficeMember(officeId);
+        allow create: if signedIn() && request.auth.uid == uid &&
+          (
+            (hasPlatformInvite() && request.resource.data.role == 'ADMIN' && request.resource.data.email == request.auth.token.email) ||
+            (hasOfficeInvite(officeId) && request.resource.data.email == request.auth.token.email) ||
+            isOfficeAdmin(officeId)
+          );
+        allow update: if isOfficeAdmin(officeId) || request.auth.uid == uid;
+        allow delete: if isOfficeAdmin(officeId);
+      }
+
+      match /invites/{email} {
+        allow read: if isOfficeAdmin(officeId) || (signedIn() && request.auth.token.email == email);
+        allow create, update: if isOfficeAdmin(officeId);
+        allow delete: if isOfficeAdmin(officeId) || (signedIn() && request.auth.token.email == email);
+      }
+
+      match /contacts/{id} { allow read, write: if isOfficeMember(officeId) && officeActive(officeId); }
+      match /serviceTypes/{id} { allow read, write: if isOfficeMember(officeId) && officeActive(officeId); }
+      match /docTemplates/{id} { allow read, write: if isOfficeMember(officeId) && officeActive(officeId); }
+      match /professionals/{id} { allow read, write: if isOfficeMember(officeId) && officeActive(officeId); }
+      match /activity/{id} { allow read, write: if isOfficeMember(officeId) && officeActive(officeId); }
+      match /chat/{id} { allow read, write: if isOfficeMember(officeId) && officeActive(officeId); }
+      match /mevzuat/{id} {
+        allow read: if isOfficeMember(officeId) && officeActive(officeId);
+        allow write: if isOfficeAdmin(officeId) && officeActive(officeId);
+      }
+      match /notifications/{id} {
+        allow read: if signedIn() && resource.data.forUid == request.auth.uid;
+        allow create: if isOfficeMember(officeId) && officeActive(officeId);
+        allow update, delete: if signedIn() && resource.data.forUid == request.auth.uid;
+      }
+
+      match /projects/{id} {
+        allow read, write: if isOfficeMember(officeId) && officeActive(officeId);
+        match /activities/{aid} {
+          allow read, write: if isOfficeMember(officeId) && officeActive(officeId);
+        }
+      }
     }
   }
 }
