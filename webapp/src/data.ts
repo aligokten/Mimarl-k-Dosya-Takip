@@ -33,7 +33,8 @@ import {
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
-import { auth, db, storage, googleProvider } from "./firebase";
+import { auth, db, storage, googleProvider, functions } from "./firebase";
+import { httpsCallable } from "firebase/functions";
 import { applySharedDriveClientId, deleteDriveFile } from "./drive";
 import type {
   Activity,
@@ -769,40 +770,58 @@ export async function createInvite(
   displayName?: string
 ): Promise<{ ok: boolean; message: string }> {
   const email = emailRaw.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { ok: false, message: "Geçerli bir e-posta girin." };
-  }
-  if (tempPassword.trim().length < 6) {
-    return { ok: false, message: "Geçici şifre en az 6 karakter olmalı." };
-  }
-  const activeCount = state.members.length + state.invites.length;
-  const alreadyMember = state.members.some(
-    (m) => m.email.toLowerCase() === email
-  );
-  const alreadyInvited = state.invites.some((i) => i.email === email);
-  if (!alreadyMember && !alreadyInvited && activeCount >= MAX_MEMBERS) {
+
+  try {
+    const createEmployee = httpsCallable<
+      {
+        email: string;
+        tempPassword: string;
+        role: MemberRole;
+        displayName?: string;
+      },
+      {
+        ok: boolean;
+        uid: string;
+        email: string;
+        displayName: string;
+        role: MemberRole;
+      }
+    >(functions(), "createEmployee");
+
+    await createEmployee({
+      email,
+      tempPassword: tempPassword.trim(),
+      role,
+      displayName: displayName?.trim() || undefined,
+    });
+
+    return {
+      ok: true,
+      message:
+        "Çalışan hesabı oluşturuldu. E-posta ve geçici şifre ile giriş yapabilir.",
+    };
+  } catch (err) {
+    const message =
+      (err as { message?: string })?.message ||
+      "Çalışan hesabı oluşturulamadı.";
+
     return {
       ok: false,
-      message: `Ofis en fazla ${MAX_MEMBERS} kullanıcı olabilir. Önce bir yer açın.`,
+      message,
     };
   }
-  if (alreadyMember) {
-    return { ok: false, message: "Bu e-posta zaten üye." };
-  }
-  const invite: Invite = {
-    email,
-    tempPassword: tempPassword.trim(),
-    role,
-    displayName: displayName?.trim() || undefined,
-    createdAt: now(),
-  };
-  await setDoc(doc(db(), "invites", email), stripUndefined(invite));
-  return { ok: true, message: "Çalışan eklendi. Geçici şifreyi paylaşın." };
 }
 
 export async function deleteInvite(emailRaw: string) {
-  await deleteDoc(doc(db(), "invites", emailRaw.trim().toLowerCase()));
+  const email = emailRaw.trim().toLowerCase();
+  const officeId = activeOfficeId();
+
+  await Promise.allSettled([
+    deleteDoc(doc(db(), "offices", officeId, "invites", email)),
+    deleteDoc(doc(db(), "platformInvites", email)),
+  ]);
 }
+
 
 // ---- Ofis paylaşımlı ayarları (yalnızca yönetici) ----
 

@@ -16,6 +16,11 @@ import {
   type FirebaseStorage,
 } from "firebase/storage";
 import {
+  getFunctions,
+  connectFunctionsEmulator,
+  type Functions,
+} from "firebase/functions";
+import {
   BUILTIN_FIREBASE_CONFIG,
   type FirebaseConfig,
 } from "./firebase-config";
@@ -61,6 +66,7 @@ let app: FirebaseApp | null = null;
 let authInstance: Auth | null = null;
 let dbInstance: Firestore | null = null;
 let storageInstance: FirebaseStorage | null = null;
+let functionsInstance: Functions | null = null;
 let employeeAuthInstance: Auth | null = null;
 
 export const googleProvider = new GoogleAuthProvider();
@@ -85,12 +91,14 @@ function ensureApp(): FirebaseApp {
   // Firestore yazımını reddetmesin; tanımsız alanlar sessizce atlanır.
   dbInstance = initializeFirestore(app, { ignoreUndefinedProperties: true });
   storageInstance = getStorage(app);
+  functionsInstance = getFunctions(app, "europe-west1");
   if (emulator) {
     connectAuthEmulator(authInstance, "http://127.0.0.1:9099", {
       disableWarnings: true,
     });
     connectFirestoreEmulator(dbInstance, "127.0.0.1", 8085);
     connectStorageEmulator(storageInstance, "127.0.0.1", 9199);
+    connectFunctionsEmulator(functionsInstance, "127.0.0.1", 5001);
   }
   return app;
 }
@@ -123,4 +131,10 @@ export function db(): Firestore {
 export function storage(): FirebaseStorage {
   ensureApp();
   return storageInstance!;
+}
+
+
+export function functions(): Functions {
+  ensureApp();
+  return functionsInstance!;
 }
