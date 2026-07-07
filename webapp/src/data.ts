@@ -140,62 +140,70 @@ function applyOfficeSharedConfig(office: Office | null) {
   applySharedDriveClientId(office?.driveClientId);
 }
 
-async function startForMember(fbUser: FbUser) {
+async function startForMember(fbUser: FbUser, officeId: string) {
   clearDataSubs();
 
-  const officeRef = doc(db(), "office", "main");
-  const meRef = doc(db(), "members", fbUser.uid);
+  const officeRef = doc(db(), "offices", officeId);
+  const meRef = doc(db(), "offices", officeId, "members", fbUser.uid);
 
   dataUnsubs.push(
     onSnapshot(officeRef, (snap) => {
-      const office = snap.exists() ? (snap.data() as Office) : null;
+      const office = snap.exists()
+        ? ({ id: officeId, ...(snap.data() as object) } as Office)
+        : null;
       applyOfficeSharedConfig(office);
       set({ office, officeChecked: true });
     })
   );
+
   dataUnsubs.push(
     onSnapshot(meRef, (snap) => {
       set({ me: snap.exists() ? (snap.data() as Member) : null });
     })
   );
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "members"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "members"), (snap) => {
       set({ members: snap.docs.map((d) => d.data() as Member) });
     })
   );
-  // Davetler yalnızca yönetici tarafından listelenebilir; yetki yoksa
-  // (çalışan oturumu) dinleyici hata verir, bunu sessizce boş liste yaparız.
+
   dataUnsubs.push(
     onSnapshot(
-      collection(db(), "invites"),
+      collection(db(), "offices", officeId, "invites"),
       (snap) => set({ invites: snap.docs.map((d) => d.data() as Invite) }),
       () => set({ invites: [] })
     )
   );
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "contacts"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "contacts"), (snap) => {
       set({ contacts: snap.docs.map((d) => stripId<Contact>(d)) });
     })
   );
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "serviceTypes"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "serviceTypes"), (snap) => {
       set({ serviceTypes: snap.docs.map((d) => stripId<ServiceType>(d)) });
     })
   );
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "docTemplates"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "docTemplates"), (snap) => {
       set({ docTemplates: snap.docs.map((d) => stripId<CustomTemplate>(d)) });
     })
   );
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "projects"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "projects"), (snap) => {
       set({ projects: snap.docs.map((d) => stripId<Project>(d)) });
     })
   );
+
   dataUnsubs.push(
     onSnapshot(
       query(
-        collection(db(), "notifications"),
+        collection(db(), "offices", officeId, "notifications"),
         where("forUid", "==", fbUser.uid)
       ),
       (snap) => {
@@ -206,30 +214,38 @@ async function startForMember(fbUser: FbUser) {
       }
     )
   );
-  // Son işlemler (ofis geneli aktivite akışı)
+
   dataUnsubs.push(
     onSnapshot(
-      query(collection(db(), "activity"), orderBy("at", "desc"), limit(30)),
+      query(
+        collection(db(), "offices", officeId, "activity"),
+        orderBy("at", "desc"),
+        limit(30)
+      ),
       (snap) => set({ activityFeed: snap.docs.map((d) => stripId<Activity>(d)) }),
       () => set({ activityFeed: [] })
     )
   );
-  // Dış paydaşlar (uzmanlar)
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "professionals"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "professionals"), (snap) => {
       set({ professionals: snap.docs.map((d) => stripId<Professional>(d)) });
     })
   );
-  // Mevzuat PDF'leri
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "mevzuat"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "mevzuat"), (snap) => {
       set({ mevzuat: snap.docs.map((d) => stripId<MevzuatDoc>(d)) });
     })
   );
-  // Ofis içi sohbet (son 100 mesaj)
+
   dataUnsubs.push(
     onSnapshot(
-      query(collection(db(), "chat"), orderBy("at", "desc"), limit(100)),
+      query(
+        collection(db(), "offices", officeId, "chat"),
+        orderBy("at", "desc"),
+        limit(100)
+      ),
       (snap) => {
         const list = snap.docs
           .map((d) => stripId<ChatMessage>(d))
@@ -266,20 +282,48 @@ export function initAuth() {
       });
       return;
     }
-    // Ofis var mı ve bu kullanıcı üye mi?
-    const officeSnap = await getDoc(doc(db(), "office", "main"));
-    const office = officeSnap.exists() ? (officeSnap.data() as Office) : null;
+
+    const indexSnap = await getDoc(doc(db(), "userOfficeIndex", fbUser.uid));
+    const index = indexSnap.exists() ? (indexSnap.data() as any) : null;
+
+    const officeId =
+      index?.primaryOfficeId ||
+      index?.officeIds?.[0] ||
+      Object.keys(index?.offices ?? {})[0];
+
+    if (!officeId) {
+      applyOfficeSharedConfig(null);
+      set({
+        user: fbUser,
+        authReady: true,
+        office: null,
+        officeChecked: true,
+        me: null,
+      });
+      return;
+    }
+
+    const officeSnap = await getDoc(doc(db(), "offices", officeId));
+    const office = officeSnap.exists()
+      ? ({ id: officeId, ...(officeSnap.data() as object) } as Office)
+      : null;
+
     applyOfficeSharedConfig(office);
+
     set({
       user: fbUser,
       authReady: true,
       office,
       officeChecked: true,
     });
-    const meSnap = await getDoc(doc(db(), "members", fbUser.uid));
+
+    const meSnap = await getDoc(
+      doc(db(), "offices", officeId, "members", fbUser.uid)
+    );
+
     if (meSnap.exists()) {
       set({ me: meSnap.data() as Member });
-      startForMember(fbUser);
+      startForMember(fbUser, officeId);
     } else {
       set({ me: null });
     }
@@ -364,7 +408,7 @@ export async function createOffice(officeName: string) {
   for (let i = 0; i < DEFAULT_SERVICES.length; i++) {
     const s = DEFAULT_SERVICES[i];
     const id = uid();
-    batch.set(doc(db(), "serviceTypes", id), {
+    batch.set(officeDoc("serviceTypes", id), {
       name: s.name,
       order: i,
       stages: s.stages.map((name) => ({ id: uid(), name })),
@@ -508,7 +552,7 @@ export async function deleteInvite(emailRaw: string) {
 export async function updateOfficeConfig(patch: {
   driveClientId?: string;
 }) {
-  await updateDoc(doc(db(), "office", "main"), patch);
+  await updateDoc(officeDoc(), patch);
 }
 
 // ---- Dış paydaşlar (uzmanlar) ----
@@ -518,7 +562,7 @@ export async function addProfessional(
 ) {
   const id = uid();
   await setDoc(
-    doc(db(), "professionals", id),
+    officeDoc("professionals", id),
     stripUndefined({ ...data, createdAt: now() })
   );
   return id;
@@ -527,12 +571,12 @@ export async function updateProfessional(
   id: string,
   data: Partial<Omit<Professional, "id" | "createdAt">>
 ) {
-  await setDoc(doc(db(), "professionals", id), stripUndefined(data), {
+  await setDoc(officeDoc("professionals", id), stripUndefined(data), {
     merge: true,
   });
 }
 export async function deleteProfessional(id: string) {
-  await deleteDoc(doc(db(), "professionals", id));
+  await deleteDoc(officeDoc("professionals", id));
 }
 
 // ---- Mevzuat / İmar Plan Notu (PDF Google Drive'da) ----
@@ -547,7 +591,7 @@ export async function addMevzuat(meta: {
 }): Promise<string> {
   const id = uid();
   await setDoc(
-    doc(db(), "mevzuat", id),
+    officeDoc("mevzuat", id),
     stripUndefined({
       kind: meta.kind,
       title: meta.title.trim(),
@@ -563,7 +607,7 @@ export async function addMevzuat(meta: {
 }
 
 export async function deleteMevzuat(item: MevzuatDoc) {
-  await deleteDoc(doc(db(), "mevzuat", item.id));
+  await deleteDoc(officeDoc("mevzuat", item.id));
   // Drive dosyasını da temizle (bağlıysa); eski Storage dosyalarını da sil.
   if (item.fileId) await deleteDriveFile(item.fileId).catch(() => {});
   if (item.storagePath)
@@ -576,7 +620,7 @@ export async function sendChatMessage(text: string) {
   const t = text.trim();
   if (!t) return;
   const who = currentName();
-  await addDoc(collection(db(), "chat"), {
+  await addDoc(officeCollection("chat"), {
     fromUid: who.uid,
     fromName: who.name,
     text: t,
@@ -588,7 +632,7 @@ export async function sendChatMessage(text: string) {
 export async function sendChatFile(file: File) {
   const who = currentName();
   const id = uid();
-  const path = `chat/${id}-${file.name}`;
+  const path = `offices/${activeOfficeId()}/chat/${id}-${file.name}`;
   const r = storageRef(storage(), path);
   await uploadBytes(r, file, {
     contentType: file.type || "application/octet-stream",
@@ -599,7 +643,7 @@ export async function sendChatFile(file: File) {
     : file.type === "application/pdf"
       ? "pdf"
       : "file";
-  await addDoc(collection(db(), "chat"), {
+  await addDoc(officeCollection("chat"), {
     fromUid: who.uid,
     fromName: who.name,
     fileUrl,
@@ -613,7 +657,7 @@ export async function sendChatFile(file: File) {
 
 // Sohbeti temizle (mesajları ve yüklenen dosyaları siler).
 export async function clearChat() {
-  const snap = await getDocs(collection(db(), "chat"));
+  const snap = await getDocs(officeCollection("chat"));
   await Promise.all(
     snap.docs.map(async (d) => {
       const path = (d.data() as ChatMessage).storagePath;
@@ -633,15 +677,15 @@ export async function updateMyProfile(patch: {
 }) {
   const u = auth().currentUser;
   if (!u) return;
-  await updateDoc(doc(db(), "members", u.uid), stripUndefined(patch));
+  await updateDoc(officeDoc("members", u.uid), stripUndefined(patch));
 }
 
 export async function setMemberRole(uidToSet: string, role: MemberRole) {
-  await updateDoc(doc(db(), "members", uidToSet), { role });
+  await updateDoc(officeDoc("members", uidToSet), { role });
 }
 
 export async function removeMember(uidToRemove: string) {
-  await deleteDoc(doc(db(), "members", uidToRemove));
+  await deleteDoc(officeDoc("members", uidToRemove));
 }
 
 // ---- Yardımcılar ----
@@ -664,6 +708,22 @@ function currentName(): { uid: string; name: string } {
   };
 }
 
+
+function activeOfficeId(): string {
+  const office = state.office as (Office & { id?: string; officeId?: string }) | null;
+  const officeId = office?.id || office?.officeId;
+  if (!officeId) throw new Error("Aktif ofis bulunamadı.");
+  return officeId;
+}
+
+function officeDoc(...segments: string[]) {
+  return doc(db(), "offices", activeOfficeId(), ...segments);
+}
+
+function officeCollection(...segments: string[]) {
+  return collection(db(), "offices", activeOfficeId(), ...segments);
+}
+
 // ---- Aktivite + bildirim ----
 
 export async function addActivity(
@@ -683,14 +743,14 @@ export async function addActivity(
     byName: who.name,
     at,
   };
-  // Projeye ait aktivite geçmişi
-  await addDoc(collection(db(), "projects", projectId, "activities"), {
+
+  await addDoc(officeCollection("projects", projectId, "activities"), {
     ...stripUndefined(payload),
     ts: serverTimestamp(),
   });
-  // Panel "Son İşlemler" için ofis geneli akış (hata olsa da ana akışı kesme)
+
   await addDoc(
-    collection(db(), "activity"),
+    officeCollection("activity"),
     stripUndefined({ ...payload, ts: serverTimestamp() })
   ).catch(() => {});
 }
@@ -698,11 +758,13 @@ export async function addActivity(
 async function notifyMembers(project: Project, text: string) {
   const who = currentName();
   const targets = new Set(project.memberIds ?? []);
-  targets.delete(who.uid); // kendine bildirim gönderme
+  targets.delete(who.uid);
   if (targets.size === 0) return;
+
   const batch = writeBatch(db());
+
   for (const forUid of targets) {
-    const ref = doc(collection(db(), "notifications"));
+    const ref = doc(officeCollection("notifications"));
     batch.set(ref, {
       forUid,
       projectId: project.id,
@@ -713,75 +775,82 @@ async function notifyMembers(project: Project, text: string) {
       at: now(),
     });
   }
+
   await batch.commit();
 }
 
 export async function markNotificationRead(id: string) {
-  await updateDoc(doc(db(), "notifications", id), { read: true });
+  await updateDoc(officeDoc("notifications", id), { read: true });
 }
 
 export async function markAllNotificationsRead() {
   const unread = state.notifications.filter((n) => !n.read);
   const batch = writeBatch(db());
+
   for (const n of unread) {
-    batch.update(doc(db(), "notifications", n.id), { read: true });
+    batch.update(officeDoc("notifications", n.id), { read: true });
   }
+
   if (unread.length) await batch.commit();
 }
 
 export async function loadActivities(projectId: string): Promise<Activity[]> {
   const snap = await getDocs(
     query(
-      collection(db(), "projects", projectId, "activities"),
+      officeCollection("projects", projectId, "activities"),
       orderBy("at", "desc")
     )
   );
   return snap.docs.map((d) => stripId<Activity>(d));
 }
 
+
 // ---- Kişiler ----
 
 export async function addContact(data: Omit<Contact, "id" | "createdAt">) {
   const id = uid();
   await setDoc(
-    doc(db(), "contacts", id),
+    officeDoc("contacts", id),
     stripUndefined({ ...data, createdAt: now() })
   );
   return id;
 }
+
 export async function updateContact(
   id: string,
   data: Partial<Omit<Contact, "id" | "createdAt">>
 ) {
-  await setDoc(doc(db(), "contacts", id), stripUndefined(data), {
+  await setDoc(officeDoc("contacts", id), stripUndefined(data), {
     merge: true,
   });
 }
+
 export async function deleteContact(id: string) {
-  await deleteDoc(doc(db(), "contacts", id));
+  await deleteDoc(officeDoc("contacts", id));
 }
+
 
 // ---- Hizmet türleri ----
 
 export async function addServiceType(name: string) {
   const id = uid();
   const order = state.serviceTypes.length;
-  await setDoc(doc(db(), "serviceTypes", id), { name, order, stages: [] });
+  await setDoc(officeDoc("serviceTypes", id), { name, order, stages: [] });
 }
 export async function deleteServiceType(id: string) {
-  await deleteDoc(doc(db(), "serviceTypes", id));
+  await deleteDoc(officeDoc("serviceTypes", id));
 }
 export async function addStage(serviceTypeId: string, name: string) {
   const st = state.serviceTypes.find((s) => s.id === serviceTypeId);
   if (!st) return;
-  await updateDoc(doc(db(), "serviceTypes", serviceTypeId), {
+  await updateDoc(officeDoc("serviceTypes", serviceTypeId), {
     stages: [...st.stages, { id: uid(), name }],
   });
 }
 export async function deleteStage(serviceTypeId: string, stageId: string) {
   const st = state.serviceTypes.find((s) => s.id === serviceTypeId);
   if (!st) return;
-  await updateDoc(doc(db(), "serviceTypes", serviceTypeId), {
+  await updateDoc(officeDoc("serviceTypes", serviceTypeId), {
     stages: st.stages.filter((s) => s.id !== stageId),
   });
 }
@@ -793,13 +862,13 @@ export async function addDocTemplate(
 ) {
   const id = uid();
   await setDoc(
-    doc(db(), "docTemplates", id),
+    officeDoc("docTemplates", id),
     stripUndefined({ ...t, createdAt: now() })
   );
   return id;
 }
 export async function deleteDocTemplate(id: string) {
-  await deleteDoc(doc(db(), "docTemplates", id));
+  await deleteDoc(officeDoc("docTemplates", id));
 }
 
 // ---- Projeler ----
@@ -819,6 +888,7 @@ export async function addProject(
 ) {
   const id = uid();
   const who = currentName();
+
   const project: Project = {
     ...data,
     id,
@@ -830,8 +900,10 @@ export async function addProject(
     createdAt: now(),
     updatedAt: now(),
   };
-  await setDoc(doc(db(), "projects", id), stripUndefined(project));
+
+  await setDoc(officeDoc("projects", id), stripUndefined(project));
   await addActivity(id, "PROJE_OLUSTURULDU", `${who.name} projeyi oluşturdu`);
+
   return id;
 }
 
@@ -841,12 +913,14 @@ export async function patchProject(
   patch: Partial<Project>,
   activity?: { type: ActivityType; text: string; notify?: boolean }
 ) {
-  await updateDoc(doc(db(), "projects", projectId), {
+  await updateDoc(officeDoc("projects", projectId), {
     ...stripUndefined(patch),
     updatedAt: now(),
   });
+
   if (activity) {
     await addActivity(projectId, activity.type, activity.text);
+
     if (activity.notify) {
       const project = state.projects.find((p) => p.id === projectId);
       if (project) await notifyMembers(project, activity.text);
@@ -855,5 +929,5 @@ export async function patchProject(
 }
 
 export async function deleteProject(projectId: string) {
-  await deleteDoc(doc(db(), "projects", projectId));
+  await deleteDoc(officeDoc("projects", projectId));
 }
