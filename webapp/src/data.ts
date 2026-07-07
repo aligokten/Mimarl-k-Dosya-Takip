@@ -387,36 +387,92 @@ const DEFAULT_SERVICES: { name: string; stages: string[] }[] = [
 export async function createOffice(officeName: string) {
   const u = auth().currentUser;
   if (!u) throw new Error("Önce giriş yapın.");
-  const office: Office = {
-    name: officeName.trim() || "Mimarlık Ofisi",
+
+  const officeId = `office-${u.uid}`;
+  const cleanName = officeName.trim() || "Mimarlık Ofisi";
+  const createdAt = now();
+
+  const office: Office & {
+    id: string;
+    officeId: string;
+    slug: string;
+    ownerEmail?: string;
+    status: string;
+    plan: string;
+    subscriptionStatus: string;
+  } = {
+    id: officeId,
+    officeId,
+    name: cleanName,
+    slug: cleanName
+      .toLowerCase()
+      .replace(/ğ/g, "g")
+      .replace(/ü/g, "u")
+      .replace(/ş/g, "s")
+      .replace(/ı/g, "i")
+      .replace(/ö/g, "o")
+      .replace(/ç/g, "c")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48) || officeId,
     ownerUid: u.uid,
-    createdAt: now(),
+    ownerEmail: u.email ?? "",
+    status: "ACTIVE",
+    plan: "TRIAL",
+    subscriptionStatus: "TRIAL",
+    createdAt,
+    updatedAt: createdAt,
   };
-  await setDoc(doc(db(), "office", "main"), office);
+
   const me: Member = {
     uid: u.uid,
     email: u.email ?? "",
     displayName: u.displayName ?? (u.email ?? "Yönetici"),
     photoURL: u.photoURL ?? undefined,
     role: "ADMIN",
-    createdAt: now(),
+    createdAt,
   };
-  await setDoc(doc(db(), "members", u.uid), stripUndefined(me));
 
-  // Varsayılan hizmet türleri
+  await setDoc(doc(db(), "offices", officeId), stripUndefined(office));
+
+  await setDoc(doc(db(), "userOfficeIndex", u.uid), {
+    uid: u.uid,
+    email: u.email ?? "",
+    primaryOfficeId: officeId,
+    officeIds: [officeId],
+    offices: {
+      [officeId]: {
+        officeId,
+        role: "ADMIN",
+        status: "ACTIVE",
+      },
+    },
+    createdAt,
+    updatedAt: createdAt,
+  });
+
   const batch = writeBatch(db());
+
+  batch.set(
+    doc(db(), "offices", officeId, "members", u.uid),
+    stripUndefined(me)
+  );
+
   for (let i = 0; i < DEFAULT_SERVICES.length; i++) {
     const s = DEFAULT_SERVICES[i];
     const id = uid();
-    batch.set(officeDoc("serviceTypes", id), {
+
+    batch.set(doc(db(), "offices", officeId, "serviceTypes", id), {
       name: s.name,
       order: i,
       stages: s.stages.map((name) => ({ id: uid(), name })),
     });
   }
+
   await batch.commit();
+
   set({ office, me });
-  startForMember(u);
+  startForMember(u, officeId);
 }
 
 // Çalışan girişi: e-posta + (ilk seferde geçici) şifre. İlk girişte hesap
