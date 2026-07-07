@@ -23,24 +23,21 @@ import {
 const CONFIG_KEY = "mimarlik-firebase-config";
 
 export function getStoredConfig(): FirebaseConfig | null {
-  // Öncelik: kullanıcının Ayarlar'dan girdiği config
+  // SaaS kullanımında Firebase projesi sabittir.
+  // Tarayıcıda daha önce kaydedilmiş eski config değerleri
+  // yanlış authDomain yönlendirmesi oluşturabileceği için kullanılmaz.
   try {
-    const raw = localStorage.getItem(CONFIG_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as FirebaseConfig;
-      if (parsed.apiKey && parsed.projectId && parsed.appId) return parsed;
-    }
+    localStorage.removeItem(CONFIG_KEY);
   } catch {
     // yoksay
   }
-  // Sonra: derlemeye gömülü config
+
   const b = BUILTIN_FIREBASE_CONFIG;
   if (b.apiKey && b.projectId && b.appId && b.authDomain) {
     return b as FirebaseConfig;
   }
   return null;
 }
-
 export function saveConfig(config: FirebaseConfig) {
   localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
 }
