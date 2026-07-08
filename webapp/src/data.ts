@@ -140,62 +140,185 @@ function applyOfficeSharedConfig(office: Office | null) {
   applySharedDriveClientId(office?.driveClientId);
 }
 
-async function startForMember(fbUser: FbUser) {
+async function startForMember(fbUser: FbUser, requestedOfficeId?: string) {
   clearDataSubs();
 
-  const officeRef = doc(db(), "office", "main");
-  const meRef = doc(db(), "members", fbUser.uid);
+  let officeId = requestedOfficeId;
+
+  if (!officeId) {
+    const indexSnap = await getDoc(doc(db(), "userOfficeIndex", fbUser.uid));
+    officeId = indexSnap.exists()
+      ? ((indexSnap.data()?.primaryOfficeId as string | undefined) || undefined)
+      : undefined;
+  }
+
+  // SaaS ofis yolu yoksa eski tek-ofis yapısına geri düş.
+  if (!officeId) {
+    const officeRef = doc(db(), "office", "main");
+    const meRef = doc(db(), "members", fbUser.uid);
+
+    dataUnsubs.push(
+      onSnapshot(officeRef, (snap) => {
+        const office = snap.exists() ? (snap.data() as Office) : null;
+        applyOfficeSharedConfig(office);
+        set({ office, officeChecked: true });
+      })
+    );
+
+    dataUnsubs.push(
+      onSnapshot(meRef, (snap) => {
+        set({ me: snap.exists() ? (snap.data() as Member) : null });
+      })
+    );
+
+    dataUnsubs.push(
+      onSnapshot(collection(db(), "members"), (snap) => {
+        set({ members: snap.docs.map((d) => d.data() as Member) });
+      })
+    );
+
+    dataUnsubs.push(
+      onSnapshot(
+        collection(db(), "invites"),
+        (snap) => set({ invites: snap.docs.map((d) => d.data() as Invite) }),
+        () => set({ invites: [] })
+      )
+    );
+
+    dataUnsubs.push(
+      onSnapshot(collection(db(), "contacts"), (snap) => {
+        set({ contacts: snap.docs.map((d) => stripId<Contact>(d)) });
+      })
+    );
+
+    dataUnsubs.push(
+      onSnapshot(collection(db(), "serviceTypes"), (snap) => {
+        set({ serviceTypes: snap.docs.map((d) => stripId<ServiceType>(d)) });
+      })
+    );
+
+    dataUnsubs.push(
+      onSnapshot(collection(db(), "docTemplates"), (snap) => {
+        set({ docTemplates: snap.docs.map((d) => stripId<CustomTemplate>(d)) });
+      })
+    );
+
+    dataUnsubs.push(
+      onSnapshot(collection(db(), "projects"), (snap) => {
+        set({ projects: snap.docs.map((d) => stripId<Project>(d)) });
+      })
+    );
+
+    dataUnsubs.push(
+      onSnapshot(
+        query(collection(db(), "notifications"), where("forUid", "==", fbUser.uid)),
+        (snap) => {
+          const list = snap.docs
+            .map((d) => stripId<AppNotification>(d))
+            .sort((a, b) => b.at.localeCompare(a.at));
+          set({ notifications: list });
+        }
+      )
+    );
+
+    dataUnsubs.push(
+      onSnapshot(
+        query(collection(db(), "activity"), orderBy("at", "desc"), limit(30)),
+        (snap) => set({ activityFeed: snap.docs.map((d) => stripId<Activity>(d)) }),
+        () => set({ activityFeed: [] })
+      )
+    );
+
+    dataUnsubs.push(
+      onSnapshot(collection(db(), "professionals"), (snap) => {
+        set({ professionals: snap.docs.map((d) => stripId<Professional>(d)) });
+      })
+    );
+
+    dataUnsubs.push(
+      onSnapshot(collection(db(), "mevzuat"), (snap) => {
+        set({ mevzuat: snap.docs.map((d) => stripId<MevzuatDoc>(d)) });
+      })
+    );
+
+    dataUnsubs.push(
+      onSnapshot(
+        query(collection(db(), "chat"), orderBy("at", "desc"), limit(100)),
+        (snap) => {
+          const list = snap.docs
+            .map((d) => stripId<ChatMessage>(d))
+            .sort((a, b) => a.at.localeCompare(b.at));
+          set({ chat: list });
+        },
+        () => set({ chat: [] })
+      )
+    );
+
+    return;
+  }
+
+  const officeRef = doc(db(), "offices", officeId);
+  const meRef = doc(db(), "offices", officeId, "members", fbUser.uid);
 
   dataUnsubs.push(
     onSnapshot(officeRef, (snap) => {
-      const office = snap.exists() ? (snap.data() as Office) : null;
+      const office = snap.exists()
+        ? ({ id: snap.id, officeId, ...(snap.data() as object) } as Office)
+        : null;
+
       applyOfficeSharedConfig(office);
       set({ office, officeChecked: true });
     })
   );
+
   dataUnsubs.push(
     onSnapshot(meRef, (snap) => {
       set({ me: snap.exists() ? (snap.data() as Member) : null });
     })
   );
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "members"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "members"), (snap) => {
       set({ members: snap.docs.map((d) => d.data() as Member) });
     })
   );
-  // Davetler yalnızca yönetici tarafından listelenebilir; yetki yoksa
-  // (çalışan oturumu) dinleyici hata verir, bunu sessizce boş liste yaparız.
+
   dataUnsubs.push(
     onSnapshot(
-      collection(db(), "invites"),
+      collection(db(), "offices", officeId, "invites"),
       (snap) => set({ invites: snap.docs.map((d) => d.data() as Invite) }),
       () => set({ invites: [] })
     )
   );
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "contacts"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "contacts"), (snap) => {
       set({ contacts: snap.docs.map((d) => stripId<Contact>(d)) });
     })
   );
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "serviceTypes"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "serviceTypes"), (snap) => {
       set({ serviceTypes: snap.docs.map((d) => stripId<ServiceType>(d)) });
     })
   );
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "docTemplates"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "docTemplates"), (snap) => {
       set({ docTemplates: snap.docs.map((d) => stripId<CustomTemplate>(d)) });
     })
   );
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "projects"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "projects"), (snap) => {
       set({ projects: snap.docs.map((d) => stripId<Project>(d)) });
     })
   );
+
   dataUnsubs.push(
     onSnapshot(
       query(
-        collection(db(), "notifications"),
+        collection(db(), "offices", officeId, "notifications"),
         where("forUid", "==", fbUser.uid)
       ),
       (snap) => {
@@ -203,33 +326,38 @@ async function startForMember(fbUser: FbUser) {
           .map((d) => stripId<AppNotification>(d))
           .sort((a, b) => b.at.localeCompare(a.at));
         set({ notifications: list });
-      }
+      },
+      () => set({ notifications: [] })
     )
   );
-  // Son işlemler (ofis geneli aktivite akışı)
+
   dataUnsubs.push(
     onSnapshot(
-      query(collection(db(), "activity"), orderBy("at", "desc"), limit(30)),
+      query(
+        collection(db(), "offices", officeId, "activity"),
+        orderBy("at", "desc"),
+        limit(30)
+      ),
       (snap) => set({ activityFeed: snap.docs.map((d) => stripId<Activity>(d)) }),
       () => set({ activityFeed: [] })
     )
   );
-  // Dış paydaşlar (uzmanlar)
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "professionals"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "professionals"), (snap) => {
       set({ professionals: snap.docs.map((d) => stripId<Professional>(d)) });
     })
   );
-  // Mevzuat PDF'leri
+
   dataUnsubs.push(
-    onSnapshot(collection(db(), "mevzuat"), (snap) => {
+    onSnapshot(collection(db(), "offices", officeId, "mevzuat"), (snap) => {
       set({ mevzuat: snap.docs.map((d) => stripId<MevzuatDoc>(d)) });
     })
   );
-  // Ofis içi sohbet (son 100 mesaj)
+
   dataUnsubs.push(
     onSnapshot(
-      query(collection(db(), "chat"), orderBy("at", "desc"), limit(100)),
+      query(collection(db(), "offices", officeId, "chat"), orderBy("at", "desc"), limit(100)),
       (snap) => {
         const list = snap.docs
           .map((d) => stripId<ChatMessage>(d))
@@ -240,6 +368,7 @@ async function startForMember(fbUser: FbUser) {
     )
   );
 }
+
 
 export function initAuth() {
   onAuthStateChanged(auth(), async (fbUser) => {
@@ -266,25 +395,81 @@ export function initAuth() {
       });
       return;
     }
-    // Ofis var mı ve bu kullanıcı üye mi?
-    const officeSnap = await getDoc(doc(db(), "office", "main"));
-    const office = officeSnap.exists() ? (officeSnap.data() as Office) : null;
-    applyOfficeSharedConfig(office);
-    set({
-      user: fbUser,
-      authReady: true,
-      office,
-      officeChecked: true,
-    });
-    const meSnap = await getDoc(doc(db(), "members", fbUser.uid));
-    if (meSnap.exists()) {
-      set({ me: meSnap.data() as Member });
-      startForMember(fbUser);
-    } else {
-      set({ me: null });
+
+    try {
+      const indexSnap = await getDoc(doc(db(), "userOfficeIndex", fbUser.uid));
+
+      if (indexSnap.exists()) {
+        const officeId = indexSnap.data()?.primaryOfficeId as string | undefined;
+
+        if (officeId) {
+          const officeRef = doc(db(), "offices", officeId);
+          const meRef = doc(db(), "offices", officeId, "members", fbUser.uid);
+
+          const [officeSnap, meSnap] = await Promise.all([
+            getDoc(officeRef),
+            getDoc(meRef),
+          ]);
+
+          const office = officeSnap.exists()
+            ? ({ id: officeSnap.id, officeId, ...(officeSnap.data() as object) } as Office)
+            : null;
+
+          const me = meSnap.exists() ? (meSnap.data() as Member) : null;
+
+          applyOfficeSharedConfig(office);
+
+          set({
+            user: fbUser,
+            authReady: true,
+            office,
+            officeChecked: true,
+            me,
+          });
+
+          if (office && me) {
+            startForMember(fbUser, officeId);
+          }
+
+          return;
+        }
+      }
+
+      // Eski tek-ofis veri yapısı için geri uyumluluk.
+      const officeSnap = await getDoc(doc(db(), "office", "main"));
+      const office = officeSnap.exists() ? (officeSnap.data() as Office) : null;
+
+      applyOfficeSharedConfig(office);
+
+      set({
+        user: fbUser,
+        authReady: true,
+        office,
+        officeChecked: true,
+      });
+
+      const meSnap = await getDoc(doc(db(), "members", fbUser.uid));
+
+      if (meSnap.exists()) {
+        set({ me: meSnap.data() as Member });
+        startForMember(fbUser);
+      } else {
+        set({ me: null });
+      }
+    } catch (error) {
+      console.error("Auth initialization failed:", error);
+
+      set({
+        user: fbUser,
+        authReady: true,
+        office: null,
+        officeChecked: true,
+        me: null,
+      });
     }
   });
 }
+
 
 export async function signInWithGoogle() {
   await signInWithPopup(auth(), googleProvider);
@@ -296,6 +481,44 @@ export async function signOutUser() {
 }
 
 // ---- Ofis kurulumu / davet ----
+
+export interface PlatformOfficeInvite {
+  email: string;
+  companyName: string;
+  plan?: string;
+  maxMembers?: number;
+  accessStatus?: string;
+  accessUntil?: string;
+  status?: string;
+}
+
+export async function getMyPlatformInvite(): Promise<PlatformOfficeInvite | null> {
+  const u = auth().currentUser;
+
+  if (!u?.email) {
+    return null;
+  }
+
+  const email = u.email.trim().toLowerCase();
+  const snap = await getDoc(doc(db(), "platformInvites", email));
+
+  if (!snap.exists()) {
+    return null;
+  }
+
+  const data = snap.data() as PlatformOfficeInvite;
+
+  if (data.status && !["PENDING", "ACTIVE"].includes(data.status)) {
+    return null;
+  }
+
+  return {
+    ...data,
+    email,
+    companyName: data.companyName || "Mimarlık Ofisi",
+  };
+}
+
 
 const DEFAULT_SERVICES: { name: string; stages: string[] }[] = [
   {
@@ -340,39 +563,126 @@ const DEFAULT_SERVICES: { name: string; stages: string[] }[] = [
   { name: "Zemin Etüdü", stages: ["Saha Çalışması", "Laboratuvar", "Teslim"] },
 ];
 
-export async function createOffice(officeName: string) {
+export async function createOffice(officeName?: string) {
   const u = auth().currentUser;
-  if (!u) throw new Error("Önce giriş yapın.");
-  const office: Office = {
-    name: officeName.trim() || "Mimarlık Ofisi",
+
+  if (!u) {
+    throw new Error("Önce giriş yapın.");
+  }
+
+  if (!u.email) {
+    throw new Error("Ofis oluşturmak için e-posta adresi gerekli.");
+  }
+
+  const invite = await getMyPlatformInvite();
+
+  if (!invite) {
+    throw new Error(
+      "Bu e-posta için Ruhsat360 ofis oluşturma yetkisi bulunmuyor."
+    );
+  }
+
+  const officeId = `office-${u.uid}`;
+  const cleanName =
+    invite.companyName?.trim() ||
+    officeName?.trim() ||
+    "Mimarlık Ofisi";
+
+  const createdAt = now();
+
+  const office: Office & {
+    id: string;
+    officeId: string;
+    slug: string;
+    ownerEmail?: string;
+    status: string;
+    plan: string;
+    subscriptionStatus: string;
+    accessStatus: string;
+    accessUntil?: string;
+    maxMembers?: number;
+    createdAt: string;
+    updatedAt: string;
+  } = {
+    id: officeId,
+    officeId,
+    name: cleanName,
+    slug:
+      cleanName
+        .toLowerCase()
+        .replace(/ğ/g, "g")
+        .replace(/ü/g, "u")
+        .replace(/ş/g, "s")
+        .replace(/ı/g, "i")
+        .replace(/ö/g, "o")
+        .replace(/ç/g, "c")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 48) || officeId,
     ownerUid: u.uid,
-    createdAt: now(),
+    ownerEmail: u.email,
+    status: "ACTIVE",
+    plan: invite.plan || "TRIAL",
+    subscriptionStatus: invite.accessStatus || "ACTIVE",
+    accessStatus: invite.accessStatus || "ACTIVE",
+    accessUntil: invite.accessUntil,
+    maxMembers: invite.maxMembers || MAX_MEMBERS,
+    createdAt,
+    updatedAt: createdAt,
   };
-  await setDoc(doc(db(), "office", "main"), office);
+
   const me: Member = {
     uid: u.uid,
-    email: u.email ?? "",
-    displayName: u.displayName ?? (u.email ?? "Yönetici"),
+    email: u.email,
+    displayName: u.displayName ?? u.email,
     photoURL: u.photoURL ?? undefined,
     role: "ADMIN",
-    createdAt: now(),
+    createdAt,
   };
-  await setDoc(doc(db(), "members", u.uid), stripUndefined(me));
 
-  // Varsayılan hizmet türleri
+  await setDoc(doc(db(), "offices", officeId), stripUndefined(office));
+
+  await setDoc(doc(db(), "userOfficeIndex", u.uid), {
+    uid: u.uid,
+    email: u.email,
+    primaryOfficeId: officeId,
+    officeIds: [officeId],
+    offices: {
+      [officeId]: {
+        officeId,
+        role: "ADMIN",
+        status: "ACTIVE",
+      },
+    },
+    createdAt,
+    updatedAt: createdAt,
+  });
+
+  // Önce yönetici üyelik kaydı ayrı oluşturulur.
+  // Böylece sonraki alt koleksiyon yazımları Firestore Rules tarafından
+  // "ofis üyesi" olarak kabul edilir.
+  await setDoc(
+    doc(db(), "offices", officeId, "members", u.uid),
+    stripUndefined(me)
+  );
+
   const batch = writeBatch(db());
+
   for (let i = 0; i < DEFAULT_SERVICES.length; i++) {
     const s = DEFAULT_SERVICES[i];
     const id = uid();
-    batch.set(doc(db(), "serviceTypes", id), {
+
+    batch.set(doc(db(), "offices", officeId, "serviceTypes", id), {
       name: s.name,
       order: i,
       stages: s.stages.map((name) => ({ id: uid(), name })),
     });
   }
+
   await batch.commit();
+
   set({ office, me });
-  startForMember(u);
+  startForMember(u, officeId);
 }
 
 // Çalışan girişi: e-posta + (ilk seferde geçici) şifre. İlk girişte hesap

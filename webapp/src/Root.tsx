@@ -35,21 +35,26 @@ export default function Root() {
     return <Login />;
   }
 
-  // Giriş yapıldı; ofis var mı, üye mi?
-  if (app.officeChecked && !app.office) {
-    return <CreateOffice />;
+  if (!app.officeChecked) {
+    return <Splash text="Ofis bilgileri kontrol ediliyor..." />;
   }
 
-  if (!app.me) {
-    return <NotMember />;
-  }
-
-  // İlk girişte geçici şifreyi değiştirmeden devam edilemez.
-  if (app.me.mustChangePassword) {
+  // SaaS kullanıcılarında userOfficeIndex + office + member bulunduysa doğrudan panel açılır.
+  if (app.office && app.me?.mustChangePassword) {
     return <ChangePassword />;
   }
 
-  return <App />;
+  if (app.office && app.me) {
+    return <App />;
+  }
+
+  // Ofis yoksa ama kullanıcı davetliyse yeni ofis oluşturma ekranı gösterilir.
+  if (!app.office) {
+    return <CreateOffice />;
+  }
+
+  // Ofis var ama kullanıcı o ofise üye değilse.
+  return <NotMember />;
 }
 
 function Splash({ text }: { text: string }) {

@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   changeMyPassword,
   createOffice,
+  getMyPlatformInvite,
+  type PlatformOfficeInvite,
   signInWithEmail,
   signInWithGoogle,
   signOutUser,
@@ -161,47 +163,109 @@ export function Login() {
 // Ofis yoksa: giriş yapan ilk kişi ofisi kurar ve yönetici olur.
 export function CreateOffice() {
   const app = useApp();
-  const [name, setName] = useState("");
+  const [invite, setInvite] = useState<PlatformOfficeInvite | null>(null);
+  const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getMyPlatformInvite()
+      .then((result) => setInvite(result))
+      .catch(() => setInvite(null))
+      .finally(() => setChecked(true));
+  }, []);
+
+  if (!checked) {
+    return (
+      <AuthShell>
+        <h1 className="mt-6 text-xl font-bold text-slate-900 dark:text-white">
+          Yetki kontrol ediliyor
+        </h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          Ruhsat360 ofis oluşturma yetkiniz kontrol ediliyor.
+        </p>
+      </AuthShell>
+    );
+  }
+
+  if (!invite) {
+    return (
+      <AuthShell>
+        <h1 className="mt-6 text-xl font-bold text-slate-900 dark:text-white">
+          Ofis oluşturma yetkiniz yok
+        </h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          <strong>{app.user?.email}</strong> e-posta adresi için Ruhsat360
+          üzerinde yeni ofis oluşturma yetkisi bulunmuyor.
+        </p>
+        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+          Ruhsat360 aboneliğiniz tanımlandıysa, lütfen size bildirilen yönetici
+          e-posta adresiyle giriş yaptığınızdan emin olun.
+        </p>
+        <button
+          onClick={() => signOutUser()}
+          className={`${primaryBtnCls} mt-5 w-full`}
+        >
+          Çıkış Yap ve Yeniden Giriş
+        </button>
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell>
       <h1 className="mt-6 text-xl font-bold text-slate-900 dark:text-white">
         Ofisinizi Oluşturun
       </h1>
+
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        {app.user?.email} ile giriş yaptınız. Bu ofisin{" "}
-        <strong>yöneticisi</strong> siz olacaksınız; sonra çalışanlarınızı
-        e-posta ile ekleyebilirsiniz.
+        <strong>{app.user?.email}</strong> hesabı{" "}
+        <strong>{invite.companyName}</strong> için yönetici olarak
+        yetkilendirilmiş.
       </p>
-      <label className={`${labelCls} mt-5`}>Ofis Adı</label>
-      <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Örn: Gökten Mimarlık"
-        className={inputCls}
-      />
+
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-slate-300">
+        <div className="flex justify-between gap-3">
+          <span>Firma</span>
+          <strong>{invite.companyName}</strong>
+        </div>
+        <div className="mt-2 flex justify-between gap-3">
+          <span>Paket</span>
+          <strong>{invite.plan || "TRIAL"}</strong>
+        </div>
+        <div className="mt-2 flex justify-between gap-3">
+          <span>Üye limiti</span>
+          <strong>{invite.maxMembers || 10}</strong>
+        </div>
+        {invite.accessUntil && (
+          <div className="mt-2 flex justify-between gap-3">
+            <span>Erişim bitiş</span>
+            <strong>{invite.accessUntil}</strong>
+          </div>
+        )}
+      </div>
+
       {error && (
-        <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
+
       <button
         onClick={() => {
-          if (!name.trim()) {
-            setError("Ofis adı gerekli.");
-            return;
-          }
           setBusy(true);
           setError(null);
-          createOffice(name)
-            .catch((e) => setError("Oluşturulamadı: " + (e?.message ?? "")))
+
+          createOffice(invite.companyName)
+            .catch((e) =>
+              setError("Ofis oluşturulamadı: " + (e?.message ?? ""))
+            )
             .finally(() => setBusy(false));
         }}
         disabled={busy}
-        className={`${primaryBtnCls} mt-4 w-full disabled:opacity-60`}
+        className={`${primaryBtnCls} mt-5 w-full disabled:opacity-60`}
       >
-        {busy ? "Oluşturuluyor..." : "Ofisi Oluştur"}
+        {busy ? "Ofis oluşturuluyor..." : `${invite.companyName} Ofisini Oluştur`}
       </button>
+
       <button
         onClick={() => signOutUser()}
         className="mt-3 w-full text-center text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
