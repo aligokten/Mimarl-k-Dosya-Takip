@@ -188,6 +188,10 @@ service cloud.firestore {
       allow create, update, delete: if isPlatformAdmin();
     }
 
+    match /platformLeads/{leadId} {
+      allow read, create, update, delete: if isPlatformAdmin();
+    }
+
     match /offices/{officeId} {
       allow read: if hasOfficeMembership(officeId) || isPlatformAdmin();
 

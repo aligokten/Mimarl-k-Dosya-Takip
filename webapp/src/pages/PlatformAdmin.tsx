@@ -39,6 +39,22 @@ type InviteRow = {
   createdAt?: string;
 };
 
+type LeadRow = {
+  id: string;
+  email?: string;
+  companyName?: string;
+  contactName?: string;
+  phone?: string;
+  source?: string;
+  status?: string;
+  inviteEmail?: string;
+  plan?: string;
+  maxMembers?: number;
+  accessUntil?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 const STATUS_OPTIONS: AccessStatus[] = [
   "ACTIVE",
   "SUSPENDED",
@@ -50,6 +66,7 @@ export default function PlatformAdmin() {
   const app = useApp();
   const [offices, setOffices] = useState<OfficeRow[]>([]);
   const [invites, setInvites] = useState<InviteRow[]>([]);
+  const [leads, setLeads] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -79,13 +96,22 @@ export default function PlatformAdmin() {
     [invites]
   );
 
+  const recentLeads = useMemo(
+    () =>
+      leads
+        .slice()
+        .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "")),
+    [leads]
+  );
+
   async function refresh() {
     setLoading(true);
 
     try {
-      const [officeSnap, inviteSnap] = await Promise.all([
+      const [officeSnap, inviteSnap, leadSnap] = await Promise.all([
         getDocs(collection(db(), "offices")),
         getDocs(collection(db(), "platformInvites")),
+        getDocs(collection(db(), "platformLeads")),
       ]);
 
       setOffices(
@@ -97,6 +123,13 @@ export default function PlatformAdmin() {
 
       setInvites(
         inviteSnap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as object),
+        }))
+      );
+
+      setLeads(
+        leadSnap.docs.map((d) => ({
           id: d.id,
           ...(d.data() as object),
         }))
@@ -173,6 +206,21 @@ export default function PlatformAdmin() {
 
     try {
       await updateDoc(doc(db(), "platformInvites", inviteId), {
+        status,
+        updatedAt: now(),
+      });
+
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function updateLeadStatus(leadId: string, status: string) {
+    setSaving(true);
+
+    try {
+      await updateDoc(doc(db(), "platformLeads", leadId), {
         status,
         updatedAt: now(),
       });
@@ -285,6 +333,59 @@ export default function PlatformAdmin() {
         >
           {saving ? "Kaydediliyor..." : "Davet Oluştur"}
         </button>
+      </div>
+
+      <div className={cardCls}>
+        <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
+          Web Başvuruları
+        </h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          ruhsat360.com üzerinden gelen demo ve müşteri başvuruları.
+        </p>
+
+        <div className="mt-4 grid gap-3">
+          {recentLeads.length === 0 && (
+            <p className="text-sm text-slate-500">Henüz web başvurusu yok.</p>
+          )}
+
+          {recentLeads.map((lead) => (
+            <div
+              key={lead.id}
+              className="rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-zinc-700 dark:bg-zinc-800/60"
+            >
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="text-base font-extrabold text-slate-900 dark:text-white">
+                    {lead.companyName || "Firma adı yok"}
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    {lead.contactName || "Yetkili adı yok"} · {lead.email || "E-posta yok"} · {lead.phone || "Telefon yok"}
+                  </div>
+                  <div className="mt-1 text-xs text-slate-400">
+                    Kaynak: {lead.source || "-"} · Durum: {lead.status || "-"} · Bitiş: {lead.accessUntil || "-"}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {["INVITE_CREATED", "CONTACTED", "CUSTOMER", "LOST"].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => updateLeadStatus(lead.id, status)}
+                      disabled={saving}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                        lead.status === status
+                          ? "bg-orange-500 text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className={cardCls}>
