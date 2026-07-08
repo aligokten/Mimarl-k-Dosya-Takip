@@ -24,6 +24,7 @@ type OfficeRow = {
   accessStatus?: string;
   subscriptionStatus?: string;
   accessUntil?: string;
+  customerType?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -38,6 +39,9 @@ type InviteRow = {
   accessUntil?: string;
   status?: string;
   officeId?: string;
+  customerType?: string;
+  archivedAt?: string;
+  archivedBy?: string;
   createdAt?: string;
 };
 
@@ -62,6 +66,9 @@ type LeadRow = {
   kvkkConsentAt?: string;
   kvkkTextVersion?: string;
   consentSource?: string;
+  customerType?: string;
+  archivedAt?: string;
+  archivedBy?: string;
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -73,6 +80,19 @@ const STATUS_OPTIONS: AccessStatus[] = [
   "PAST_DUE",
   "CANCELLED",
 ];
+
+const CUSTOMER_TYPE_OPTIONS = [
+  { code: "DEMO", label: "Demo" },
+  { code: "CUSTOMER", label: "Gerçek Müşteri" },
+  { code: "TEST", label: "Test" },
+];
+
+function customerTypeLabel(value?: string) {
+  return (
+    CUSTOMER_TYPE_OPTIONS.find((item) => item.code === value)?.label ||
+    "Demo"
+  );
+}
 
 const PLAN_OPTIONS: Array<{
   code: PlanCode;
@@ -162,6 +182,7 @@ export default function PlatformAdmin() {
   const [leads, setLeads] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
 
   const [email, setEmail] = useState("");
@@ -185,17 +206,22 @@ export default function PlatformAdmin() {
   const pendingInvites = useMemo(
     () =>
       invites
+        .filter(
+          (invite) =>
+            showArchived || (!invite.archivedAt && invite.status !== "ARCHIVED")
+        )
         .slice()
         .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "")),
-    [invites]
+    [invites, showArchived]
   );
 
   const recentLeads = useMemo(
     () =>
       leads
+        .filter((lead) => showArchived || !lead.archivedAt)
         .slice()
         .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "")),
-    [leads]
+    [leads, showArchived]
   );
 
   async function refresh() {
@@ -298,6 +324,7 @@ export default function PlatformAdmin() {
           maxMembers: Number(maxMembers) || cfg.maxMembers,
           accessStatus: "ACTIVE",
           accessUntil,
+          customerType: "DEMO",
           status: "ACTIVE",
           createdAt: now(),
           createdBy: app.user?.email || "platform",
@@ -396,6 +423,66 @@ export default function PlatformAdmin() {
     }
   }
 
+  async function updateLeadCustomerType(lead: LeadRow, customerType: string) {
+    const inviteEmail = (lead.inviteEmail || lead.email || "").trim().toLowerCase();
+
+    setSaving(true);
+
+    try {
+      await updateDoc(doc(db(), "platformLeads", lead.id), {
+        customerType,
+        updatedAt: now(),
+      });
+
+      if (inviteEmail) {
+        await setDoc(
+          doc(db(), "platformInvites", inviteEmail),
+          {
+            customerType,
+            updatedAt: now(),
+          },
+          { merge: true }
+        );
+      }
+
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function archiveLead(leadId: string) {
+    setSaving(true);
+
+    try {
+      await updateDoc(doc(db(), "platformLeads", leadId), {
+        archivedAt: now(),
+        archivedBy: app.user?.email || "platform",
+        updatedAt: now(),
+      });
+
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function restoreLead(leadId: string) {
+    setSaving(true);
+
+    try {
+      await updateDoc(doc(db(), "platformLeads", leadId), {
+        archivedAt: "",
+        archivedBy: "",
+        updatedAt: now(),
+      });
+
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function updateLeadPlan(lead: LeadRow, nextPlan: PlanCode) {
     const patch = planPatch(nextPlan);
     const inviteEmail = (lead.inviteEmail || lead.email || "").trim().toLowerCase();
@@ -453,6 +540,21 @@ export default function PlatformAdmin() {
     }
   }
 
+  async function updateOfficeCustomerType(officeId: string, customerType: string) {
+    setSaving(true);
+
+    try {
+      await updateDoc(doc(db(), "offices", officeId), {
+        customerType,
+        updatedAt: now(),
+      });
+
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function updateInvitePlan(invite: InviteRow, nextPlan: PlanCode) {
     const patch = planPatch(nextPlan);
 
@@ -468,6 +570,62 @@ export default function PlatformAdmin() {
           subscriptionStatus: "ACTIVE",
         });
       }
+
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function updateInviteCustomerType(invite: InviteRow, customerType: string) {
+    setSaving(true);
+
+    try {
+      await updateDoc(doc(db(), "platformInvites", invite.id), {
+        customerType,
+        updatedAt: now(),
+      });
+
+      if (invite.officeId) {
+        await updateDoc(doc(db(), "offices", invite.officeId), {
+          customerType,
+          updatedAt: now(),
+        });
+      }
+
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function archiveInvite(invite: InviteRow) {
+    setSaving(true);
+
+    try {
+      await updateDoc(doc(db(), "platformInvites", invite.id), {
+        status: "ARCHIVED",
+        archivedAt: now(),
+        archivedBy: app.user?.email || "platform",
+        updatedAt: now(),
+      });
+
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function restoreInvite(invite: InviteRow) {
+    setSaving(true);
+
+    try {
+      await updateDoc(doc(db(), "platformInvites", invite.id), {
+        status: invite.officeId ? "ACCEPTED" : "ACTIVE",
+        archivedAt: "",
+        archivedBy: "",
+        updatedAt: now(),
+      });
 
       await refresh();
     } finally {
@@ -502,13 +660,24 @@ export default function PlatformAdmin() {
             </p>
           </div>
 
-          <button
-            onClick={refresh}
-            disabled={loading}
-            className="rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-60 dark:bg-white dark:text-slate-900"
-          >
-            {loading ? "Yenileniyor..." : "Yenile"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200 dark:bg-zinc-800/70 dark:text-slate-300 dark:ring-zinc-700">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+              />
+              Arşivlenenleri göster
+            </label>
+
+            <button
+              onClick={refresh}
+              disabled={loading}
+              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-60 dark:bg-white dark:text-slate-900"
+            >
+              {loading ? "Yenileniyor..." : "Yenile"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -648,7 +817,7 @@ export default function PlatformAdmin() {
               <div className="mt-4 grid gap-3 rounded-2xl bg-slate-50 p-4 text-xs text-slate-600 dark:bg-zinc-900/60 dark:text-slate-300 md:grid-cols-2">
                 <div>
                   <span className="font-bold text-slate-800 dark:text-slate-100">Plan:</span>{" "}
-                  {planLabel(lead.plan)} · {lead.maxMembers || "-"} kullanıcı
+                  {planLabel(lead.plan)} · {lead.maxMembers || "-"} kullanıcı · {customerTypeLabel(lead.customerType)}
                 </div>
                 <div>
                   <span className="font-bold text-slate-800 dark:text-slate-100">Davet e-postası:</span>{" "}
@@ -698,6 +867,44 @@ export default function PlatformAdmin() {
                   </a>
                 </div>
               )}
+
+              <div className="mt-4">
+                <label className={labelCls}>Başvuru Tipi</label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {CUSTOMER_TYPE_OPTIONS.map((item) => (
+                    <button
+                      key={item.code}
+                      onClick={() => updateLeadCustomerType(lead, item.code)}
+                      disabled={saving}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                        (lead.customerType || "DEMO") === item.code
+                          ? "bg-emerald-600 text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+
+                  {lead.archivedAt ? (
+                    <button
+                      onClick={() => restoreLead(lead.id)}
+                      disabled={saving}
+                      className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white dark:bg-white dark:text-slate-900"
+                    >
+                      Arşivden Çıkar
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => archiveLead(lead.id)}
+                      disabled={saving}
+                      className="rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300"
+                    >
+                      Arşivle
+                    </button>
+                  )}
+                </div>
+              </div>
 
               <div className="mt-4">
                 <label className={labelCls}>Başvuru Planı</label>
@@ -771,7 +978,7 @@ export default function PlatformAdmin() {
                       {office.name || office.id}
                     </div>
                     <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      {office.ownerEmail || "E-posta yok"} · {planLabel(office.plan)} · Üye limiti:{" "}
+                      {office.ownerEmail || "E-posta yok"} · {customerTypeLabel(office.customerType)} · {planLabel(office.plan)} · Üye limiti:{" "}
                       {office.maxMembers || "-"} · Bitiş: {office.accessUntil || "-"}
                       {accessWarningText(office.accessUntil) && (
                         <>
@@ -796,6 +1003,21 @@ export default function PlatformAdmin() {
                     >
                       Ofisi Görüntüle →
                     </a>
+
+                    {CUSTOMER_TYPE_OPTIONS.map((item) => (
+                      <button
+                        key={item.code}
+                        onClick={() => updateOfficeCustomerType(office.id, item.code)}
+                        disabled={saving}
+                        className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                          (office.customerType || "DEMO") === item.code
+                            ? "bg-emerald-600 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
 
                     {PLAN_OPTIONS.map((item) => (
                       <button
@@ -855,7 +1077,7 @@ export default function PlatformAdmin() {
                     {invite.companyName || invite.id}
                   </div>
                   <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {invite.email || invite.id} · {planLabel(invite.plan)} · Üye limiti:{" "}
+                    {invite.email || invite.id} · {customerTypeLabel(invite.customerType)} · {planLabel(invite.plan)} · Üye limiti:{" "}
                     {invite.maxMembers || "-"} · Bitiş: {invite.accessUntil || "-"}
                     {accessWarningText(invite.accessUntil) && (
                       <>
@@ -881,6 +1103,39 @@ export default function PlatformAdmin() {
                     >
                       Ofisi Görüntüle →
                     </a>
+                  )}
+
+                  {CUSTOMER_TYPE_OPTIONS.map((item) => (
+                    <button
+                      key={item.code}
+                      onClick={() => updateInviteCustomerType(invite, item.code)}
+                      disabled={saving}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                        (invite.customerType || "DEMO") === item.code
+                          ? "bg-emerald-600 text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+
+                  {invite.archivedAt || invite.status === "ARCHIVED" ? (
+                    <button
+                      onClick={() => restoreInvite(invite)}
+                      disabled={saving}
+                      className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white dark:bg-white dark:text-slate-900"
+                    >
+                      Arşivden Çıkar
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => archiveInvite(invite)}
+                      disabled={saving}
+                      className="rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300"
+                    >
+                      Arşivle
+                    </button>
                   )}
 
                   {PLAN_OPTIONS.map((item) => (
