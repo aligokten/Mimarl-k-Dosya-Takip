@@ -13,6 +13,18 @@ import { UsersIcon } from "../components/icons";
 import { MAX_MEMBERS, MEMBER_ROLE_LABELS, type MemberRole } from "../types";
 import { Avatar } from "../App";
 
+
+
+
+
+function safeText(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function safeCreatedAt(value: unknown): string {
+  return safeText(value);
+}
+
 function randomPassword(): string {
   // Okunaklı, 8 karakterlik geçici şifre.
   const chars = "abcdefghjkmnpqrstuvwxyz23456789";
@@ -31,10 +43,10 @@ export default function Team() {
   }
 
   const members = [...app.members].sort((a, b) =>
-    a.createdAt.localeCompare(b.createdAt)
+    safeCreatedAt(a.createdAt).localeCompare(safeCreatedAt(b.createdAt))
   );
   const invites = [...app.invites].sort((a, b) =>
-    a.createdAt.localeCompare(b.createdAt)
+    safeCreatedAt(a.createdAt).localeCompare(safeCreatedAt(b.createdAt))
   );
   const total = members.length + invites.length;
 

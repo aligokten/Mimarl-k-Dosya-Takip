@@ -33,6 +33,7 @@ import Profile from "./pages/Profile";
 import Team from "./pages/Team";
 import Mevzuat from "./pages/Mevzuat";
 import Uzmanlar from "./pages/Uzmanlar";
+import PlatformAdmin from "./pages/PlatformAdmin";
 
 const NAV_ITEMS = [
   { to: "/", label: "Panel", end: true, icon: GridIcon },
@@ -49,6 +50,13 @@ export default function App() {
   const theme = useTheme();
   const me = app.me!;
   const [arsapayOpen, setArsapayOpen] = useState(false);
+
+  const navItems = app.platformAdmin
+    ? [
+        ...NAV_ITEMS,
+        { to: "/platform", label: "Platform", end: false, icon: BuildingIcon },
+      ]
+    : NAV_ITEMS;
 
   return (
     <div className="min-h-screen px-2 py-3 sm:px-4 sm:py-6">
@@ -102,7 +110,7 @@ export default function App() {
 
         {/* Mobil gezinme */}
         <nav className="no-print mt-4 flex gap-1 overflow-x-auto px-4 md:hidden">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -131,7 +139,7 @@ export default function App() {
 
         <div className="flex gap-3 px-3 pb-8 pt-5 sm:px-5 md:gap-6 md:pl-4">
           <aside className="no-print hidden w-20 shrink-0 flex-col items-center gap-3 pt-2 md:flex">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const Icon = item.icon;
               return (
                 <NavLink
@@ -217,6 +225,7 @@ export default function App() {
               <Route path="/profil" element={<Profile />} />
               <Route path="/ekip" element={<Team />} />
               <Route path="/ayarlar" element={<Settings />} />
+              <Route path="/platform" element={<PlatformAdmin />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>

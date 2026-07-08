@@ -69,6 +69,7 @@ export interface AppState {
   office: Office | null;
   officeChecked: boolean;
   me: Member | null;
+  platformAdmin: boolean;
   members: Member[];
   invites: Invite[];
   contacts: Contact[];
@@ -88,6 +89,7 @@ let state: AppState = {
   office: null,
   officeChecked: false,
   me: null,
+  platformAdmin: false,
   members: [],
   invites: [],
   contacts: [],
@@ -381,6 +383,7 @@ export function initAuth() {
         office: null,
         officeChecked: false,
         me: null,
+        platformAdmin: false,
         members: [],
         invites: [],
         contacts: [],
@@ -397,6 +400,11 @@ export function initAuth() {
     }
 
     try {
+      const platformAdminSnap = await getDoc(doc(db(), "platformAdmins", fbUser.uid));
+      const platformAdmin =
+        platformAdminSnap.exists() &&
+        platformAdminSnap.data()?.active === true;
+
       const indexSnap = await getDoc(doc(db(), "userOfficeIndex", fbUser.uid));
 
       if (indexSnap.exists()) {
@@ -425,6 +433,7 @@ export function initAuth() {
             office,
             officeChecked: true,
             me,
+            platformAdmin,
           });
 
           if (office && me) {
@@ -446,6 +455,7 @@ export function initAuth() {
         authReady: true,
         office,
         officeChecked: true,
+        platformAdmin,
       });
 
       const meSnap = await getDoc(doc(db(), "members", fbUser.uid));
@@ -465,6 +475,7 @@ export function initAuth() {
         office: null,
         officeChecked: true,
         me: null,
+        platformAdmin: false,
       });
     }
   });
