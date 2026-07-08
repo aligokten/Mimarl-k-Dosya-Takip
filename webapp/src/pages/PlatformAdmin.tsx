@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   setDoc,
   updateDoc,
@@ -107,6 +108,38 @@ function planPatch(value: string) {
     accessUntil: defaultAccessUntilForPlan(cfg.code),
     updatedAt: now(),
   };
+}
+
+function daysUntilAccessEnd(value?: string) {
+  if (!value) return null;
+
+  const end = new Date(`${value}T23:59:59`);
+  if (Number.isNaN(end.getTime())) return null;
+
+  return Math.ceil((end.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+}
+
+function accessWarningText(value?: string) {
+  const days = daysUntilAccessEnd(value);
+
+  if (days === null || days > 7) return "";
+
+  if (days < 0) return "Süre doldu";
+  if (days === 0) return "Bugün bitiyor";
+
+  return `${days} gün kaldı`;
+}
+
+function accessWarningClass(value?: string) {
+  const days = daysUntilAccessEnd(value);
+
+  if (days === null || days > 7) return "";
+
+  if (days <= 0) {
+    return "font-extrabold text-red-600 dark:text-red-300";
+  }
+
+  return "font-extrabold text-amber-600 dark:text-amber-300";
 }
 
 export default function PlatformAdmin() {
@@ -271,14 +304,30 @@ export default function PlatformAdmin() {
     }
   }
 
-  async function updateInviteStatus(inviteId: string, status: string) {
+  async function updateInviteStatus(invite: InviteRow, status: string) {
     setSaving(true);
 
     try {
-      await updateDoc(doc(db(), "platformInvites", inviteId), {
+      await updateDoc(doc(db(), "platformInvites", invite.id), {
         status,
         updatedAt: now(),
       });
+
+      if (invite.officeId) {
+        const officeAccessStatus =
+          status === "SUSPENDED" || status === "CANCELLED"
+            ? status
+            : "ACTIVE";
+
+        await updateDoc(doc(db(), "offices", invite.officeId), {
+          plan: invite.plan || "TRIAL",
+          maxMembers: invite.maxMembers || 10,
+          accessUntil: invite.accessUntil || "",
+          accessStatus: officeAccessStatus,
+          subscriptionStatus: officeAccessStatus,
+          updatedAt: now(),
+        });
+      }
 
       await refresh();
     } finally {
@@ -327,8 +376,10 @@ export default function PlatformAdmin() {
       await updateDoc(doc(db(), "platformLeads", lead.id), patch);
 
       if (inviteEmail) {
+        const inviteRef = doc(db(), "platformInvites", inviteEmail);
+
         await setDoc(
-          doc(db(), "platformInvites", inviteEmail),
+          inviteRef,
           {
             ...patch,
             email: inviteEmail,
@@ -340,6 +391,19 @@ export default function PlatformAdmin() {
           },
           { merge: true }
         );
+
+        const inviteSnap = await getDoc(inviteRef);
+        const officeId = inviteSnap.exists()
+          ? (inviteSnap.data() as { officeId?: string }).officeId
+          : "";
+
+        if (officeId) {
+          await updateDoc(doc(db(), "offices", officeId), {
+            ...patch,
+            accessStatus: "ACTIVE",
+            subscriptionStatus: "ACTIVE",
+          });
+        }
       }
 
       await refresh();
@@ -359,11 +423,22 @@ export default function PlatformAdmin() {
     }
   }
 
-  async function updateInvitePlan(inviteId: string, nextPlan: PlanCode) {
+  async function updateInvitePlan(invite: InviteRow, nextPlan: PlanCode) {
+    const patch = planPatch(nextPlan);
+
     setSaving(true);
 
     try {
-      await updateDoc(doc(db(), "platformInvites", inviteId), planPatch(nextPlan));
+      await updateDoc(doc(db(), "platformInvites", invite.id), patch);
+
+      if (invite.officeId) {
+        await updateDoc(doc(db(), "offices", invite.officeId), {
+          ...patch,
+          accessStatus: "ACTIVE",
+          subscriptionStatus: "ACTIVE",
+        });
+      }
+
       await refresh();
     } finally {
       setSaving(false);
@@ -507,6 +582,14 @@ export default function PlatformAdmin() {
                   </div>
                   <div className="mt-1 text-xs text-slate-400">
                     Kaynak: {lead.source || "-"} · Durum: {lead.status || "-"} · Bitiş: {lead.accessUntil || "-"}
+                    {accessWarningText(lead.accessUntil) && (
+                      <>
+                        {" "}·{" "}
+                        <span className={accessWarningClass(lead.accessUntil)}>
+                          {accessWarningText(lead.accessUntil)}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <div className="mt-1 text-xs text-slate-400">
                     E-posta: {lead.emailStatus || "-"}
@@ -634,6 +717,14 @@ export default function PlatformAdmin() {
                     <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                       {office.ownerEmail || "E-posta yok"} · {planLabel(office.plan)} · Üye limiti:{" "}
                       {office.maxMembers || "-"} · Bitiş: {office.accessUntil || "-"}
+                      {accessWarningText(office.accessUntil) && (
+                        <>
+                          {" "}·{" "}
+                          <span className={accessWarningClass(office.accessUntil)}>
+                            {accessWarningText(office.accessUntil)}
+                          </span>
+                        </>
+                      )}
                     </div>
                     <div className="mt-1 text-xs text-slate-400">
                       Ofis ID: {office.id}
@@ -701,6 +792,14 @@ export default function PlatformAdmin() {
                   <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {invite.email || invite.id} · {planLabel(invite.plan)} · Üye limiti:{" "}
                     {invite.maxMembers || "-"} · Bitiş: {invite.accessUntil || "-"}
+                    {accessWarningText(invite.accessUntil) && (
+                      <>
+                        {" "}·{" "}
+                        <span className={accessWarningClass(invite.accessUntil)}>
+                          {accessWarningText(invite.accessUntil)}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <div className="mt-1 text-xs text-slate-400">
                     Durum: {invite.status || "-"} · Ofis: {invite.officeId || "-"}
@@ -711,7 +810,7 @@ export default function PlatformAdmin() {
                   {PLAN_OPTIONS.map((item) => (
                     <button
                       key={item.code}
-                      onClick={() => updateInvitePlan(invite.id, item.code)}
+                      onClick={() => updateInvitePlan(invite, item.code)}
                       disabled={saving}
                       className={`rounded-full px-3 py-1.5 text-xs font-bold ${
                         planConfig(invite.plan).code === item.code
@@ -726,7 +825,7 @@ export default function PlatformAdmin() {
                   {["ACTIVE", "ACCEPTED", "SUSPENDED", "CANCELLED"].map((status) => (
                     <button
                       key={status}
-                      onClick={() => updateInviteStatus(invite.id, status)}
+                      onClick={() => updateInviteStatus(invite, status)}
                       disabled={saving}
                       className={`rounded-full px-3 py-1.5 text-xs font-bold ${
                         invite.status === status
