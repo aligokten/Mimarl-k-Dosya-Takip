@@ -45,12 +45,17 @@ type LeadRow = {
   companyName?: string;
   contactName?: string;
   phone?: string;
+  message?: string;
   source?: string;
   status?: string;
   inviteEmail?: string;
   plan?: string;
   maxMembers?: number;
   accessUntil?: string;
+  emailStatus?: string;
+  emailError?: string;
+  emailSentAt?: string;
+  notes?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -69,6 +74,7 @@ export default function PlatformAdmin() {
   const [leads, setLeads] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
 
   const [email, setEmail] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -128,12 +134,23 @@ export default function PlatformAdmin() {
         }))
       );
 
-      setLeads(
-        leadSnap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as object),
-        }))
-      );
+      const leadRows = leadSnap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as object),
+      })) as LeadRow[];
+
+      setLeads(leadRows);
+      setLeadNotes((prev) => {
+        const next = { ...prev };
+
+        for (const lead of leadRows) {
+          if (next[lead.id] === undefined) {
+            next[lead.id] = lead.notes || "";
+          }
+        }
+
+        return next;
+      });
     } finally {
       setLoading(false);
     }
@@ -226,6 +243,22 @@ export default function PlatformAdmin() {
       });
 
       await refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function updateLeadNotes(leadId: string) {
+    setSaving(true);
+
+    try {
+      await updateDoc(doc(db(), "platformLeads", leadId), {
+        notes: leadNotes[leadId] || "",
+        updatedAt: now(),
+      });
+
+      await refresh();
+      alert("Başvuru notu kaydedildi.");
     } finally {
       setSaving(false);
     }
@@ -353,7 +386,7 @@ export default function PlatformAdmin() {
               key={lead.id}
               className="rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-zinc-700 dark:bg-zinc-800/60"
             >
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="text-base font-extrabold text-slate-900 dark:text-white">
                     {lead.companyName || "Firma adı yok"}
@@ -363,6 +396,10 @@ export default function PlatformAdmin() {
                   </div>
                   <div className="mt-1 text-xs text-slate-400">
                     Kaynak: {lead.source || "-"} · Durum: {lead.status || "-"} · Bitiş: {lead.accessUntil || "-"}
+                  </div>
+                  <div className="mt-1 text-xs text-slate-400">
+                    E-posta: {lead.emailStatus || "-"}
+                    {lead.emailSentAt ? ` · Gönderim: ${lead.emailSentAt.slice(0, 16).replace("T", " ")}` : ""}
                   </div>
                 </div>
 
@@ -382,6 +419,57 @@ export default function PlatformAdmin() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 rounded-2xl bg-slate-50 p-4 text-xs text-slate-600 dark:bg-zinc-900/60 dark:text-slate-300 md:grid-cols-2">
+                <div>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">Plan:</span>{" "}
+                  {lead.plan || "-"} · {lead.maxMembers || "-"} kullanıcı
+                </div>
+                <div>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">Davet e-postası:</span>{" "}
+                  {lead.inviteEmail || lead.email || "-"}
+                </div>
+                <div>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">Oluşturulma:</span>{" "}
+                  {lead.createdAt ? lead.createdAt.slice(0, 16).replace("T", " ") : "-"}
+                </div>
+                <div>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">Güncelleme:</span>{" "}
+                  {lead.updatedAt ? lead.updatedAt.slice(0, 16).replace("T", " ") : "-"}
+                </div>
+                <div className="md:col-span-2">
+                  <span className="font-bold text-slate-800 dark:text-slate-100">Başvuru mesajı:</span>{" "}
+                  {lead.message || "-"}
+                </div>
+                {lead.emailError && (
+                  <div className="md:col-span-2 text-red-600 dark:text-red-300">
+                    <span className="font-bold">E-posta hatası:</span> {lead.emailError}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4">
+                <label className={labelCls}>Platform Notu</label>
+                <textarea
+                  value={leadNotes[lead.id] || ""}
+                  onChange={(e) =>
+                    setLeadNotes((prev) => ({
+                      ...prev,
+                      [lead.id]: e.target.value,
+                    }))
+                  }
+                  rows={3}
+                  placeholder="Örn: 09.07'de arandı, demo randevusu istiyor."
+                  className={`${inputCls} min-h-24`}
+                />
+                <button
+                  onClick={() => updateLeadNotes(lead.id)}
+                  disabled={saving}
+                  className="mt-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-60 dark:bg-white dark:text-slate-900"
+                >
+                  Notu Kaydet
+                </button>
               </div>
             </div>
           ))}
