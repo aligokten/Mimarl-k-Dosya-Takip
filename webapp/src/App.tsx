@@ -45,6 +45,43 @@ const NAV_ITEMS = [
   { to: "/ayarlar", label: "Ayarlar", end: false, icon: GearIcon },
 ];
 
+function daysUntilAccessEnd(value?: string) {
+  if (!value) return null;
+
+  const end = new Date(`${value}T23:59:59`);
+  if (Number.isNaN(end.getTime())) return null;
+
+  return Math.ceil((end.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+}
+
+function accessWarningForDate(value?: string) {
+  const days = daysUntilAccessEnd(value);
+
+  if (days === null || days > 7) return null;
+
+  if (days < 0) {
+    return {
+      title: "Erişim süreniz doldu",
+      text: "Ruhsat360 erişiminizin devam etmesi için platform yöneticisiyle iletişime geçin.",
+      danger: true,
+    };
+  }
+
+  if (days === 0) {
+    return {
+      title: "Erişim süreniz bugün bitiyor",
+      text: "Kesintisiz kullanıma devam etmek için aboneliğinizi bugün yenileyin.",
+      danger: true,
+    };
+  }
+
+  return {
+    title: `Erişim sürenizin bitmesine ${days} gün kaldı`,
+    text: "Kesintisiz kullanıma devam etmek için abonelik durumunuzu kontrol edin.",
+    danger: false,
+  };
+}
+
 export default function App() {
   const app = useApp();
   const theme = useTheme();
@@ -57,6 +94,9 @@ export default function App() {
         { to: "/platform", label: "Platform", end: false, icon: BuildingIcon },
       ]
     : NAV_ITEMS;
+
+  const officeAccessUntil = (app.office as { accessUntil?: string } | null)?.accessUntil;
+  const accessWarning = accessWarningForDate(officeAccessUntil);
 
   return (
     <div className="min-h-screen px-2 py-3 sm:px-4 sm:py-6">
@@ -107,6 +147,20 @@ export default function App() {
             </Link>
           </div>
         </header>
+
+        {accessWarning && (
+          <div
+            className={clsx(
+              "no-print mx-5 mt-4 rounded-2xl border px-4 py-3 text-sm sm:mx-8",
+              accessWarning.danger
+                ? "border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
+                : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+            )}
+          >
+            <div className="font-extrabold">{accessWarning.title}</div>
+            <div className="mt-0.5 text-xs opacity-85">{accessWarning.text}</div>
+          </div>
+        )}
 
         {/* Mobil gezinme */}
         <nav className="no-print mt-4 flex gap-1 overflow-x-auto px-4 md:hidden">
