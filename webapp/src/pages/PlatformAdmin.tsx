@@ -57,6 +57,10 @@ type LeadRow = {
   emailStatus?: string;
   emailError?: string;
   emailSentAt?: string;
+  kvkkConsent?: boolean;
+  kvkkConsentAt?: string;
+  kvkkTextVersion?: string;
+  consentSource?: string;
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -631,6 +635,15 @@ export default function PlatformAdmin() {
                 <div>
                   <span className="font-bold text-slate-800 dark:text-slate-100">Güncelleme:</span>{" "}
                   {lead.updatedAt ? lead.updatedAt.slice(0, 16).replace("T", " ") : "-"}
+                </div>
+                <div>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">KVKK:</span>{" "}
+                  {lead.kvkkConsent ? "Onay alındı" : "Onay yok"}
+                  {lead.kvkkConsentAt ? ` · ${lead.kvkkConsentAt.slice(0, 16).replace("T", " ")}` : ""}
+                </div>
+                <div>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">Rıza kaynağı:</span>{" "}
+                  {lead.consentSource || "-"} {lead.kvkkTextVersion ? `· v${lead.kvkkTextVersion}` : ""}
                 </div>
                 <div className="md:col-span-2">
                   <span className="font-bold text-slate-800 dark:text-slate-100">Başvuru mesajı:</span>{" "}
