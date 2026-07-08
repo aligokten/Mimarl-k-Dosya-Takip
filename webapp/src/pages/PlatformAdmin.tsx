@@ -11,6 +11,7 @@ import { now, useApp } from "../data";
 import { cardCls, inputCls, labelCls, primaryBtnCls } from "../ui";
 
 type AccessStatus = "ACTIVE" | "SUSPENDED" | "PAST_DUE" | "CANCELLED";
+type PlanCode = "TRIAL" | "STARTER" | "PRO" | "ENTERPRISE";
 
 type OfficeRow = {
   id: string;
@@ -67,6 +68,47 @@ const STATUS_OPTIONS: AccessStatus[] = [
   "CANCELLED",
 ];
 
+const PLAN_OPTIONS: Array<{
+  code: PlanCode;
+  label: string;
+  maxMembers: number;
+  days: number;
+}> = [
+  { code: "TRIAL", label: "Trial", maxMembers: 10, days: 14 },
+  { code: "STARTER", label: "Başlangıç", maxMembers: 3, days: 365 },
+  { code: "PRO", label: "Profesyonel", maxMembers: 10, days: 365 },
+  { code: "ENTERPRISE", label: "Kurumsal", maxMembers: 20, days: 365 },
+];
+
+function planConfig(value?: string) {
+  return (
+    PLAN_OPTIONS.find((item) => item.code === value) ||
+    PLAN_OPTIONS.find((item) => item.code === "PRO")!
+  );
+}
+
+function planLabel(value?: string) {
+  return planConfig(value).label;
+}
+
+function defaultAccessUntilForPlan(value?: string) {
+  const cfg = planConfig(value);
+  return new Date(Date.now() + cfg.days * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+function planPatch(value: string) {
+  const cfg = planConfig(value);
+
+  return {
+    plan: cfg.code,
+    maxMembers: cfg.maxMembers,
+    accessUntil: defaultAccessUntilForPlan(cfg.code),
+    updatedAt: now(),
+  };
+}
+
 export default function PlatformAdmin() {
   const app = useApp();
   const [offices, setOffices] = useState<OfficeRow[]>([]);
@@ -78,12 +120,12 @@ export default function PlatformAdmin() {
 
   const [email, setEmail] = useState("");
   const [companyName, setCompanyName] = useState("");
-  const [plan, setPlan] = useState("PRO");
-  const [maxMembers, setMaxMembers] = useState("10");
+  const [plan, setPlan] = useState<PlanCode>("PRO");
+  const [maxMembers, setMaxMembers] = useState(
+    String(planConfig("PRO").maxMembers)
+  );
   const [accessUntil, setAccessUntil] = useState(
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10)
+    defaultAccessUntilForPlan("PRO")
   );
 
   const activeOffices = useMemo(
@@ -162,6 +204,14 @@ export default function PlatformAdmin() {
     }
   }, [app.platformAdmin]);
 
+  function handleInvitePlanChange(value: PlanCode) {
+    const cfg = planConfig(value);
+
+    setPlan(cfg.code);
+    setMaxMembers(String(cfg.maxMembers));
+    setAccessUntil(defaultAccessUntilForPlan(cfg.code));
+  }
+
   async function createInvite() {
     const cleanEmail = email.trim().toLowerCase();
     const cleanCompany = companyName.trim();
@@ -171,6 +221,8 @@ export default function PlatformAdmin() {
       return;
     }
 
+    const cfg = planConfig(plan);
+
     setSaving(true);
 
     try {
@@ -179,8 +231,8 @@ export default function PlatformAdmin() {
         {
           email: cleanEmail,
           companyName: cleanCompany,
-          plan: plan.trim() || "PRO",
-          maxMembers: Number(maxMembers) || 10,
+          plan: cfg.code,
+          maxMembers: Number(maxMembers) || cfg.maxMembers,
           accessStatus: "ACTIVE",
           accessUntil,
           status: "ACTIVE",
@@ -193,7 +245,8 @@ export default function PlatformAdmin() {
       setEmail("");
       setCompanyName("");
       setPlan("PRO");
-      setMaxMembers("10");
+      setMaxMembers(String(planConfig("PRO").maxMembers));
+      setAccessUntil(defaultAccessUntilForPlan("PRO"));
 
       await refresh();
       alert("Müşteri daveti oluşturuldu.");
@@ -264,6 +317,59 @@ export default function PlatformAdmin() {
     }
   }
 
+  async function updateLeadPlan(lead: LeadRow, nextPlan: PlanCode) {
+    const patch = planPatch(nextPlan);
+    const inviteEmail = (lead.inviteEmail || lead.email || "").trim().toLowerCase();
+
+    setSaving(true);
+
+    try {
+      await updateDoc(doc(db(), "platformLeads", lead.id), patch);
+
+      if (inviteEmail) {
+        await setDoc(
+          doc(db(), "platformInvites", inviteEmail),
+          {
+            ...patch,
+            email: inviteEmail,
+            companyName: lead.companyName || "",
+            contactName: lead.contactName || null,
+            phone: lead.phone || null,
+            accessStatus: "ACTIVE",
+            status: "ACTIVE",
+          },
+          { merge: true }
+        );
+      }
+
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function updateOfficePlan(officeId: string, nextPlan: PlanCode) {
+    setSaving(true);
+
+    try {
+      await updateDoc(doc(db(), "offices", officeId), planPatch(nextPlan));
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function updateInvitePlan(inviteId: string, nextPlan: PlanCode) {
+    setSaving(true);
+
+    try {
+      await updateDoc(doc(db(), "platformInvites", inviteId), planPatch(nextPlan));
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!app.platformAdmin) {
     return (
       <div className={cardCls}>
@@ -329,12 +435,17 @@ export default function PlatformAdmin() {
 
           <div>
             <label className={labelCls}>Paket</label>
-            <input
+            <select
               value={plan}
-              onChange={(e) => setPlan(e.target.value)}
-              placeholder="PRO"
+              onChange={(e) => handleInvitePlanChange(e.target.value as PlanCode)}
               className={inputCls}
-            />
+            >
+              {PLAN_OPTIONS.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -424,7 +535,7 @@ export default function PlatformAdmin() {
               <div className="mt-4 grid gap-3 rounded-2xl bg-slate-50 p-4 text-xs text-slate-600 dark:bg-zinc-900/60 dark:text-slate-300 md:grid-cols-2">
                 <div>
                   <span className="font-bold text-slate-800 dark:text-slate-100">Plan:</span>{" "}
-                  {lead.plan || "-"} · {lead.maxMembers || "-"} kullanıcı
+                  {planLabel(lead.plan)} · {lead.maxMembers || "-"} kullanıcı
                 </div>
                 <div>
                   <span className="font-bold text-slate-800 dark:text-slate-100">Davet e-postası:</span>{" "}
@@ -447,6 +558,26 @@ export default function PlatformAdmin() {
                     <span className="font-bold">E-posta hatası:</span> {lead.emailError}
                   </div>
                 )}
+              </div>
+
+              <div className="mt-4">
+                <label className={labelCls}>Başvuru Planı</label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {PLAN_OPTIONS.map((item) => (
+                    <button
+                      key={item.code}
+                      onClick={() => updateLeadPlan(lead, item.code)}
+                      disabled={saving}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                        planConfig(lead.plan).code === item.code
+                          ? "bg-orange-500 text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="mt-4">
@@ -501,7 +632,7 @@ export default function PlatformAdmin() {
                       {office.name || office.id}
                     </div>
                     <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      {office.ownerEmail || "E-posta yok"} · {office.plan || "Plan yok"} · Üye limiti:{" "}
+                      {office.ownerEmail || "E-posta yok"} · {planLabel(office.plan)} · Üye limiti:{" "}
                       {office.maxMembers || "-"} · Bitiş: {office.accessUntil || "-"}
                     </div>
                     <div className="mt-1 text-xs text-slate-400">
@@ -510,6 +641,21 @@ export default function PlatformAdmin() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
+                    {PLAN_OPTIONS.map((item) => (
+                      <button
+                        key={item.code}
+                        onClick={() => updateOfficePlan(office.id, item.code)}
+                        disabled={saving}
+                        className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                          planConfig(office.plan).code === item.code
+                            ? "bg-blue-600 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+
                     {STATUS_OPTIONS.map((item) => (
                       <button
                         key={item}
@@ -553,7 +699,7 @@ export default function PlatformAdmin() {
                     {invite.companyName || invite.id}
                   </div>
                   <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {invite.email || invite.id} · {invite.plan || "Plan yok"} · Üye limiti:{" "}
+                    {invite.email || invite.id} · {planLabel(invite.plan)} · Üye limiti:{" "}
                     {invite.maxMembers || "-"} · Bitiş: {invite.accessUntil || "-"}
                   </div>
                   <div className="mt-1 text-xs text-slate-400">
@@ -562,6 +708,21 @@ export default function PlatformAdmin() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  {PLAN_OPTIONS.map((item) => (
+                    <button
+                      key={item.code}
+                      onClick={() => updateInvitePlan(invite.id, item.code)}
+                      disabled={saving}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                        planConfig(invite.plan).code === item.code
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+
                   {["ACTIVE", "ACCEPTED", "SUSPENDED", "CANCELLED"].map((status) => (
                     <button
                       key={status}
