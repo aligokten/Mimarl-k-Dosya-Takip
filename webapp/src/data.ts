@@ -70,6 +70,7 @@ export interface AppState {
   officeChecked: boolean;
   me: Member | null;
   platformAdmin: boolean;
+  platformOfficePreview: boolean;
   members: Member[];
   invites: Invite[];
   contacts: Contact[];
@@ -90,6 +91,7 @@ let state: AppState = {
   officeChecked: false,
   me: null,
   platformAdmin: false,
+  platformOfficePreview: false,
   members: [],
   invites: [],
   contacts: [],
@@ -140,6 +142,27 @@ function stripId<T>(d: { id: string; data: () => unknown }): T {
 // Ofis genelinde paylaşılan Drive ayarını ilgili modüle yansıtır.
 function applyOfficeSharedConfig(office: Office | null) {
   applySharedDriveClientId(office?.driveClientId);
+}
+
+function requestedPlatformOfficeId(): string | undefined {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("platformOfficeId") || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function platformPreviewMember(fbUser: FbUser): Member {
+  return {
+    uid: fbUser.uid,
+    email: fbUser.email || "platform@ruhsat360.com",
+    displayName: fbUser.displayName || "Platform Yönetici",
+    photoURL: fbUser.photoURL || undefined,
+    role: "ADMIN",
+    title: "Platform Önizleme",
+    createdAt: now(),
+  };
 }
 
 function currentOfficeId(): string | null {
@@ -301,7 +324,12 @@ async function startForMember(fbUser: FbUser, requestedOfficeId?: string) {
 
   dataUnsubs.push(
     onSnapshot(meRef, (snap) => {
-      set({ me: snap.exists() ? (snap.data() as Member) : null });
+      const fallbackMember =
+        state.platformAdmin && state.platformOfficePreview
+          ? platformPreviewMember(fbUser)
+          : null;
+
+      set({ me: snap.exists() ? (snap.data() as Member) : fallbackMember });
     })
   );
 
@@ -410,6 +438,7 @@ export function initAuth() {
         officeChecked: false,
         me: null,
         platformAdmin: false,
+        platformOfficePreview: false,
         members: [],
         invites: [],
         contacts: [],
@@ -430,6 +459,37 @@ export function initAuth() {
       const platformAdmin =
         platformAdminSnap.exists() &&
         platformAdminSnap.data()?.active === true;
+
+      const previewOfficeId = platformAdmin ? requestedPlatformOfficeId() : undefined;
+
+      if (previewOfficeId) {
+        const officeRef = doc(db(), "offices", previewOfficeId);
+        const officeSnap = await getDoc(officeRef);
+
+        const office = officeSnap.exists()
+          ? ({ id: officeSnap.id, officeId: previewOfficeId, ...(officeSnap.data() as object) } as Office)
+          : null;
+
+        const me = platformPreviewMember(fbUser);
+
+        applyOfficeSharedConfig(office);
+
+        set({
+          user: fbUser,
+          authReady: true,
+          office,
+          officeChecked: true,
+          me,
+          platformAdmin,
+          platformOfficePreview: true,
+        });
+
+        if (office) {
+          startForMember(fbUser, previewOfficeId);
+        }
+
+        return;
+      }
 
       const indexSnap = await getDoc(doc(db(), "userOfficeIndex", fbUser.uid));
 
@@ -460,6 +520,7 @@ export function initAuth() {
             officeChecked: true,
             me,
             platformAdmin,
+            platformOfficePreview: false,
           });
 
           if (office && me) {

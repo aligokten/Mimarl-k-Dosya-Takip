@@ -41,7 +41,7 @@ export default function Root() {
 
   const accessProblem = getOfficeAccessProblem(app.office);
 
-  if (app.office && app.me && accessProblem) {
+  if (app.office && app.me && accessProblem && !app.platformOfficePreview) {
     return (
       <SubscriptionBlocked
         officeName={getOfficeName(app.office)}

@@ -51,6 +51,7 @@ type LeadRow = {
   source?: string;
   status?: string;
   inviteEmail?: string;
+  officeId?: string;
   plan?: string;
   maxMembers?: number;
   accessUntil?: string;
@@ -146,6 +147,14 @@ function accessWarningClass(value?: string) {
   return "font-extrabold text-amber-600 dark:text-amber-300";
 }
 
+function officeViewHref(officeId?: string) {
+  if (!officeId) return "";
+
+  return `${window.location.origin}${window.location.pathname}?platformOfficeId=${encodeURIComponent(
+    officeId
+  )}#/`;
+}
+
 export default function PlatformAdmin() {
   const app = useApp();
   const [offices, setOffices] = useState<OfficeRow[]>([]);
@@ -206,17 +215,34 @@ export default function PlatformAdmin() {
         }))
       );
 
-      setInvites(
-        inviteSnap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as object),
-        }))
-      );
-
-      const leadRows = leadSnap.docs.map((d) => ({
+      const inviteRows = inviteSnap.docs.map((d) => ({
         id: d.id,
         ...(d.data() as object),
-      })) as LeadRow[];
+      })) as InviteRow[];
+
+      setInvites(inviteRows);
+
+      const inviteByEmail = new Map(
+        inviteRows.map((invite) => [
+          String(invite.email || invite.id).toLowerCase(),
+          invite,
+        ])
+      );
+
+      const leadRows = leadSnap.docs.map((d) => {
+        const lead = {
+          id: d.id,
+          ...(d.data() as object),
+        } as LeadRow;
+
+        const inviteKey = String(lead.inviteEmail || lead.email || "").toLowerCase();
+        const invite = inviteByEmail.get(inviteKey);
+
+        return {
+          ...lead,
+          officeId: lead.officeId || invite?.officeId,
+        };
+      }) as LeadRow[];
 
       setLeads(leadRows);
       setLeadNotes((prev) => {
@@ -629,6 +655,10 @@ export default function PlatformAdmin() {
                   {lead.inviteEmail || lead.email || "-"}
                 </div>
                 <div>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">Ofis:</span>{" "}
+                  {lead.officeId || "-"}
+                </div>
+                <div>
                   <span className="font-bold text-slate-800 dark:text-slate-100">Oluşturulma:</span>{" "}
                   {lead.createdAt ? lead.createdAt.slice(0, 16).replace("T", " ") : "-"}
                 </div>
@@ -655,6 +685,19 @@ export default function PlatformAdmin() {
                   </div>
                 )}
               </div>
+
+              {lead.officeId && (
+                <div className="mt-4">
+                  <a
+                    href={officeViewHref(lead.officeId)}
+                    target="_blank"
+                    rel="noopener"
+                    className="inline-flex rounded-full bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                  >
+                    Ofisi Görüntüle →
+                  </a>
+                </div>
+              )}
 
               <div className="mt-4">
                 <label className={labelCls}>Başvuru Planı</label>
@@ -745,6 +788,15 @@ export default function PlatformAdmin() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
+                    <a
+                      href={officeViewHref(office.id)}
+                      target="_blank"
+                      rel="noopener"
+                      className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
+                    >
+                      Ofisi Görüntüle →
+                    </a>
+
                     {PLAN_OPTIONS.map((item) => (
                       <button
                         key={item.code}
@@ -820,6 +872,17 @@ export default function PlatformAdmin() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  {invite.officeId && (
+                    <a
+                      href={officeViewHref(invite.officeId)}
+                      target="_blank"
+                      rel="noopener"
+                      className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
+                    >
+                      Ofisi Görüntüle →
+                    </a>
+                  )}
+
                   {PLAN_OPTIONS.map((item) => (
                     <button
                       key={item.code}
