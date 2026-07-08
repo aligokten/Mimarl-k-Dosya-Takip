@@ -113,6 +113,7 @@ function internalLeadEmailHtml({
   source,
   message,
   accessUntil,
+  kvkkConsentAt,
 }) {
   return `
     <div style="font-family:Arial,sans-serif;background:#f8fafc;padding:28px;color:#0f172a">
@@ -124,6 +125,7 @@ function internalLeadEmailHtml({
         <p><strong>Telefon:</strong> ${escapeHtml(phone || "-")}</p>
         <p><strong>Kaynak:</strong> ${escapeHtml(source || "-")}</p>
         <p><strong>Demo bitiş:</strong> ${escapeHtml(accessUntil)}</p>
+        <p><strong>KVKK onayı:</strong> Alındı — ${escapeHtml(kvkkConsentAt || "-")}</p>
         <p><strong>Mesaj:</strong><br>${escapeHtml(message || "-")}</p>
       </div>
     </div>
@@ -201,6 +203,8 @@ exports.createWebsitePlatformInvite = onRequest(
       const phone = cleanText(body.phone, 40);
       const message = cleanText(body.message, 1000);
       const source = cleanText(body.source || "ruhsat360.com", 80);
+      const kvkkConsent = body.kvkkConsent === true;
+      const kvkkConsentAt = cleanText(body.kvkkConsentAt, 80);
 
       if (!companyName) {
         res.status(400).json({
@@ -218,7 +222,16 @@ exports.createWebsitePlatformInvite = onRequest(
         return;
       }
 
+      if (!kvkkConsent) {
+        res.status(400).json({
+          ok: false,
+          message: "KVKK açık rıza onayı zorunludur.",
+        });
+        return;
+      }
+
       const now = new Date().toISOString();
+      const consentAt = kvkkConsentAt || now;
       const accessUntil = addDaysAsDateString(14);
 
       const inviteRef = db.collection("platformInvites").doc(email);
@@ -236,6 +249,10 @@ exports.createWebsitePlatformInvite = onRequest(
         accessUntil,
         status: "ACTIVE",
         source,
+        kvkkConsent: true,
+        kvkkConsentAt: consentAt,
+        kvkkTextVersion: "2026-07-08",
+        consentSource: "website-form",
         leadId: leadRef.id,
         createdAt: now,
         updatedAt: now,
@@ -250,6 +267,10 @@ exports.createWebsitePlatformInvite = onRequest(
         phone: phone || null,
         message: message || null,
         source,
+        kvkkConsent: true,
+        kvkkConsentAt: consentAt,
+        kvkkTextVersion: "2026-07-08",
+        consentSource: "website-form",
         status: "INVITE_CREATED",
         inviteEmail: email,
         plan: "TRIAL",
@@ -287,6 +308,7 @@ exports.createWebsitePlatformInvite = onRequest(
               source,
               message,
               accessUntil,
+              kvkkConsentAt: consentAt,
             }),
             text: [
               "Yeni Ruhsat360 web başvurusu",
@@ -297,6 +319,7 @@ exports.createWebsitePlatformInvite = onRequest(
               `Telefon: ${phone || "-"}`,
               `Kaynak: ${source || "-"}`,
               `Demo bitiş: ${accessUntil}`,
+              `KVKK onayı: Alındı — ${consentAt}`,
               "",
               `Mesaj: ${message || "-"}`,
             ].join("\n"),
