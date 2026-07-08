@@ -72,11 +72,24 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/offices/$(officeId)/members/$(request.auth.uid));
     }
 
-    function hasOfficeAccess(officeId) {
+    function hasOfficeMembership(officeId) {
       return signedIn() &&
         hasUserIndex() &&
         myPrimaryOfficeId() == officeId &&
         isOfficeMemberDoc(officeId);
+    }
+
+    function isOfficeActive(officeId) {
+      return exists(/databases/$(database)/documents/offices/$(officeId)) &&
+        (
+          get(/databases/$(database)/documents/offices/$(officeId)).data.accessStatus == null ||
+          get(/databases/$(database)/documents/offices/$(officeId)).data.accessStatus == "ACTIVE" ||
+          get(/databases/$(database)/documents/offices/$(officeId)).data.accessStatus == "TRIAL"
+        );
+    }
+
+    function hasOfficeAccess(officeId) {
+      return hasOfficeMembership(officeId) && isOfficeActive(officeId);
     }
 
     function isOfficeOwner(officeId) {
@@ -176,14 +189,14 @@ service cloud.firestore {
     }
 
     match /offices/{officeId} {
-      allow read: if hasOfficeAccess(officeId) || isPlatformAdmin();
+      allow read: if hasOfficeMembership(officeId) || isPlatformAdmin();
 
       allow create: if canCreateNewOffice();
 
       allow update, delete: if hasOfficeAccess(officeId) || isPlatformAdmin();
 
       match /members/{uid} {
-        allow read: if hasOfficeAccess(officeId) || isPlatformAdmin();
+        allow read: if hasOfficeMembership(officeId) || isPlatformAdmin();
 
         allow create: if isPlatformAdmin() ||
           (
