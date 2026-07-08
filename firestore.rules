@@ -92,6 +92,17 @@ service cloud.firestore {
       return hasOfficeMembership(officeId) && isOfficeActive(officeId);
     }
 
+    function employeeInvitePathForEmail(email) {
+      return /databases/$(database)/documents/employeeInvites/$(email);
+    }
+
+    function hasEmployeeInviteForOffice(officeId) {
+      return signedIn() &&
+        request.auth.token.email != null &&
+        exists(employeeInvitePathForEmail(request.auth.token.email)) &&
+        get(employeeInvitePathForEmail(request.auth.token.email)).data.officeId == officeId;
+    }
+
     function isOfficeOwner(officeId) {
       return signedIn() &&
         exists(/databases/$(database)/documents/offices/$(officeId)) &&
@@ -176,6 +187,26 @@ service cloud.firestore {
       allow create, update, delete: if isPlatformAdmin();
     }
 
+    match /employeeInvites/{email} {
+      allow get: if signedIn() &&
+        request.auth.token.email == email;
+      allow list: if isPlatformAdmin();
+      allow create, update: if isPlatformAdmin() ||
+        (
+          signedIn() &&
+          hasOfficeAccess(request.resource.data.officeId)
+        );
+      allow delete: if isPlatformAdmin() ||
+        (
+          signedIn() &&
+          request.auth.token.email == email
+        ) ||
+        (
+          signedIn() &&
+          hasOfficeAccess(resource.data.officeId)
+        );
+    }
+
     match /platformAdmins/{uid} {
       allow read: if signedIn() &&
         (request.auth.uid == uid || isPlatformAdmin());
@@ -207,6 +238,11 @@ service cloud.firestore {
             signedIn() &&
             request.auth.uid == uid &&
             isOfficeOwner(officeId)
+          ) ||
+          (
+            signedIn() &&
+            request.auth.uid == uid &&
+            hasEmployeeInviteForOffice(officeId)
           );
 
         allow update: if isPlatformAdmin() ||
@@ -218,6 +254,17 @@ service cloud.firestore {
           );
 
         allow delete: if isPlatformAdmin() || hasOfficeAccess(officeId);
+      }
+
+      match /invites/{email} {
+        allow read: if hasOfficeAccess(officeId) ||
+          isPlatformAdmin() ||
+          (
+            signedIn() &&
+            request.auth.token.email == email
+          );
+        allow create, update, delete: if hasOfficeAccess(officeId) ||
+          isPlatformAdmin();
       }
 
       match /mevzuat/{id} {
