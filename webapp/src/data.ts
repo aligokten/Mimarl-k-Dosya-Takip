@@ -658,12 +658,15 @@ export async function createOffice(officeName?: string) {
     updatedAt: createdAt,
   });
 
-  const batch = writeBatch(db());
-
-  batch.set(
+  // Önce yönetici üyelik kaydı ayrı oluşturulur.
+  // Böylece sonraki alt koleksiyon yazımları Firestore Rules tarafından
+  // "ofis üyesi" olarak kabul edilir.
+  await setDoc(
     doc(db(), "offices", officeId, "members", u.uid),
     stripUndefined(me)
   );
+
+  const batch = writeBatch(db());
 
   for (let i = 0; i < DEFAULT_SERVICES.length; i++) {
     const s = DEFAULT_SERVICES[i];
