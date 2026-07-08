@@ -142,6 +142,32 @@ function applyOfficeSharedConfig(office: Office | null) {
   applySharedDriveClientId(office?.driveClientId);
 }
 
+function currentOfficeId(): string | null {
+  const office = state.office as (Office & { id?: string; officeId?: string }) | null;
+  return office?.officeId || office?.id || null;
+}
+
+function officeCollection(name: string) {
+  const officeId = currentOfficeId();
+  return officeId
+    ? collection(db(), "offices", officeId, name)
+    : collection(db(), name);
+}
+
+function officeDoc(name: string, id: string) {
+  const officeId = currentOfficeId();
+  return officeId
+    ? doc(db(), "offices", officeId, name, id)
+    : doc(db(), name, id);
+}
+
+function projectActivitiesCollection(projectId: string) {
+  const officeId = currentOfficeId();
+  return officeId
+    ? collection(db(), "offices", officeId, "projects", projectId, "activities")
+    : collection(db(), "projects", projectId, "activities");
+}
+
 async function startForMember(fbUser: FbUser, requestedOfficeId?: string) {
   clearDataSubs();
 
@@ -225,7 +251,7 @@ async function startForMember(fbUser: FbUser, requestedOfficeId?: string) {
 
     dataUnsubs.push(
       onSnapshot(
-        query(collection(db(), "activity"), orderBy("at", "desc"), limit(30)),
+        query(officeCollection("activity"), orderBy("at", "desc"), limit(30)),
         (snap) => set({ activityFeed: snap.docs.map((d) => stripId<Activity>(d)) }),
         () => set({ activityFeed: [] })
       )
@@ -829,7 +855,7 @@ export async function deleteInvite(emailRaw: string) {
 export async function updateOfficeConfig(patch: {
   driveClientId?: string;
 }) {
-  await updateDoc(doc(db(), "office", "main"), patch);
+  await updateDoc(currentOfficeRef(), patch);
 }
 
 // ---- Dış paydaşlar (uzmanlar) ----
@@ -839,7 +865,7 @@ export async function addProfessional(
 ) {
   const id = uid();
   await setDoc(
-    doc(db(), "professionals", id),
+    officeDoc("professionals", id),
     stripUndefined({ ...data, createdAt: now() })
   );
   return id;
@@ -848,12 +874,12 @@ export async function updateProfessional(
   id: string,
   data: Partial<Omit<Professional, "id" | "createdAt">>
 ) {
-  await setDoc(doc(db(), "professionals", id), stripUndefined(data), {
+  await setDoc(officeDoc("professionals", id), stripUndefined(data), {
     merge: true,
   });
 }
 export async function deleteProfessional(id: string) {
-  await deleteDoc(doc(db(), "professionals", id));
+  await deleteDoc(officeDoc("professionals", id));
 }
 
 // ---- Mevzuat / İmar Plan Notu (PDF Google Drive'da) ----
@@ -868,7 +894,7 @@ export async function addMevzuat(meta: {
 }): Promise<string> {
   const id = uid();
   await setDoc(
-    doc(db(), "mevzuat", id),
+    officeDoc("mevzuat", id),
     stripUndefined({
       kind: meta.kind,
       title: meta.title.trim(),
@@ -884,7 +910,7 @@ export async function addMevzuat(meta: {
 }
 
 export async function deleteMevzuat(item: MevzuatDoc) {
-  await deleteDoc(doc(db(), "mevzuat", item.id));
+  await deleteDoc(officeDoc("mevzuat", item.id));
   // Drive dosyasını da temizle (bağlıysa); eski Storage dosyalarını da sil.
   if (item.fileId) await deleteDriveFile(item.fileId).catch(() => {});
   if (item.storagePath)
@@ -897,7 +923,7 @@ export async function sendChatMessage(text: string) {
   const t = text.trim();
   if (!t) return;
   const who = currentName();
-  await addDoc(collection(db(), "chat"), {
+  await addDoc(officeCollection("chat"), {
     fromUid: who.uid,
     fromName: who.name,
     text: t,
@@ -920,7 +946,7 @@ export async function sendChatFile(file: File) {
     : file.type === "application/pdf"
       ? "pdf"
       : "file";
-  await addDoc(collection(db(), "chat"), {
+  await addDoc(officeCollection("chat"), {
     fromUid: who.uid,
     fromName: who.name,
     fileUrl,
@@ -934,7 +960,7 @@ export async function sendChatFile(file: File) {
 
 // Sohbeti temizle (mesajları ve yüklenen dosyaları siler).
 export async function clearChat() {
-  const snap = await getDocs(collection(db(), "chat"));
+  const snap = await getDocs(officeCollection("chat"));
   await Promise.all(
     snap.docs.map(async (d) => {
       const path = (d.data() as ChatMessage).storagePath;
@@ -954,15 +980,15 @@ export async function updateMyProfile(patch: {
 }) {
   const u = auth().currentUser;
   if (!u) return;
-  await updateDoc(doc(db(), "members", u.uid), stripUndefined(patch));
+  await updateDoc(officeDoc("members", u.uid), stripUndefined(patch));
 }
 
 export async function setMemberRole(uidToSet: string, role: MemberRole) {
-  await updateDoc(doc(db(), "members", uidToSet), { role });
+  await updateDoc(officeDoc("members", uidToSet), { role });
 }
 
 export async function removeMember(uidToRemove: string) {
-  await deleteDoc(doc(db(), "members", uidToRemove));
+  await deleteDoc(officeDoc("members", uidToRemove));
 }
 
 // ---- Yardımcılar ----
@@ -1005,13 +1031,13 @@ export async function addActivity(
     at,
   };
   // Projeye ait aktivite geçmişi
-  await addDoc(collection(db(), "projects", projectId, "activities"), {
+  await addDoc(projectActivitiesCollection(projectId), {
     ...stripUndefined(payload),
     ts: serverTimestamp(),
   });
   // Panel "Son İşlemler" için ofis geneli akış (hata olsa da ana akışı kesme)
   await addDoc(
-    collection(db(), "activity"),
+    officeCollection("activity"),
     stripUndefined({ ...payload, ts: serverTimestamp() })
   ).catch(() => {});
 }
@@ -1023,7 +1049,7 @@ async function notifyMembers(project: Project, text: string) {
   if (targets.size === 0) return;
   const batch = writeBatch(db());
   for (const forUid of targets) {
-    const ref = doc(collection(db(), "notifications"));
+    const ref = doc(officeCollection("notifications"));
     batch.set(ref, {
       forUid,
       projectId: project.id,
@@ -1053,7 +1079,7 @@ export async function markAllNotificationsRead() {
 export async function loadActivities(projectId: string): Promise<Activity[]> {
   const snap = await getDocs(
     query(
-      collection(db(), "projects", projectId, "activities"),
+      projectActivitiesCollection(projectId),
       orderBy("at", "desc")
     )
   );
@@ -1065,7 +1091,7 @@ export async function loadActivities(projectId: string): Promise<Activity[]> {
 export async function addContact(data: Omit<Contact, "id" | "createdAt">) {
   const id = uid();
   await setDoc(
-    doc(db(), "contacts", id),
+    officeDoc("contacts", id),
     stripUndefined({ ...data, createdAt: now() })
   );
   return id;
@@ -1074,12 +1100,12 @@ export async function updateContact(
   id: string,
   data: Partial<Omit<Contact, "id" | "createdAt">>
 ) {
-  await setDoc(doc(db(), "contacts", id), stripUndefined(data), {
+  await setDoc(officeDoc("contacts", id), stripUndefined(data), {
     merge: true,
   });
 }
 export async function deleteContact(id: string) {
-  await deleteDoc(doc(db(), "contacts", id));
+  await deleteDoc(officeDoc("contacts", id));
 }
 
 // ---- Hizmet türleri ----
@@ -1087,22 +1113,22 @@ export async function deleteContact(id: string) {
 export async function addServiceType(name: string) {
   const id = uid();
   const order = state.serviceTypes.length;
-  await setDoc(doc(db(), "serviceTypes", id), { name, order, stages: [] });
+  await setDoc(officeDoc("serviceTypes", id), { name, order, stages: [] });
 }
 export async function deleteServiceType(id: string) {
-  await deleteDoc(doc(db(), "serviceTypes", id));
+  await deleteDoc(officeDoc("serviceTypes", id));
 }
 export async function addStage(serviceTypeId: string, name: string) {
   const st = state.serviceTypes.find((s) => s.id === serviceTypeId);
   if (!st) return;
-  await updateDoc(doc(db(), "serviceTypes", serviceTypeId), {
+  await updateDoc(officeDoc("serviceTypes", serviceTypeId), {
     stages: [...st.stages, { id: uid(), name }],
   });
 }
 export async function deleteStage(serviceTypeId: string, stageId: string) {
   const st = state.serviceTypes.find((s) => s.id === serviceTypeId);
   if (!st) return;
-  await updateDoc(doc(db(), "serviceTypes", serviceTypeId), {
+  await updateDoc(officeDoc("serviceTypes", serviceTypeId), {
     stages: st.stages.filter((s) => s.id !== stageId),
   });
 }
@@ -1114,13 +1140,13 @@ export async function addDocTemplate(
 ) {
   const id = uid();
   await setDoc(
-    doc(db(), "docTemplates", id),
+    officeDoc("docTemplates", id),
     stripUndefined({ ...t, createdAt: now() })
   );
   return id;
 }
 export async function deleteDocTemplate(id: string) {
-  await deleteDoc(doc(db(), "docTemplates", id));
+  await deleteDoc(officeDoc("docTemplates", id));
 }
 
 // ---- Projeler ----
@@ -1151,7 +1177,7 @@ export async function addProject(
     createdAt: now(),
     updatedAt: now(),
   };
-  await setDoc(doc(db(), "projects", id), stripUndefined(project));
+  await setDoc(officeDoc("projects", id), stripUndefined(project));
   await addActivity(id, "PROJE_OLUSTURULDU", `${who.name} projeyi oluşturdu`);
   return id;
 }
@@ -1162,7 +1188,7 @@ export async function patchProject(
   patch: Partial<Project>,
   activity?: { type: ActivityType; text: string; notify?: boolean }
 ) {
-  await updateDoc(doc(db(), "projects", projectId), {
+  await updateDoc(officeDoc("projects", projectId), {
     ...stripUndefined(patch),
     updatedAt: now(),
   });
@@ -1176,5 +1202,5 @@ export async function patchProject(
 }
 
 export async function deleteProject(projectId: string) {
-  await deleteDoc(doc(db(), "projects", projectId));
+  await deleteDoc(officeDoc("projects", projectId));
 }
