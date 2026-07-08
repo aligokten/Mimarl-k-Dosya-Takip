@@ -105,14 +105,28 @@ export interface Invite {
   tempPassword: string;
   role: MemberRole;
   displayName?: string;
+  officeId?: string;
+  officeName?: string;
+  status?: string;
   createdAt: string;
 }
 
 export interface Office {
+  id?: string;
+  officeId?: string;
   name: string;
   ownerUid: string;
+  ownerEmail?: string;
   inviteCode?: string;
+  status?: string;
+  plan?: string;
+  subscriptionStatus?: string;
+  accessStatus?: string;
+  accessUntil?: string;
+  maxMembers?: number;
+  customerType?: string;
   createdAt: string;
+  updatedAt?: string;
   // Ofis genelinde paylaşılan ayarlar (yalnızca yönetici düzenler).
   geminiKey?: string;
   geminiModel?: string;

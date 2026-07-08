@@ -34,6 +34,16 @@ function randomPassword(): string {
   return out;
 }
 
+function officeMemberLimit(office: unknown): number {
+  const value = Number((office as { maxMembers?: number } | null)?.maxMembers);
+
+  if (Number.isFinite(value) && value > 0) {
+    return value;
+  }
+
+  return MAX_MEMBERS;
+}
+
 export default function Team() {
   const app = useApp();
   const me = app.me!;
@@ -49,16 +59,18 @@ export default function Team() {
     safeCreatedAt(a.createdAt).localeCompare(safeCreatedAt(b.createdAt))
   );
   const total = members.length + invites.length;
+  const limit = officeMemberLimit(app.office);
+  const full = total >= limit;
 
   return (
     <div className="max-w-3xl space-y-6">
       <PageTitle
         icon={<UsersIcon className="h-5 w-5" />}
         title="Ekip Yönetimi"
-        subtitle={`Ofisinizde ${total}/${MAX_MEMBERS} kullanıcı (üye + bekleyen).`}
+        subtitle={`Ofisinizde ${total}/${limit} kullanıcı (üye + bekleyen).`}
       />
 
-      <AddEmployee full={total >= MAX_MEMBERS} />
+      <AddEmployee full={full} limit={limit} total={total} />
 
       {invites.length > 0 && (
         <section className={`${cardCls} overflow-hidden`}>
@@ -178,7 +190,15 @@ export default function Team() {
   );
 }
 
-function AddEmployee({ full }: { full: boolean }) {
+function AddEmployee({
+  full,
+  limit,
+  total,
+}: {
+  full: boolean;
+  limit: number;
+  total: number;
+}) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [tempPassword, setTempPassword] = useState(randomPassword());
@@ -198,10 +218,13 @@ function AddEmployee({ full }: { full: boolean }) {
         şifre</strong> girin. Bu bilgileri çalışana iletin; ilk girişte kendi
         şifresini belirleyecek.
       </p>
+      <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+        Plan kullanıcı limiti: {total}/{limit}
+      </p>
       {full && (
         <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
-          Kullanıcı sınırına ulaştınız. Yeni ekleme için önce bir üye/davet
-          çıkarın.
+          Bu planın kullanıcı sınırına ulaştınız. Yeni ekleme için önce bir üye/davet
+          çıkarın veya planınızı yükseltin.
         </p>
       )}
 

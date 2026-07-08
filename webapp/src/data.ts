@@ -170,6 +170,20 @@ function currentOfficeId(): string | null {
   return office?.officeId || office?.id || null;
 }
 
+function currentOfficeMemberLimit(): number {
+  const value = Number((state.office as { maxMembers?: number } | null)?.maxMembers);
+
+  if (Number.isFinite(value) && value > 0) {
+    return value;
+  }
+
+  return MAX_MEMBERS;
+}
+
+function currentOfficeDisplayName(): string {
+  return (state.office as { name?: string } | null)?.name || "Ruhsat360 Ofisi";
+}
+
 function officeCollection(name: string) {
   const officeId = currentOfficeId();
   return officeId
@@ -590,6 +604,13 @@ export interface PlatformOfficeInvite {
   status?: string;
 }
 
+interface EmployeeInviteIndex extends Invite {
+  officeId: string;
+  officeName?: string;
+  createdByUid?: string;
+  createdByEmail?: string;
+}
+
 export async function getMyPlatformInvite(): Promise<PlatformOfficeInvite | null> {
   const u = auth().currentUser;
 
@@ -824,10 +845,38 @@ export async function signInWithEmail(
     }
     return { ok: false, message: "Giriş yapılamadı. Bilgileri kontrol edin." };
   }
-  // Hesap yeni oluşturuldu → davet var mı ve geçici şifre doğru mu?
+  // Hesap yeni oluşturuldu → önce eski tek-ofis daveti, sonra SaaS ofis daveti kontrol edilir.
   try {
-    const inviteSnap = await getDoc(doc(db(), "invites", email));
-    if (!inviteSnap.exists()) {
+    const legacyInviteSnap = await getDoc(doc(db(), "invites", email));
+
+    if (legacyInviteSnap.exists()) {
+      const invite = legacyInviteSnap.data() as Invite;
+
+      if (invite.tempPassword !== password) {
+        await deleteUser(cred.user).catch(() => {});
+        return { ok: false, message: "Geçici şifre hatalı." };
+      }
+
+      const me: Member = {
+        uid: cred.user.uid,
+        email,
+        displayName: invite.displayName?.trim() || email.split("@")[0],
+        role: invite.role,
+        mustChangePassword: true,
+        createdAt: now(),
+      };
+
+      await setDoc(doc(db(), "members", cred.user.uid), stripUndefined(me));
+      await deleteDoc(doc(db(), "invites", email)).catch(() => {});
+      set({ me });
+      startForMember(cred.user);
+
+      return { ok: true, message: "" };
+    }
+
+    const employeeInviteSnap = await getDoc(doc(db(), "employeeInvites", email));
+
+    if (!employeeInviteSnap.exists()) {
       await deleteUser(cred.user).catch(() => {});
       return {
         ok: false,
@@ -835,11 +884,21 @@ export async function signInWithEmail(
           "Bu e-posta ofise davet edilmemiş. Lütfen yöneticinizle görüşün.",
       };
     }
-    const invite = inviteSnap.data() as Invite;
+
+    const invite = employeeInviteSnap.data() as EmployeeInviteIndex;
+
     if (invite.tempPassword !== password) {
       await deleteUser(cred.user).catch(() => {});
       return { ok: false, message: "Geçici şifre hatalı." };
     }
+
+    if (!invite.officeId) {
+      await deleteUser(cred.user).catch(() => {});
+      return { ok: false, message: "Davet ofis bilgisi eksik." };
+    }
+
+    const officeId = invite.officeId;
+
     const me: Member = {
       uid: cred.user.uid,
       email,
@@ -848,10 +907,36 @@ export async function signInWithEmail(
       mustChangePassword: true,
       createdAt: now(),
     };
-    await setDoc(doc(db(), "members", cred.user.uid), stripUndefined(me));
-    await deleteDoc(doc(db(), "invites", email)).catch(() => {});
-    set({ me });
-    startForMember(cred.user);
+
+    await setDoc(
+      doc(db(), "offices", officeId, "members", cred.user.uid),
+      stripUndefined(me)
+    );
+
+    await setDoc(doc(db(), "userOfficeIndex", cred.user.uid), {
+      uid: cred.user.uid,
+      email,
+      primaryOfficeId: officeId,
+      officeIds: [officeId],
+      offices: {
+        [officeId]: {
+          officeId,
+          role: invite.role,
+          status: "ACTIVE",
+        },
+      },
+      createdAt: now(),
+      updatedAt: now(),
+    });
+
+    await deleteDoc(doc(db(), "offices", officeId, "invites", email)).catch(
+      () => {}
+    );
+    await deleteDoc(doc(db(), "employeeInvites", email)).catch(() => {});
+
+    set({ me, platformOfficePreview: false });
+    startForMember(cred.user, officeId);
+
     return { ok: true, message: "" };
   } catch {
     await deleteUser(cred.user).catch(() => {});
@@ -876,39 +961,83 @@ export async function createInvite(
   displayName?: string
 ): Promise<{ ok: boolean; message: string }> {
   const email = emailRaw.trim().toLowerCase();
+
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { ok: false, message: "Geçerli bir e-posta girin." };
   }
+
   if (tempPassword.trim().length < 6) {
     return { ok: false, message: "Geçici şifre en az 6 karakter olmalı." };
   }
+
+  const memberLimit = currentOfficeMemberLimit();
   const activeCount = state.members.length + state.invites.length;
   const alreadyMember = state.members.some(
     (m) => m.email.toLowerCase() === email
   );
   const alreadyInvited = state.invites.some((i) => i.email === email);
-  if (!alreadyMember && !alreadyInvited && activeCount >= MAX_MEMBERS) {
+
+  if (!alreadyMember && !alreadyInvited && activeCount >= memberLimit) {
     return {
       ok: false,
-      message: `Ofis en fazla ${MAX_MEMBERS} kullanıcı olabilir. Önce bir yer açın.`,
+      message: `Bu plan en fazla ${memberLimit} kullanıcıya izin verir. Yeni kullanıcı eklemek için önce bir üye/davet çıkarın veya planınızı yükseltin.`,
     };
   }
+
   if (alreadyMember) {
     return { ok: false, message: "Bu e-posta zaten üye." };
   }
+
+  if (alreadyInvited) {
+    return { ok: false, message: "Bu e-posta için zaten bekleyen davet var." };
+  }
+
+  const officeId = currentOfficeId();
+  const createdAt = now();
+
   const invite: Invite = {
     email,
     tempPassword: tempPassword.trim(),
     role,
     displayName: displayName?.trim() || undefined,
-    createdAt: now(),
+    officeId: officeId || undefined,
+    officeName: officeId ? currentOfficeDisplayName() : undefined,
+    status: "PENDING",
+    createdAt,
   };
-  await setDoc(doc(db(), "invites", email), stripUndefined(invite));
+
+  if (officeId) {
+    const payload = stripUndefined(invite);
+
+    await setDoc(officeDoc("invites", email), payload);
+
+    await setDoc(
+      doc(db(), "employeeInvites", email),
+      stripUndefined({
+        ...payload,
+        officeId,
+        createdByUid: auth().currentUser?.uid,
+        createdByEmail: auth().currentUser?.email || undefined,
+      })
+    );
+  } else {
+    await setDoc(doc(db(), "invites", email), stripUndefined(invite));
+  }
+
   return { ok: true, message: "Çalışan eklendi. Geçici şifreyi paylaşın." };
 }
 
 export async function deleteInvite(emailRaw: string) {
-  await deleteDoc(doc(db(), "invites", emailRaw.trim().toLowerCase()));
+  const email = emailRaw.trim().toLowerCase();
+  const officeId = currentOfficeId();
+
+  if (officeId) {
+    await deleteDoc(officeDoc("invites", email)).catch(() => {});
+    await deleteDoc(doc(db(), "employeeInvites", email)).catch(() => {});
+    return;
+  }
+
+  await deleteDoc(doc(db(), "invites", email));
 }
 
 // ---- Ofis paylaşımlı ayarları (yalnızca yönetici) ----
