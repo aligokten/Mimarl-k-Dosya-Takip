@@ -1040,6 +1040,30 @@ export async function deleteInvite(emailRaw: string) {
   await deleteDoc(doc(db(), "invites", email));
 }
 
+// ---- Onboarding ----
+
+export async function updateOfficeOnboarding(patch: {
+  onboardingHidden?: boolean;
+  onboardingCompletedAt?: string;
+}) {
+  const updatedAt = now();
+  const payload = stripUndefined({
+    ...patch,
+    updatedAt,
+  });
+
+  await setDoc(currentOfficeRef(), payload, { merge: true });
+
+  if (state.office) {
+    set({
+      office: {
+        ...state.office,
+        ...payload,
+      } as Office,
+    });
+  }
+}
+
 // ---- Ofis paylaşımlı ayarları (yalnızca yönetici) ----
 
 export async function updateOfficeConfig(patch: {

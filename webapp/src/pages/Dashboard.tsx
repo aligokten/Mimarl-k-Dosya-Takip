@@ -25,6 +25,7 @@ import {
 } from "../components/icons";
 import type { AppState } from "../data";
 import { CONSTRUCTION_TERMS } from "../terms";
+import OnboardingCard from "../components/OnboardingCard";
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -327,6 +328,8 @@ export default function Dashboard() {
           Proje Paneli.
         </h1>
       </div>
+
+      <OnboardingCard />
 
       <TermTicker />
 
