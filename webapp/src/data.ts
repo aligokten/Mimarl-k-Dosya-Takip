@@ -11,6 +11,7 @@ import {
 } from "firebase/auth";
 import {
   collection,
+  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -162,6 +163,210 @@ function platformPreviewMember(fbUser: FbUser): Member {
     role: "ADMIN",
     title: "Platform Önizleme",
     createdAt: now(),
+  };
+}
+
+async function findOfficeMembershipForUser(fbUser: FbUser): Promise<{
+  officeId: string;
+  member: Member;
+} | null> {
+  try {
+    const uidSnap = await getDocs(
+      query(
+        collectionGroup(db(), "members"),
+        where("uid", "==", fbUser.uid),
+        limit(1)
+      )
+    );
+
+    const uidDoc = uidSnap.docs[0];
+
+    if (uidDoc) {
+      const officeId = uidDoc.ref.parent.parent?.id;
+
+      if (officeId) {
+        return {
+          officeId,
+          member: uidDoc.data() as Member,
+        };
+      }
+    }
+  } catch {
+    // Eski kayıtlarda uid alanı yoksa e-posta ile tekrar deneyeceğiz.
+  }
+
+  const email = fbUser.email?.trim().toLowerCase();
+
+  if (!email) {
+    return null;
+  }
+
+  try {
+    const emailSnap = await getDocs(
+      query(
+        collectionGroup(db(), "members"),
+        where("email", "==", email),
+        limit(1)
+      )
+    );
+
+    const emailDoc = emailSnap.docs[0];
+
+    if (emailDoc) {
+      const officeId = emailDoc.ref.parent.parent?.id;
+
+      if (officeId) {
+        return {
+          officeId,
+          member: {
+            ...(emailDoc.data() as Member),
+            uid: fbUser.uid,
+            email,
+          },
+        };
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+async function ensureUserOfficeIndex(
+  fbUser: FbUser,
+  officeId: string,
+  member: Member
+) {
+  await setDoc(
+    doc(db(), "userOfficeIndex", fbUser.uid),
+    {
+      uid: fbUser.uid,
+      email: fbUser.email || member.email,
+      primaryOfficeId: officeId,
+      officeIds: [officeId],
+      offices: {
+        [officeId]: {
+          officeId,
+          role: member.role || "EMPLOYEE",
+          status: "ACTIVE",
+        },
+      },
+      createdAt: member.createdAt || now(),
+      updatedAt: now(),
+    },
+    { merge: true }
+  );
+}
+
+async function findEmployeeInviteForUser(
+  fbUser: FbUser
+): Promise<EmployeeInviteIndex | null> {
+  const email = fbUser.email?.trim().toLowerCase();
+
+  if (!email) {
+    return null;
+  }
+
+  try {
+    const directSnap = await getDoc(doc(db(), "employeeInvites", email));
+
+    if (directSnap.exists()) {
+      const invite = directSnap.data() as EmployeeInviteIndex;
+
+      if (invite.officeId) {
+        return {
+          ...invite,
+          email,
+          officeId: invite.officeId,
+        };
+      }
+    }
+  } catch {
+    // Eski davetlerde employeeInvites olmayabilir; ofis içi davetlerde arayacağız.
+  }
+
+  try {
+    const inviteSnap = await getDocs(
+      query(
+        collectionGroup(db(), "invites"),
+        where("email", "==", email),
+        limit(1)
+      )
+    );
+
+    const inviteDoc = inviteSnap.docs[0];
+
+    if (!inviteDoc) {
+      return null;
+    }
+
+    const invite = inviteDoc.data() as Invite & { officeId?: string };
+    const officeId = invite.officeId || inviteDoc.ref.parent.parent?.id;
+
+    if (!officeId) {
+      return null;
+    }
+
+    return {
+      ...invite,
+      email,
+      officeId,
+    } as EmployeeInviteIndex;
+  } catch {
+    return null;
+  }
+}
+
+async function acceptEmployeeInviteForUser(
+  fbUser: FbUser
+): Promise<{
+  officeId: string;
+  member: Member;
+} | null> {
+  const email = fbUser.email?.trim().toLowerCase();
+
+  if (!email) {
+    return null;
+  }
+
+  const invite = await findEmployeeInviteForUser(fbUser);
+
+  if (!invite?.officeId) {
+    return null;
+  }
+
+  const officeId = invite.officeId;
+
+  const member: Member = {
+    uid: fbUser.uid,
+    email,
+    displayName:
+      fbUser.displayName ||
+      invite.displayName?.trim() ||
+      email.split("@")[0],
+    photoURL: fbUser.photoURL || undefined,
+    role: invite.role || "EMPLOYEE",
+    mustChangePassword: false,
+    createdAt: invite.createdAt || now(),
+  };
+
+  await setDoc(
+    doc(db(), "offices", officeId, "members", fbUser.uid),
+    stripUndefined(member),
+    { merge: true }
+  );
+
+  await ensureUserOfficeIndex(fbUser, officeId, member);
+
+  await deleteDoc(doc(db(), "offices", officeId, "invites", email)).catch(
+    () => {}
+  );
+  await deleteDoc(doc(db(), "employeeInvites", email)).catch(() => {});
+
+  return {
+    officeId,
+    member,
   };
 }
 
@@ -543,6 +748,77 @@ export function initAuth() {
 
           return;
         }
+      }
+
+      const acceptedEmployeeInvite = await acceptEmployeeInviteForUser(fbUser);
+
+      if (acceptedEmployeeInvite) {
+        const { officeId, member } = acceptedEmployeeInvite;
+
+        const officeRef = doc(db(), "offices", officeId);
+        const officeSnap = await getDoc(officeRef);
+
+        const office = officeSnap.exists()
+          ? ({ id: officeSnap.id, officeId, ...(officeSnap.data() as object) } as Office)
+          : null;
+
+        applyOfficeSharedConfig(office);
+
+        set({
+          user: fbUser,
+          authReady: true,
+          office,
+          officeChecked: true,
+          me: member,
+          platformAdmin,
+          platformOfficePreview: false,
+        });
+
+        if (office) {
+          startForMember(fbUser, officeId);
+        }
+
+        return;
+      }
+
+      const recoveredMembership = await findOfficeMembershipForUser(fbUser);
+
+      if (recoveredMembership) {
+        const { officeId, member } = recoveredMembership;
+
+        await ensureUserOfficeIndex(fbUser, officeId, member);
+
+        const officeRef = doc(db(), "offices", officeId);
+        const meRef = doc(db(), "offices", officeId, "members", fbUser.uid);
+
+        const [officeSnap, meSnap] = await Promise.all([
+          getDoc(officeRef),
+          getDoc(meRef),
+        ]);
+
+        const office = officeSnap.exists()
+          ? ({ id: officeSnap.id, officeId, ...(officeSnap.data() as object) } as Office)
+          : null;
+
+        const me = meSnap.exists() ? (meSnap.data() as Member) : member;
+
+        applyOfficeSharedConfig(office);
+
+        set({
+          user: fbUser,
+          authReady: true,
+          office,
+          officeChecked: true,
+          me,
+          platformAdmin,
+          platformOfficePreview: false,
+        });
+
+        if (office && me) {
+          startForMember(fbUser, officeId);
+        }
+
+        return;
       }
 
       // Eski tek-ofis veri yapısı için geri uyumluluk.
