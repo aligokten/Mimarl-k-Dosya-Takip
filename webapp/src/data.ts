@@ -730,23 +730,25 @@ export function initAuth() {
 
           const me = meSnap.exists() ? (meSnap.data() as Member) : null;
 
-          applyOfficeSharedConfig(office);
-
-          set({
-            user: fbUser,
-            authReady: true,
-            office,
-            officeChecked: true,
-            me,
-            platformAdmin,
-            platformOfficePreview: false,
-          });
-
           if (office && me) {
+            applyOfficeSharedConfig(office);
+
+            set({
+              user: fbUser,
+              authReady: true,
+              office,
+              officeChecked: true,
+              me,
+              platformAdmin,
+              platformOfficePreview: false,
+            });
+
             startForMember(fbUser, officeId);
+            return;
           }
 
-          return;
+          // userOfficeIndex var ama ofis üyelik kaydı yoksa burada durma.
+          // Bekleyen çalışan daveti veya collectionGroup üzerinden üyelik kurtarma akışına devam et.
         }
       }
 
@@ -864,8 +866,41 @@ export async function signInWithGoogle() {
 }
 
 export async function signOutUser() {
-  await fbSignOut(auth());
-  clearDataSubs();
+  try {
+    await fbSignOut(auth());
+  } finally {
+    clearDataSubs();
+    applyOfficeSharedConfig(null);
+
+    set({
+      authReady: true,
+      user: null,
+      office: null,
+      officeChecked: false,
+      me: null,
+      platformAdmin: false,
+      platformOfficePreview: false,
+      members: [],
+      invites: [],
+      contacts: [],
+      serviceTypes: [],
+      docTemplates: [],
+      projects: [],
+      notifications: [],
+      activityFeed: [],
+      professionals: [],
+      mevzuat: [],
+      chat: [],
+    });
+
+    try {
+      sessionStorage.clear();
+    } catch {
+      // sessionStorage erişilemezse sessiz geç.
+    }
+
+    window.location.replace(`${window.location.origin}${window.location.pathname}?v=signout-${Date.now()}`);
+  }
 }
 
 // ---- Ofis kurulumu / davet ----
