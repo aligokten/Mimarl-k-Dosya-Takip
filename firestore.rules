@@ -231,7 +231,17 @@ service cloud.firestore {
       allow update, delete: if hasOfficeAccess(officeId) || isPlatformAdmin();
 
       match /members/{uid} {
-        allow read: if hasOfficeMembership(officeId) || isPlatformAdmin();
+        allow read: if hasOfficeMembership(officeId) ||
+          isPlatformAdmin() ||
+          (
+            signedIn() &&
+            request.auth.uid == uid
+          ) ||
+          (
+            signedIn() &&
+            request.auth.token.email != null &&
+            resource.data.email == request.auth.token.email
+          );
 
         allow create: if isPlatformAdmin() ||
           (
