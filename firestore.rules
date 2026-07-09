@@ -74,17 +74,22 @@ service cloud.firestore {
 
     function hasOfficeMembership(officeId) {
       return signedIn() &&
-        hasUserIndex() &&
-        myPrimaryOfficeId() == officeId &&
-        isOfficeMemberDoc(officeId);
+        isOfficeMemberDoc(officeId) &&
+        (
+          !hasUserIndex() ||
+          myPrimaryOfficeId() == officeId
+        );
     }
 
     function isOfficeActive(officeId) {
       return exists(/databases/$(database)/documents/offices/$(officeId)) &&
         (
           get(/databases/$(database)/documents/offices/$(officeId)).data.accessStatus == null ||
+          get(/databases/$(database)/documents/offices/$(officeId)).data.accessStatus == "" ||
           get(/databases/$(database)/documents/offices/$(officeId)).data.accessStatus == "ACTIVE" ||
-          get(/databases/$(database)/documents/offices/$(officeId)).data.accessStatus == "TRIAL"
+          get(/databases/$(database)/documents/offices/$(officeId)).data.accessStatus == "TRIAL" ||
+          get(/databases/$(database)/documents/offices/$(officeId)).data.subscriptionStatus == "ACTIVE" ||
+          get(/databases/$(database)/documents/offices/$(officeId)).data.subscriptionStatus == "TRIAL"
         );
     }
 
@@ -96,11 +101,20 @@ service cloud.firestore {
       return /databases/$(database)/documents/employeeInvites/$(email);
     }
 
+    function officeEmployeeInvitePathForEmail(officeId, email) {
+      return /databases/$(database)/documents/offices/$(officeId)/invites/$(email);
+    }
+
     function hasEmployeeInviteForOffice(officeId) {
       return signedIn() &&
         request.auth.token.email != null &&
-        exists(employeeInvitePathForEmail(request.auth.token.email)) &&
-        get(employeeInvitePathForEmail(request.auth.token.email)).data.officeId == officeId;
+        (
+          (
+            exists(employeeInvitePathForEmail(request.auth.token.email)) &&
+            get(employeeInvitePathForEmail(request.auth.token.email)).data.officeId == officeId
+          ) ||
+          exists(officeEmployeeInvitePathForEmail(officeId, request.auth.token.email))
+        );
     }
 
     function isOfficeOwner(officeId) {
