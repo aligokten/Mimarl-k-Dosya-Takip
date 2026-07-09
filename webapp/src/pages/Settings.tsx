@@ -6,6 +6,7 @@ import {
   deleteServiceType,
   deleteStage,
   updateOfficeConfig,
+  updateOfficeOnboarding,
   useApp,
 } from "../data";
 import { connectDrive, disconnectDrive, useDrive } from "../drive";
@@ -17,6 +18,19 @@ import DeleteButton from "../components/DeleteButton";
 
 const MASK = "••••••••••••";
 
+function onboardingStorageKey(office: unknown): string {
+  const data = office as { id?: string; officeId?: string; name?: string } | null;
+  return `ruhsat360:onboarding:hidden:${data?.officeId || data?.id || data?.name || "default"}`;
+}
+
+function clearOnboardingHidden(office: unknown) {
+  try {
+    localStorage.removeItem(onboardingStorageKey(office));
+  } catch {
+    // localStorage erişilemezse sessiz geç.
+  }
+}
+
 export default function Settings() {
   const app = useApp();
   return (
@@ -25,7 +39,33 @@ export default function Settings() {
         icon={<GearIcon className="h-5 w-5" />}
         title="Ayarlar"
         subtitle="Hizmet türleri, dosya depolama ve ekip."
-      />
+      />\n\n      <section className={`${cardCls} p-5`}>
+        <h2 className="text-base font-bold text-slate-900 dark:text-white">
+          Başlangıç Rehberi
+        </h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Paneldeki müşteri onboarding rehberini tekrar görünür hale getirebilirsiniz.
+        </p>
+        <button
+          type="button"
+          onClick={async () => {
+            clearOnboardingHidden(app.office);
+
+            try {
+              await updateOfficeOnboarding({ onboardingHidden: false });
+            } catch {
+              // Yerel görünürlük açıldı; Firestore yazımı başarısız olsa da akış kesilmez.
+            }
+
+            alert("Başlangıç rehberi tekrar görünür hale getirildi. Panele döndüğünüzde kart görünecek.");
+          }}
+          className={`${secondaryBtnCls} mt-4`}
+        >
+          Başlangıç Rehberini Göster
+        </button>
+      </section>
+
+
 
       {app.me?.role === "ADMIN" && (
         <section className={`${cardCls} flex flex-wrap items-center gap-3 p-6`}>
