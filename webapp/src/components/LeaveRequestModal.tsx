@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createLeaveRequest } from "../data";
 import { uploadSharedPdf, useDrive } from "../drive";
-import { cardCls, inputCls, primaryBtnCls, secondaryBtnCls, smallLabelCls } from "../ui";
+import { inputCls, primaryBtnCls, secondaryBtnCls, smallLabelCls } from "../ui";
 import type { LeaveKind } from "../types";
 import DocScanner from "./DocScanner";
 
@@ -75,11 +75,11 @@ export default function LeaveRequestModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 sm:items-center sm:p-6"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:items-center sm:p-6"
       onClick={onClose}
     >
       <div
-        className={`${cardCls} w-full max-w-lg`}
+        className="my-8 w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-zinc-900"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-zinc-700">
