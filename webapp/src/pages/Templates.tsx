@@ -35,7 +35,12 @@ export default function Templates() {
               <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                 {template.description ?? "Sizin yüklediğiniz şablon."}
               </p>
-              <span className="mt-3 inline-block text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              {template.sourceDriveFileId && (
+                <span className="mt-2 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
+                  Taahhütname Oluştur&apos;da kullanılabilir
+                </span>
+              )}
+              <span className="mt-3 block text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 Düzenle ve PDF al →
               </span>
             </Link>

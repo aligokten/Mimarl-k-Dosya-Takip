@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { addDocTemplate } from "../data";
+import { uploadToDrive, useDrive } from "../drive";
 import { cardCls, inputCls, labelCls, primaryBtnCls, smallLabelCls } from "../ui";
 import PageTitle from "../components/PageTitle";
 import { FileIcon } from "../components/icons";
@@ -61,11 +62,17 @@ async function fileToHtml(file: File): Promise<string> {
 
 export default function TemplateUpload() {
   const navigate = useNavigate();
+  const drive = useDrive();
   const [busy, setBusy] = useState(false);
+  const [busyText, setBusyText] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  async function createTemplate(title: string, body: string) {
-    const id = await addDocTemplate({ title, body });
+  async function createTemplate(
+    title: string,
+    body: string,
+    source?: { sourceDriveFileId: string; sourceFileName: string }
+  ) {
+    const id = await addDocTemplate({ title, body, ...source });
     navigate(`/sablonlar/${id}`);
   }
 
@@ -104,8 +111,15 @@ export default function TemplateUpload() {
           setBusy(true);
           try {
             let body: string;
+            let source: { sourceDriveFileId: string; sourceFileName: string } | undefined;
             if (file instanceof File && file.size > 0) {
+              setBusyText("Dosya dönüştürülüyor...");
               body = await fileToHtml(file);
+              if (file.name.toLowerCase().endsWith(".docx") && drive.connected) {
+                setBusyText("Orijinal Word dosyası Drive'a yükleniyor...");
+                const uploaded = await uploadToDrive(file, "Şablon Word Dosyaları");
+                source = { sourceDriveFileId: uploaded.id, sourceFileName: file.name };
+              }
             } else if (pasted) {
               body = textToHtml(pasted);
             } else {
@@ -113,7 +127,8 @@ export default function TemplateUpload() {
               setBusy(false);
               return;
             }
-            await createTemplate(title, body);
+            setBusyText("Şablon kaydediliyor...");
+            await createTemplate(title, body, source);
           } catch (err) {
             setError(
               err instanceof Error ? err.message : "Dosya dönüştürülemedi."
@@ -144,6 +159,19 @@ export default function TemplateUpload() {
           <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
             Word (.docx) belgeleri biçimlendirmesiyle birlikte aktarılır.
           </p>
+          {drive.connected ? (
+            <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
+              Drive bağlı: orijinal Word dosyası da saklanacak, böylece
+              Uzmanlar &gt; Taahhütname Oluştur akışında sayfa düzeni birebir
+              korunarak doldurulabilir.
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+              Taahhütname gibi birebir sayfa düzeni korunması gereken
+              belgeler için önce Ayarlar &gt; Google Drive&apos;a bağlanın;
+              aksi halde yalnızca ekran içi düzenleme kullanılabilir.
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -176,7 +204,7 @@ export default function TemplateUpload() {
           disabled={busy}
           className={`${primaryBtnCls} disabled:opacity-60`}
         >
-          {busy ? "Yükleniyor..." : "Şablonu Oluştur ve Düzenle"}
+          {busy ? busyText || "Yükleniyor..." : "Şablonu Oluştur ve Düzenle"}
         </button>
       </form>
 
@@ -190,6 +218,15 @@ export default function TemplateUpload() {
           [MÜTEAHHİT VERGİ NO] · [BAŞVURAN ADI] · [BAŞVURAN TC] · [TARİH] ·
           [VEKİL ADI] · [VEKİL ÜNVAN] · [VEKİL TELEFON] · [VEKİL E-POSTA] ·
           [İMZALAYAN ADI]
+        </p>
+        <p className="mt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+          Taahhütname şablonları için ayrıca: [MÜELLİF ADI] / [FENNİ MESUL
+          ADI] · [MÜELLİF TC] / [FENNİ MESUL TC] · [MÜELLİF MESLEK] ·
+          [MÜELLİF FİRMA] · [MÜELLİF ODA SİCİL NO] · [MÜELLİF BÜRO TESCİL
+          NO] · [MÜELLİF TELEFON] · [MÜELLİF E-POSTA] · [MÜELLİF ADRESİ]
+          (Uzmanlar sayfasında seçilen kişiye göre otomatik dolar; şablonda
+          hangi adlandırmayı kullandıysanız — müellif ya da fenni mesul — o
+          dolar.)
         </p>
         <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
           İmza kısmına <strong>[VEKİL ADI]</strong> / <strong>[İMZALAYAN ADI]</strong>

@@ -1,10 +1,16 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 import {
   addProfessional,
   deleteProfessional,
   updateProfessional,
   useApp,
 } from "../data";
+import { downloadDriveFileBytes, useDrive } from "../drive";
+import { downloadBlob, fillDocxTemplate } from "../docxFill";
+import { buildProfessionalTokens, buildProjectTokens } from "../templateTokens";
 import {
   PROFESSIONAL_ROLE_CHIP,
   PROFESSIONAL_ROLE_LABELS,
@@ -35,6 +41,9 @@ export default function Uzmanlar() {
   const app = useApp();
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Professional | "new" | null>(null);
+  const [taahhutnameFor, setTaahhutnameFor] = useState<Professional | null>(
+    null
+  );
 
   const q = query.trim().toLocaleLowerCase("tr");
   const list = [...app.professionals]
@@ -142,13 +151,22 @@ export default function Uzmanlar() {
                 {p.notes && <Row label="Not" value={p.notes} />}
               </dl>
 
-              <button
-                type="button"
-                onClick={() => setEditing(p)}
-                className="mt-4 self-start text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
-              >
-                Düzenle
-              </button>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditing(p)}
+                  className="self-start text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  Düzenle
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTaahhutnameFor(p)}
+                  className="self-start text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  📄 Taahhütname Oluştur
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -158,6 +176,13 @@ export default function Uzmanlar() {
         <ProfessionalModal
           initial={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {taahhutnameFor && (
+        <TaahhutnameModal
+          professional={taahhutnameFor}
+          onClose={() => setTaahhutnameFor(null)}
         />
       )}
     </div>
@@ -171,6 +196,152 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
         {label}:
       </dt>
       <dd className="min-w-0 break-words">{value}</dd>
+    </div>
+  );
+}
+
+function TaahhutnameModal({
+  professional,
+  onClose,
+}: {
+  professional: Professional;
+  onClose: () => void;
+}) {
+  const app = useApp();
+  const drive = useDrive();
+  const [templateId, setTemplateId] = useState("");
+  const [projectId, setProjectId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const templates = app.docTemplates.filter((t) => t.sourceDriveFileId);
+
+  async function generate() {
+    const template = templates.find((t) => t.id === templateId);
+    const project = app.projects.find((p) => p.id === projectId);
+    if (!template?.sourceDriveFileId || !project) {
+      setError("Şablon ve proje seçin.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const original = await downloadDriveFileBytes(template.sourceDriveFileId);
+      const tokens = {
+        ...buildProjectTokens(project, app.contacts),
+        ...buildProfessionalTokens(professional),
+        TARİH: format(new Date(), "d MMMM yyyy", { locale: tr }),
+      };
+      const blob = await fillDocxTemplate(original, tokens);
+      downloadBlob(
+        blob,
+        `${template.title} - ${professional.name} - ${project.name}.docx`
+      );
+      setDone(true);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Taahhütname oluşturulamadı."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="my-8 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-base font-bold text-slate-900 dark:text-white">
+          Taahhütname Oluştur — {professional.name}
+        </h3>
+
+        {!drive.connected ? (
+          <p className="mt-4 text-sm text-amber-600 dark:text-amber-400">
+            Bu özellik için önce Ayarlar &gt; Google Drive&apos;a bağlanın.
+          </p>
+        ) : templates.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+            Uygun şablon bulunamadı. Şablonlar &gt; Şablon Yükle&apos;den bir
+            Word (.docx) taahhütname şablonu yükleyin (Drive bağlıyken
+            yüklenen .docx dosyaları burada seçilebilir olur).{" "}
+            <Link
+              to="/sablonlar/yukle"
+              className="font-semibold text-blue-600 hover:underline dark:text-blue-400"
+            >
+              Şablon yükle →
+            </Link>
+          </p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            <div>
+              <label className={labelCls}>Taahhütname Şablonu</label>
+              <select
+                value={templateId}
+                onChange={(e) => setTemplateId(e.target.value)}
+                className={inputCls}
+              >
+                <option value="" disabled>
+                  Şablon seçin
+                </option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Proje</label>
+              <select
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                className={inputCls}
+              >
+                <option value="" disabled>
+                  Proje seçin
+                </option>
+                {app.projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {error && (
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            )}
+            {done && (
+              <p className="text-sm text-green-700 dark:text-green-300">
+                Word dosyası indirildi ✓ PDF&apos;e çevirmek için Word veya
+                Google Dokümanlar&apos;da &quot;Farklı Kaydet &gt; PDF&quot;
+                kullanın; ardından e-belediye&apos;ye yükleyip e-imza
+                atabilirsiniz.
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button type="button" onClick={onClose} className={secondaryBtnCls}>
+                Kapat
+              </button>
+              <button
+                type="button"
+                onClick={generate}
+                disabled={busy || !templateId || !projectId}
+                className={`${primaryBtnCls} disabled:opacity-60`}
+              >
+                {busy ? "Oluşturuluyor..." : "Taahhütnameyi Oluştur"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

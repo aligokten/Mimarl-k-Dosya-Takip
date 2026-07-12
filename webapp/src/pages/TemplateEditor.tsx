@@ -5,6 +5,7 @@ import { tr } from "date-fns/locale";
 import { addDocTemplate, useApp } from "../data";
 import { cardCls, secondaryBtnCls } from "../ui";
 import { PrinterIcon } from "../components/icons";
+import { buildProjectTokens, buildVekilTokens } from "../templateTokens";
 
 const DRAFT_KEY_PREFIX = "mimarlik-doc-draft-";
 
@@ -65,47 +66,13 @@ export default function TemplateEditor() {
   function fillFromProject(projectId: string) {
     const project = db.projects.find((p) => p.id === projectId);
     if (!project) return;
-    const client = db.contacts.find((c) => c.id === project.clientId);
-    const owner = db.contacts.find((o) => o.id === project.landOwnerId);
-    const contractor = db.contacts.find(
-      (c) => c.id === project.contractorId
-    );
-    fillTokens({
-      "PROJE ADI": project.name,
-      İL: project.province,
-      İLÇE: project.district,
-      MAHALLE: project.neighborhood,
-      ADA: project.ada,
-      PARSEL: project.parsel,
-      BELEDİYE: project.district,
-      "MÜŞTERİ ADI": client?.name,
-      "MÜŞTERİ ADRESİ": client?.address,
-      "MÜŞTERİ TELEFON": client?.phone,
-      "ARSA SAHİBİ ADI": owner?.name,
-      "ARSA SAHİBİ TC": owner?.tcNo,
-      "ARSA SAHİBİ ADRESİ": owner?.address,
-      "MÜTEAHHİT ADI": contractor?.name,
-      "MÜTEAHHİT ADRESİ": contractor?.address,
-      "MÜTEAHHİT TELEFON": contractor?.phone,
-      "MÜTEAHHİT VERGİ NO": contractor?.taxNo,
-      "BAŞVURAN ADI": owner?.name ?? client?.name,
-      "BAŞVURAN TC": owner?.tcNo,
-      "BAŞVURAN ADRESİ": owner?.address ?? client?.address,
-      TELEFON: owner?.phone ?? client?.phone,
-    });
+    fillTokens(buildProjectTokens(project, db.contacts));
   }
 
   function fillVekil(memberUid: string) {
     const m = db.members.find((x) => x.uid === memberUid);
     if (!m) return;
-    fillTokens({
-      "VEKİL ADI": m.displayName,
-      "VEKİL ÜNVAN": m.title,
-      "VEKİL TELEFON": m.phone,
-      "VEKİL E-POSTA": m.email,
-      "İMZALAYAN ADI": m.displayName,
-      "İMZA": m.displayName,
-    });
+    fillTokens(buildVekilTokens(m));
   }
 
   async function saveAsNewTemplate() {
