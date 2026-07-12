@@ -696,7 +696,7 @@ export default function PlatformAdmin() {
 
   if (!app.platformAdmin) {
     return (
-      <div className={cardCls}>
+      <div className={`${cardCls} p-6`}>
         <h1 className="text-xl font-extrabold text-slate-900 dark:text-white">
           Platform Yönetimi
         </h1>
@@ -710,7 +710,7 @@ export default function PlatformAdmin() {
 
   return (
     <div className="space-y-5">
-      <div className={cardCls}>
+      <div className={`${cardCls} p-6`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">
@@ -742,7 +742,7 @@ export default function PlatformAdmin() {
         </div>
       </div>
 
-      <div className={cardCls}>
+      <div className={`${cardCls} p-6`}>
         <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
           Yeni Müşteri Daveti
         </h2>
@@ -814,7 +814,7 @@ export default function PlatformAdmin() {
         </button>
       </div>
 
-      <div className={cardCls}>
+      <div className={`${cardCls} p-6`}>
         <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
           Web Başvuruları
         </h2>
@@ -883,7 +883,7 @@ export default function PlatformAdmin() {
         />
       )}
 
-      <div className={cardCls}>
+      <div className={`${cardCls} p-6`}>
         <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
           Aktif Ofisler
         </h2>
@@ -933,7 +933,7 @@ export default function PlatformAdmin() {
         </div>
       </div>
 
-      <div className={cardCls}>
+      <div className={`${cardCls} p-6`}>
         <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
           Platform Davetleri
         </h2>
