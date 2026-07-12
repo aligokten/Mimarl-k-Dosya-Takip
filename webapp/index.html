@@ -3,6 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Bazı mobil tarayıcılarda "Masaüstü Web Sitesi İste" seçeneği açıkken
+      // tarayıcı sayfanın viewport etiketini yok sayıp geniş (masaüstü) bir
+      // görünüm genişliği zorluyor; sayfa da bu genişliğe göre küçültülerek
+      // gösteriliyor. window.screen.width gerçek cihaz genişliğini verdiği
+      // için bunu viewport'a geri yazarak düzeltiyoruz.
+      (function () {
+        try {
+          var vp = document.querySelector('meta[name="viewport"]');
+          var screenW = window.screen && window.screen.width;
+          if (vp && screenW && screenW > 0 && screenW < 820) {
+            vp.setAttribute(
+              "content",
+              "width=" + screenW + ", initial-scale=1.0"
+            );
+          }
+        } catch (e) {}
+      })();
+    </script>
     <title>Ruhsat360</title>
     <link rel="icon" type="image/png" href="/brand/favicon.png" />
     <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
