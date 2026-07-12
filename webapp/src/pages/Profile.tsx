@@ -1,10 +1,23 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { signOutUser, updateMyProfile, useApp } from "../data";
-import { cardCls, inputCls, labelCls, primaryBtnCls } from "../ui";
+import {
+  computeLeaveBalance,
+  deleteLeaveRequest,
+  memberLeaveQuota,
+  signOutUser,
+  updateMyProfile,
+  useApp,
+} from "../data";
+import { cardCls, inputCls, labelCls, primaryBtnCls, secondaryBtnCls } from "../ui";
 import PageTitle from "../components/PageTitle";
 import { UsersIcon } from "../components/icons";
-import { MEMBER_ROLE_LABELS } from "../types";
+import LeaveRequestModal from "../components/LeaveRequestModal";
+import {
+  LEAVE_KIND_LABELS,
+  LEAVE_STATUS_CHIP,
+  LEAVE_STATUS_LABELS,
+  MEMBER_ROLE_LABELS,
+} from "../types";
 import { Avatar } from "../App";
 
 export default function Profile() {
@@ -89,6 +102,8 @@ export default function Profile() {
         </form>
       </div>
 
+      <MyLeaveCard />
+
       <div className="flex flex-wrap gap-3">
         {me.role === "ADMIN" && (
           <Link
@@ -105,6 +120,99 @@ export default function Profile() {
           Çıkış Yap
         </button>
       </div>
+    </div>
+  );
+}
+
+function MyLeaveCard() {
+  const app = useApp();
+  const me = app.me!;
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const quota = memberLeaveQuota(me);
+  const { used, remaining } = computeLeaveBalance(app.leaveRequests, me.uid, quota);
+  const myRequests = app.leaveRequests.filter((r) => r.memberUid === me.uid);
+
+  return (
+    <div className={`${cardCls} p-6`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+            İzinlerim
+          </h2>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            {new Date().getFullYear()} yılı yıllık izin hakkı: {quota} gün ·
+            kullanılan: {used} gün · kalan:{" "}
+            <span
+              className={
+                remaining <= 0
+                  ? "font-semibold text-red-600 dark:text-red-400"
+                  : remaining <= 3
+                    ? "font-semibold text-amber-600 dark:text-amber-400"
+                    : "font-semibold text-emerald-600 dark:text-emerald-400"
+              }
+            >
+              {remaining} gün
+            </span>
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className={secondaryBtnCls}
+        >
+          + Yeni İzin Talebi
+        </button>
+      </div>
+
+      {myRequests.length === 0 ? (
+        <p className="mt-4 text-sm text-slate-400 dark:text-slate-500">
+          Henüz izin talebiniz yok.
+        </p>
+      ) : (
+        <ul className="mt-4 divide-y divide-slate-100 dark:divide-zinc-700">
+          {myRequests.map((r) => (
+            <li key={r.id} className="flex flex-wrap items-center gap-2 py-2.5">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-slate-900 dark:text-white">
+                  {LEAVE_KIND_LABELS[r.kind]} · {r.startDate} → {r.endDate} (
+                  {r.days} gün)
+                </p>
+                {r.status === "REDDEDILDI" && r.decisionNote && (
+                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                    Not: {r.decisionNote}
+                  </p>
+                )}
+              </div>
+              <span
+                className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${LEAVE_STATUS_CHIP[r.status]}`}
+              >
+                {LEAVE_STATUS_LABELS[r.status]}
+              </span>
+              {r.status === "BEKLIYOR" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm("Bu izin talebi iptal edilsin mi?")) {
+                      deleteLeaveRequest(r.id);
+                    }
+                  }}
+                  className="rounded-full border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:hover:bg-red-500/10"
+                >
+                  İptal Et
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {modalOpen && (
+        <LeaveRequestModal
+          memberName={me.displayName || me.email}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

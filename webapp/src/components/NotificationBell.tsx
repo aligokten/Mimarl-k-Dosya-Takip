@@ -80,7 +80,11 @@ export default function NotificationBell() {
                 onClick={() => {
                   if (!n.read) markNotificationRead(n.id);
                   setOpen(false);
-                  navigate(`/projeler/${n.projectId}`);
+                  if (n.kind === "IZIN") {
+                    navigate(app.me?.role === "ADMIN" ? "/ekip" : "/profil");
+                  } else {
+                    navigate(`/projeler/${n.projectId}`);
+                  }
                 }}
                 className={
                   "flex w-full gap-2 border-b border-slate-50 px-4 py-3 text-left last:border-0 hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-zinc-700/50 " +
@@ -93,7 +97,7 @@ export default function NotificationBell() {
                 <span className={n.read ? "pl-4" : ""}>
                   <span className="block text-sm text-slate-700 dark:text-slate-200">
                     <span className="font-semibold text-slate-900 dark:text-white">
-                      {n.projectName}
+                      {n.projectName ?? "İzin"}
                     </span>{" "}
                     — {n.text}
                   </span>

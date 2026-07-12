@@ -44,6 +44,9 @@ import type {
   Contact,
   CustomTemplate,
   Invite,
+  LeaveKind,
+  LeaveRequest,
+  LeaveStatus,
   Member,
   MemberRole,
   MevzuatDoc,
@@ -53,7 +56,7 @@ import type {
   Project,
   ServiceType,
 } from "./types";
-import { MAX_MEMBERS } from "./types";
+import { DEFAULT_ANNUAL_LEAVE_DAYS, MAX_MEMBERS } from "./types";
 
 export function uid(): string {
   return crypto.randomUUID();
@@ -83,6 +86,7 @@ export interface AppState {
   professionals: Professional[];
   mevzuat: MevzuatDoc[];
   chat: ChatMessage[];
+  leaveRequests: LeaveRequest[];
 }
 
 let state: AppState = {
@@ -104,6 +108,7 @@ let state: AppState = {
   professionals: [],
   mevzuat: [],
   chat: [],
+  leaveRequests: [],
 };
 
 const listeners = new Set<() => void>();
@@ -530,6 +535,19 @@ async function startForMember(fbUser: FbUser, requestedOfficeId?: string) {
       )
     );
 
+    dataUnsubs.push(
+      onSnapshot(
+        collection(db(), "leaveRequests"),
+        (snap) => {
+          const list = snap.docs
+            .map((d) => stripId<LeaveRequest>(d))
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+          set({ leaveRequests: list });
+        },
+        () => set({ leaveRequests: [] })
+      )
+    );
+
     return;
   }
 
@@ -648,6 +666,19 @@ async function startForMember(fbUser: FbUser, requestedOfficeId?: string) {
       () => set({ chat: [] })
     )
   );
+
+  dataUnsubs.push(
+    onSnapshot(
+      collection(db(), "offices", officeId, "leaveRequests"),
+      (snap) => {
+        const list = snap.docs
+          .map((d) => stripId<LeaveRequest>(d))
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        set({ leaveRequests: list });
+      },
+      () => set({ leaveRequests: [] })
+    )
+  );
 }
 
 
@@ -675,6 +706,7 @@ export function initAuth() {
         professionals: [],
         mevzuat: [],
         chat: [],
+        leaveRequests: [],
       });
       return;
     }
@@ -897,6 +929,7 @@ export async function signOutUser() {
       professionals: [],
       mevzuat: [],
       chat: [],
+      leaveRequests: [],
     });
 
     try {
@@ -1615,6 +1648,189 @@ export async function loadActivities(projectId: string): Promise<Activity[]> {
     )
   );
   return snap.docs.map((d) => stripId<Activity>(d));
+}
+
+// ---- İzin yönetimi ----
+
+// Proje bildirimlerinden bağımsız, tek bir kullanıcıya genel bildirim gönderir.
+async function notifyUser(
+  forUid: string,
+  text: string,
+  extra?: { kind?: "IZIN"; leaveRequestId?: string }
+) {
+  const who = currentName();
+  await addDoc(
+    officeCollection("notifications"),
+    stripUndefined({
+      forUid,
+      text,
+      byName: who.name,
+      read: false,
+      at: now(),
+      ...extra,
+    })
+  );
+}
+
+// İki tarih arasındaki gün sayısını (başlangıç ve bitiş dahil) hesaplar.
+function leaveDaysBetween(startDate: string, endDate: string): number {
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  const diff = Math.round((end.getTime() - start.getTime()) / 86_400_000);
+  return Math.max(1, diff + 1);
+}
+
+// Bir çalışanın belirli bir yıl için kullandığı/kalan yıllık izin gün sayısı
+// (yalnızca onaylanmış yıllık izin talepleri sayılır).
+export function computeLeaveBalance(
+  leaveRequests: LeaveRequest[],
+  memberUid: string,
+  quota: number,
+  year: number = new Date().getFullYear()
+): { used: number; remaining: number } {
+  const used = leaveRequests
+    .filter(
+      (r) =>
+        r.memberUid === memberUid &&
+        r.kind === "YILLIK" &&
+        r.status === "ONAYLANDI" &&
+        r.startDate.slice(0, 4) === String(year)
+    )
+    .reduce((sum, r) => sum + r.days, 0);
+  return { used, remaining: quota - used };
+}
+
+export function memberLeaveQuota(member: Member | null | undefined): number {
+  const value = Number(member?.annualLeaveQuota);
+  return Number.isFinite(value) && value > 0 ? value : DEFAULT_ANNUAL_LEAVE_DAYS;
+}
+
+export async function createLeaveRequest(input: {
+  kind: LeaveKind;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  reportDiagnosis?: string;
+  reportHospital?: string;
+  reportDoctor?: string;
+  reportFileUrl?: string;
+  reportPreviewUrl?: string;
+}): Promise<void> {
+  const who = currentName();
+  const days = leaveDaysBetween(input.startDate, input.endDate);
+
+  await addDoc(
+    officeCollection("leaveRequests"),
+    stripUndefined({
+      memberUid: who.uid,
+      memberName: who.name,
+      kind: input.kind,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      days,
+      reason: input.reason,
+      reportDiagnosis: input.reportDiagnosis,
+      reportHospital: input.reportHospital,
+      reportDoctor: input.reportDoctor,
+      reportFileUrl: input.reportFileUrl,
+      reportPreviewUrl: input.reportPreviewUrl,
+      status: "BEKLIYOR" as LeaveStatus,
+      createdAt: now(),
+    })
+  );
+
+  const admins = state.members.filter(
+    (m) => m.role === "ADMIN" && m.uid !== who.uid
+  );
+  const kindLabel = input.kind === "YILLIK" ? "yıllık izin" : "sağlık raporu";
+  for (const admin of admins) {
+    await notifyUser(
+      admin.uid,
+      `${who.name}, ${input.startDate} - ${input.endDate} tarihleri için ${kindLabel} talebi oluşturdu.`,
+      { kind: "IZIN" }
+    );
+  }
+}
+
+export async function updateLeaveRequestDates(
+  id: string,
+  startDate: string,
+  endDate: string
+): Promise<void> {
+  await updateDoc(officeDoc("leaveRequests", id), {
+    startDate,
+    endDate,
+    days: leaveDaysBetween(startDate, endDate),
+  });
+}
+
+export async function deleteLeaveRequest(id: string): Promise<void> {
+  await deleteDoc(officeDoc("leaveRequests", id));
+}
+
+export async function decideLeaveRequest(
+  id: string,
+  status: Extract<LeaveStatus, "ONAYLANDI" | "REDDEDILDI">,
+  note?: string
+): Promise<void> {
+  const req = state.leaveRequests.find((r) => r.id === id);
+  const who = currentName();
+
+  await updateDoc(
+    officeDoc("leaveRequests", id),
+    stripUndefined({
+      status,
+      decidedByUid: who.uid,
+      decidedByName: who.name,
+      decidedAt: now(),
+      decisionNote: note,
+    })
+  );
+
+  if (!req) return;
+
+  const rangeText = `${req.startDate} - ${req.endDate}`;
+  await notifyUser(
+    req.memberUid,
+    status === "ONAYLANDI"
+      ? `${rangeText} tarihli izin talebiniz onaylandı.`
+      : `${rangeText} tarihli izin talebiniz reddedildi.${note ? ` Not: ${note}` : ""}`,
+    { kind: "IZIN", leaveRequestId: id }
+  );
+
+  if (status === "ONAYLANDI" && req.kind === "YILLIK") {
+    const member = state.members.find((m) => m.uid === req.memberUid);
+    const quota = memberLeaveQuota(member);
+    const year = Number(req.startDate.slice(0, 4));
+    const { used } = computeLeaveBalance(
+      state.leaveRequests,
+      req.memberUid,
+      quota,
+      year
+    );
+    const remaining = quota - (used + req.days);
+
+    if (remaining <= 0) {
+      await notifyUser(
+        req.memberUid,
+        `Yıllık izin hakkınız doldu (${quota} günlük limitinizin tamamını kullandınız).`,
+        { kind: "IZIN", leaveRequestId: id }
+      );
+    } else if (remaining <= 3) {
+      await notifyUser(
+        req.memberUid,
+        `Yıllık izin hakkınız azalıyor: ${remaining} gün kaldı.`,
+        { kind: "IZIN", leaveRequestId: id }
+      );
+    }
+  }
+}
+
+export async function setMemberLeaveQuota(
+  uidToSet: string,
+  quota: number
+): Promise<void> {
+  await updateDoc(officeDoc("members", uidToSet), { annualLeaveQuota: quota });
 }
 
 // ---- Kişiler ----
