@@ -105,5 +105,13 @@ service cloud.firestore {
       allow read, update: if isPlatformAdmin();
       allow create: if signedIn();
     }
+
+    // Platform (pazarlama) sitesinden gelen demo/web başvuruları: oluşturma
+    // ayrı bir sunucu tarafı akışla yapılır (bu repo kapsamında değil);
+    // burada yalnızca platform yöneticisinin okuma/güncelleme (ör. okundu
+    // işaretleme, durum güncelleme) izni tanımlanır.
+    match /platformLeads/{id} {
+      allow read, update: if isPlatformAdmin();
+    }
   }
 }

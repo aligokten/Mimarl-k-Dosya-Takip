@@ -36,6 +36,7 @@ import {
 } from "firebase/storage";
 import { auth, db, storage, googleProvider } from "./firebase";
 import { applySharedDriveClientId, deleteDriveFile } from "./drive";
+import { playNotificationChime } from "./notifySound";
 import type {
   Activity,
   ActivityType,
@@ -52,6 +53,7 @@ import type {
   MevzuatDoc,
   MevzuatKind,
   Office,
+  PlatformLeadNotice,
   PlatformMessage,
   Professional,
   Project,
@@ -89,6 +91,7 @@ export interface AppState {
   chat: ChatMessage[];
   leaveRequests: LeaveRequest[];
   platformMessages: PlatformMessage[];
+  platformLeads: PlatformLeadNotice[];
 }
 
 let state: AppState = {
@@ -112,6 +115,7 @@ let state: AppState = {
   chat: [],
   leaveRequests: [],
   platformMessages: [],
+  platformLeads: [],
 };
 
 const listeners = new Set<() => void>();
@@ -440,6 +444,29 @@ async function startForMember(fbUser: FbUser, requestedOfficeId?: string) {
         () => set({ platformMessages: [] })
       )
     );
+
+    // Platform sitesinden gelen yeni web başvuruları (leads): bildirim
+    // çanına düşer. İlk anlık görüntüdeki (sayfa yüklenirken zaten var olan)
+    // kayıtlar için ses çalınmaz — yalnızca oturum açıkken sonradan gelen
+    // gerçekten yeni başvurularda "docChanges" ile sesli uyarı tetiklenir.
+    let leadsLoaded = false;
+    dataUnsubs.push(
+      onSnapshot(
+        collection(db(), "platformLeads"),
+        (snap) => {
+          if (leadsLoaded) {
+            const hasNew = snap.docChanges().some((c) => c.type === "added");
+            if (hasNew) playNotificationChime();
+          }
+          leadsLoaded = true;
+          const list = snap.docs
+            .map((d) => stripId<PlatformLeadNotice>(d))
+            .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+          set({ platformLeads: list });
+        },
+        () => set({ platformLeads: [] })
+      )
+    );
   }
 
   let officeId = requestedOfficeId;
@@ -726,6 +753,7 @@ export function initAuth() {
         chat: [],
         leaveRequests: [],
         platformMessages: [],
+        platformLeads: [],
       });
       return;
     }
@@ -950,6 +978,7 @@ export async function signOutUser() {
       chat: [],
       leaveRequests: [],
       platformMessages: [],
+      platformLeads: [],
     });
 
     try {
@@ -1693,6 +1722,21 @@ export async function markAllPlatformMessagesRead(): Promise<void> {
     batch.update(doc(db(), "platformMessages", m.id), { read: true });
   }
   if (unread.length) await batch.commit();
+}
+
+// ---- Platform web başvuruları (leads) bildirim durumu ----
+
+export async function markPlatformLeadNoticeSeen(id: string): Promise<void> {
+  await updateDoc(doc(db(), "platformLeads", id), { notifSeen: true });
+}
+
+export async function markAllPlatformLeadNoticesSeen(): Promise<void> {
+  const unseen = state.platformLeads.filter((l) => !l.notifSeen);
+  const batch = writeBatch(db());
+  for (const l of unseen) {
+    batch.update(doc(db(), "platformLeads", l.id), { notifSeen: true });
+  }
+  if (unseen.length) await batch.commit();
 }
 
 export async function loadActivities(projectId: string): Promise<Activity[]> {
