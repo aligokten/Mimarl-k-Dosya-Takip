@@ -102,7 +102,7 @@ export default function Profile() {
         </form>
       </div>
 
-      <MyLeaveCard />
+      {me.role !== "ADMIN" && <MyLeaveCard />}
 
       <div className="flex flex-wrap gap-3">
         {me.role === "ADMIN" && (
