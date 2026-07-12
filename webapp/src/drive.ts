@@ -354,6 +354,72 @@ export async function deleteDriveFile(fileId: string): Promise<void> {
   });
 }
 
+async function multipartUploadRaw(
+  metadata: Record<string, unknown>,
+  content: Blob,
+  contentType: string
+): Promise<{ id: string }> {
+  const boundary = `drv-${Math.random().toString(36).slice(2)}`;
+  const body = new Blob([
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(
+      metadata
+    )}\r\n`,
+    `--${boundary}\r\nContent-Type: ${contentType}\r\n\r\n`,
+    content,
+    `\r\n--${boundary}--`,
+  ]);
+  const resp = await driveFetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",
+    {
+      method: "POST",
+      headers: { "Content-Type": `multipart/related; boundary=${boundary}` },
+      body,
+    }
+  );
+  return resp.json();
+}
+
+// Eski Word (.doc, OLE ikili biçim) dosyalarını tarayıcıda ayrıştıran bir
+// kütüphane yok; bunun yerine dosya Drive'a "Google Dokümanlar'a dönüştür"
+// seçeneğiyle geçici olarak yüklenir, ardından .docx (OOXML) olarak dışa
+// aktarılır. Sonuç, sayfa düzeni Google'ın dönüştürücüsünce yeniden
+// yorumlanmış normal bir .docx dosyasıdır — orijinal .doc ile birebir
+// piksel/konum eşleşmesi garanti edilmez (yalnızca gerçek .docx yüklemede
+// bu garanti vardır); yine de Uzmanlar > Taahhütname Oluştur ve şablon
+// düzenleyicide normal .docx gibi kullanılabilir.
+export async function convertDocToDocx(
+  file: File,
+  folderName: string
+): Promise<{ docxBytes: ArrayBuffer; docxFileId: string; docxFileName: string }> {
+  const folderId = await ensureSubfolder(folderName);
+  const temp = await multipartUploadRaw(
+    {
+      name: file.name,
+      mimeType: "application/vnd.google-apps.document",
+      parents: [folderId],
+    },
+    file,
+    "application/msword"
+  );
+  try {
+    const exportResp = await driveFetch(
+      `https://www.googleapis.com/drive/v3/files/${temp.id}/export?mimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+    );
+    const docxBytes = await exportResp.arrayBuffer();
+    const docxFileName = file.name.replace(/\.doc$/i, ".docx");
+    const docxMime =
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const saved = await multipartUploadRaw(
+      { name: docxFileName, parents: [folderId] },
+      new Blob([docxBytes], { type: docxMime }),
+      docxMime
+    );
+    return { docxBytes, docxFileId: saved.id, docxFileName };
+  } finally {
+    await deleteDriveFile(temp.id).catch(() => {});
+  }
+}
+
 // Ham dosya baytlarını indirir (ör. bir .docx şablonunu XML seviyesinde
 // doldurmak için orijinal dosyayı geri almak amacıyla).
 export async function downloadDriveFileBytes(
