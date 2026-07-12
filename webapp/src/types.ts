@@ -349,6 +349,11 @@ export interface CustomTemplate {
   title: string;
   description?: string;
   body: string;
+  // Orijinal Word (.docx) dosyası Drive'da saklanıyorsa: sayfa düzenini
+  // birebir koruyarak (XML seviyesinde) doldurma özelliği için kullanılır
+  // (ör. Taahhütname Oluştur). Yalnızca .docx yüklenip Drive bağlıyken dolar.
+  sourceDriveFileId?: string;
+  sourceFileName?: string;
   createdAt: string;
 }
 

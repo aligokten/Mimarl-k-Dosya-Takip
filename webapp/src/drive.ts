@@ -354,6 +354,17 @@ export async function deleteDriveFile(fileId: string): Promise<void> {
   });
 }
 
+// Ham dosya baytlarını indirir (ör. bir .docx şablonunu XML seviyesinde
+// doldurmak için orijinal dosyayı geri almak amacıyla).
+export async function downloadDriveFileBytes(
+  fileId: string
+): Promise<ArrayBuffer> {
+  const resp = await driveFetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`
+  );
+  return resp.arrayBuffer();
+}
+
 
 // Client ID tanımlıysa Google betiğini uygulama açılışında yükle:
 // böylece "Drive'a Bağlan" tıklamasında popup gecikmeden (ve Safari
