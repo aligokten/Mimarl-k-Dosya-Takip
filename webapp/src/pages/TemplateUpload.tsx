@@ -113,13 +113,34 @@ export default function TemplateUpload() {
             let body: string;
             let source: { sourceDriveFileId: string; sourceFileName: string } | undefined;
             if (file instanceof File && file.size > 0) {
+              // Drive'a yükleme (gerekirse Google yetkilendirme penceresi
+              // açar) mutlaka İLK adım olmalı: tarayıcılar, kullanıcı
+              // tıklamasından sonra araya giren başka bir bekleme (ör.
+              // mammoth dönüşümü) varsa açılır pencereyi engelleyebilir.
+              // Bu adım isteğe bağlıdır (Taahhütname'de birebir sayfa
+              // düzeni için kullanılır) — başarısız olsa bile şablonun
+              // kendisinin yüklenmesini engellemesin.
+              if (file.name.toLowerCase().endsWith(".docx") && drive.connected) {
+                try {
+                  setBusyText("Orijinal Word dosyası Drive'a yükleniyor...");
+                  const uploaded = await uploadToDrive(file, "Şablon Word Dosyaları");
+                  source = { sourceDriveFileId: uploaded.id, sourceFileName: file.name };
+                } catch (driveErr) {
+                  console.error("Drive'a orijinal dosya yüklenemedi:", driveErr);
+                  // navigate() az sonra bu sayfadan çıkaracağı için setError
+                  // yerine alert kullanıyoruz — kullanıcı bunu görmeden
+                  // sayfadan ayrılmasın.
+                  window.alert(
+                    "Orijinal Word dosyası Drive'a yüklenemedi, bu yüzden " +
+                      "Taahhütname Oluştur'da birebir sayfa düzeniyle " +
+                      "kullanılamayacak; ancak şablonun kendisi normal " +
+                      "şekilde yükleniyor.\n\nHata: " +
+                      (driveErr instanceof Error ? driveErr.message : String(driveErr))
+                  );
+                }
+              }
               setBusyText("Dosya dönüştürülüyor...");
               body = await fileToHtml(file);
-              if (file.name.toLowerCase().endsWith(".docx") && drive.connected) {
-                setBusyText("Orijinal Word dosyası Drive'a yükleniyor...");
-                const uploaded = await uploadToDrive(file, "Şablon Word Dosyaları");
-                source = { sourceDriveFileId: uploaded.id, sourceFileName: file.name };
-              }
             } else if (pasted) {
               body = textToHtml(pasted);
             } else {
