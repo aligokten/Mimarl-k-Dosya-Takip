@@ -180,6 +180,32 @@ function leadStatusPillClass(status?: string) {
   return "bg-slate-100 text-slate-600 dark:bg-zinc-700 dark:text-slate-200";
 }
 
+function officeStatusPillClass(status?: string) {
+  if (status === "ACTIVE") {
+    return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300";
+  }
+  if (status === "SUSPENDED" || status === "PAST_DUE") {
+    return "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300";
+  }
+  if (status === "CANCELLED") {
+    return "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300";
+  }
+  return "bg-slate-100 text-slate-600 dark:bg-zinc-700 dark:text-slate-200";
+}
+
+function inviteStatusPillClass(status?: string) {
+  if (status === "ACTIVE" || status === "ACCEPTED") {
+    return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300";
+  }
+  if (status === "SUSPENDED") {
+    return "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300";
+  }
+  if (status === "CANCELLED" || status === "ARCHIVED") {
+    return "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300";
+  }
+  return "bg-slate-100 text-slate-600 dark:bg-zinc-700 dark:text-slate-200";
+}
+
 function officeViewHref(officeId?: string) {
   if (!officeId) return "";
 
@@ -198,6 +224,12 @@ export default function PlatformAdmin() {
   const [showArchived, setShowArchived] = useState(false);
   const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedOfficeId, setSelectedOfficeId] = useState<string | null>(
+    null
+  );
+  const [selectedInviteId, setSelectedInviteId] = useState<string | null>(
+    null
+  );
 
   const [email, setEmail] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -241,6 +273,16 @@ export default function PlatformAdmin() {
   const selectedLead = useMemo(
     () => recentLeads.find((lead) => lead.id === selectedLeadId) ?? null,
     [recentLeads, selectedLeadId]
+  );
+
+  const selectedOffice = useMemo(
+    () => activeOffices.find((o) => o.id === selectedOfficeId) ?? null,
+    [activeOffices, selectedOfficeId]
+  );
+
+  const selectedInvite = useMemo(
+    () => pendingInvites.find((i) => i.id === selectedInviteId) ?? null,
+    [pendingInvites, selectedInviteId]
   );
 
   async function refresh() {
@@ -856,89 +898,36 @@ export default function PlatformAdmin() {
               office.accessStatus || office.subscriptionStatus || "ACTIVE";
 
             return (
-              <div
+              <button
                 key={office.id}
-                className="rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-zinc-700 dark:bg-zinc-800/60"
+                type="button"
+                onClick={() => setSelectedOfficeId(office.id)}
+                className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/70 p-3.5 text-left transition hover:border-slate-300 hover:shadow-sm dark:border-zinc-700 dark:bg-zinc-800/60 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
               >
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <div className="text-base font-extrabold text-slate-900 dark:text-white">
-                      {office.name || office.id}
-                    </div>
-                    <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      {office.ownerEmail || "E-posta yok"} · {customerTypeLabel(office.customerType)} · {planLabel(office.plan)} · Üye limiti:{" "}
-                      {office.maxMembers || "-"} · Bitiş: {office.accessUntil || "-"}
-                      {accessWarningText(office.accessUntil) && (
-                        <>
-                          {" "}·{" "}
-                          <span className={accessWarningClass(office.accessUntil)}>
-                            {accessWarningText(office.accessUntil)}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                    <div className="mt-1 text-xs text-slate-400">
-                      Ofis ID: {office.id}
-                    </div>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-extrabold text-slate-900 dark:text-white">
+                    {office.name || office.id}
                   </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <a
-                      href={officeViewHref(office.id)}
-                      target="_blank"
-                      rel="noopener"
-                      className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
-                    >
-                      Ofisi Görüntüle →
-                    </a>
-
-                    {CUSTOMER_TYPE_OPTIONS.map((item) => (
-                      <button
-                        key={item.code}
-                        onClick={() => updateOfficeCustomerType(office.id, item.code)}
-                        disabled={saving}
-                        className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                          (office.customerType || "DEMO") === item.code
-                            ? "bg-emerald-600 text-white"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-
-                    {PLAN_OPTIONS.map((item) => (
-                      <button
-                        key={item.code}
-                        onClick={() => updateOfficePlan(office.id, item.code)}
-                        disabled={saving}
-                        className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                          planConfig(office.plan).code === item.code
-                            ? "bg-blue-600 text-white"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-
-                    {STATUS_OPTIONS.map((item) => (
-                      <button
-                        key={item}
-                        onClick={() => updateOfficeStatus(office.id, item)}
-                        disabled={saving}
-                        className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                          status === item
-                            ? "bg-orange-500 text-white"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
-                        }`}
-                      >
-                        {item}
-                      </button>
-                    ))}
+                  <div className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                    {office.ownerEmail || "E-posta yok"} · {planLabel(office.plan)}
                   </div>
                 </div>
-              </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${officeStatusPillClass(status)}`}
+                  >
+                    {status}
+                  </span>
+                  {accessWarningText(office.accessUntil) && (
+                    <span className={`text-[11px] ${accessWarningClass(office.accessUntil)}`}>
+                      {accessWarningText(office.accessUntil)}
+                    </span>
+                  )}
+                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                    Detaylar →
+                  </span>
+                </div>
+              </button>
             );
           })}
         </div>
@@ -955,112 +944,68 @@ export default function PlatformAdmin() {
           )}
 
           {pendingInvites.map((invite) => (
-            <div
+            <button
               key={invite.id}
-              className="rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-zinc-700 dark:bg-zinc-800/60"
+              type="button"
+              onClick={() => setSelectedInviteId(invite.id)}
+              className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/70 p-3.5 text-left transition hover:border-slate-300 hover:shadow-sm dark:border-zinc-700 dark:bg-zinc-800/60 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
             >
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <div className="text-base font-extrabold text-slate-900 dark:text-white">
-                    {invite.companyName || invite.id}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {invite.email || invite.id} · {customerTypeLabel(invite.customerType)} · {planLabel(invite.plan)} · Üye limiti:{" "}
-                    {invite.maxMembers || "-"} · Bitiş: {invite.accessUntil || "-"}
-                    {accessWarningText(invite.accessUntil) && (
-                      <>
-                        {" "}·{" "}
-                        <span className={accessWarningClass(invite.accessUntil)}>
-                          {accessWarningText(invite.accessUntil)}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-400">
-                    Durum: {invite.status || "-"} · Ofis: {invite.officeId || "-"}
-                  </div>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-extrabold text-slate-900 dark:text-white">
+                  {invite.companyName || invite.id}
                 </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {invite.officeId && (
-                    <a
-                      href={officeViewHref(invite.officeId)}
-                      target="_blank"
-                      rel="noopener"
-                      className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
-                    >
-                      Ofisi Görüntüle →
-                    </a>
-                  )}
-
-                  {CUSTOMER_TYPE_OPTIONS.map((item) => (
-                    <button
-                      key={item.code}
-                      onClick={() => updateInviteCustomerType(invite, item.code)}
-                      disabled={saving}
-                      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                        (invite.customerType || "DEMO") === item.code
-                          ? "bg-emerald-600 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-
-                  {invite.archivedAt || invite.status === "ARCHIVED" ? (
-                    <button
-                      onClick={() => restoreInvite(invite)}
-                      disabled={saving}
-                      className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white dark:bg-white dark:text-slate-900"
-                    >
-                      Arşivden Çıkar
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => archiveInvite(invite)}
-                      disabled={saving}
-                      className="rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300"
-                    >
-                      Arşivle
-                    </button>
-                  )}
-
-                  {PLAN_OPTIONS.map((item) => (
-                    <button
-                      key={item.code}
-                      onClick={() => updateInvitePlan(invite, item.code)}
-                      disabled={saving}
-                      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                        planConfig(invite.plan).code === item.code
-                          ? "bg-blue-600 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-
-                  {["ACTIVE", "ACCEPTED", "SUSPENDED", "CANCELLED"].map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => updateInviteStatus(invite, status)}
-                      disabled={saving}
-                      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                        invite.status === status
-                          ? "bg-orange-500 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
-                      }`}
-                    >
-                      {status}
-                    </button>
-                  ))}
+                <div className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                  {invite.email || invite.id} · {planLabel(invite.plan)}
                 </div>
               </div>
-            </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <span
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${inviteStatusPillClass(invite.status)}`}
+                >
+                  {invite.status || "-"}
+                </span>
+                {accessWarningText(invite.accessUntil) && (
+                  <span className={`text-[11px] ${accessWarningClass(invite.accessUntil)}`}>
+                    {accessWarningText(invite.accessUntil)}
+                  </span>
+                )}
+                {(invite.archivedAt || invite.status === "ARCHIVED") && (
+                  <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:bg-zinc-600 dark:text-slate-200">
+                    Arşivlendi
+                  </span>
+                )}
+                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                  Detaylar →
+                </span>
+              </div>
+            </button>
           ))}
         </div>
       </div>
+
+      {selectedOffice && (
+        <OfficeDetailModal
+          office={selectedOffice}
+          saving={saving}
+          onClose={() => setSelectedOfficeId(null)}
+          updateOfficeStatus={updateOfficeStatus}
+          updateOfficePlan={updateOfficePlan}
+          updateOfficeCustomerType={updateOfficeCustomerType}
+        />
+      )}
+
+      {selectedInvite && (
+        <InviteDetailModal
+          invite={selectedInvite}
+          saving={saving}
+          onClose={() => setSelectedInviteId(null)}
+          updateInviteStatus={updateInviteStatus}
+          updateInvitePlan={updateInvitePlan}
+          updateInviteCustomerType={updateInviteCustomerType}
+          archiveInvite={archiveInvite}
+          restoreInvite={restoreInvite}
+        />
+      )}
     </div>
   );
 }
@@ -1285,6 +1230,295 @@ function LeadDetailModal({
             >
               Notu Kaydet
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Aktif ofis detayları — açılır pencerede (önceden sayfada tam açık kart).
+function OfficeDetailModal({
+  office,
+  saving,
+  onClose,
+  updateOfficeStatus,
+  updateOfficePlan,
+  updateOfficeCustomerType,
+}: {
+  office: OfficeRow;
+  saving: boolean;
+  onClose: () => void;
+  updateOfficeStatus: (officeId: string, accessStatus: AccessStatus) => void;
+  updateOfficePlan: (officeId: string, nextPlan: PlanCode) => void;
+  updateOfficeCustomerType: (officeId: string, customerType: string) => void;
+}) {
+  const status =
+    office.accessStatus || office.subscriptionStatus || "ACTIVE";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 sm:items-center sm:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="my-8 w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-zinc-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3.5 dark:border-zinc-700">
+          <h3 className="truncate text-base font-extrabold text-slate-900 dark:text-white">
+            {office.name || office.id}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-zinc-800"
+            title="Kapat"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="max-h-[75vh] overflow-y-auto p-5">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            {office.ownerEmail || "E-posta yok"} · {customerTypeLabel(office.customerType)} · {planLabel(office.plan)} · Üye limiti:{" "}
+            {office.maxMembers || "-"} · Bitiş: {office.accessUntil || "-"}
+            {accessWarningText(office.accessUntil) && (
+              <>
+                {" "}·{" "}
+                <span className={accessWarningClass(office.accessUntil)}>
+                  {accessWarningText(office.accessUntil)}
+                </span>
+              </>
+            )}
+          </div>
+          <div className="mt-1 text-xs text-slate-400">Ofis ID: {office.id}</div>
+
+          <div className="mt-4">
+            <a
+              href={officeViewHref(office.id)}
+              target="_blank"
+              rel="noopener"
+              className="inline-flex rounded-full bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+            >
+              Ofisi Görüntüle →
+            </a>
+          </div>
+
+          <div className="mt-4">
+            <label className={labelCls}>Müşteri Tipi</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {CUSTOMER_TYPE_OPTIONS.map((item) => (
+                <button
+                  key={item.code}
+                  onClick={() => updateOfficeCustomerType(office.id, item.code)}
+                  disabled={saving}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                    (office.customerType || "DEMO") === item.code
+                      ? "bg-emerald-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className={labelCls}>Plan</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {PLAN_OPTIONS.map((item) => (
+                <button
+                  key={item.code}
+                  onClick={() => updateOfficePlan(office.id, item.code)}
+                  disabled={saving}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                    planConfig(office.plan).code === item.code
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className={labelCls}>Erişim Durumu</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {STATUS_OPTIONS.map((item) => (
+                <button
+                  key={item}
+                  onClick={() => updateOfficeStatus(office.id, item)}
+                  disabled={saving}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                    status === item
+                      ? "bg-orange-500 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                  }`}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Platform daveti detayları — açılır pencerede (önceden sayfada tam açık kart).
+function InviteDetailModal({
+  invite,
+  saving,
+  onClose,
+  updateInviteStatus,
+  updateInvitePlan,
+  updateInviteCustomerType,
+  archiveInvite,
+  restoreInvite,
+}: {
+  invite: InviteRow;
+  saving: boolean;
+  onClose: () => void;
+  updateInviteStatus: (invite: InviteRow, status: string) => void;
+  updateInvitePlan: (invite: InviteRow, nextPlan: PlanCode) => void;
+  updateInviteCustomerType: (invite: InviteRow, customerType: string) => void;
+  archiveInvite: (invite: InviteRow) => void;
+  restoreInvite: (invite: InviteRow) => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 sm:items-center sm:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="my-8 w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-zinc-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3.5 dark:border-zinc-700">
+          <h3 className="truncate text-base font-extrabold text-slate-900 dark:text-white">
+            {invite.companyName || invite.id}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-zinc-800"
+            title="Kapat"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="max-h-[75vh] overflow-y-auto p-5">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            {invite.email || invite.id} · {customerTypeLabel(invite.customerType)} · {planLabel(invite.plan)} · Üye limiti:{" "}
+            {invite.maxMembers || "-"} · Bitiş: {invite.accessUntil || "-"}
+            {accessWarningText(invite.accessUntil) && (
+              <>
+                {" "}·{" "}
+                <span className={accessWarningClass(invite.accessUntil)}>
+                  {accessWarningText(invite.accessUntil)}
+                </span>
+              </>
+            )}
+          </div>
+          <div className="mt-1 text-xs text-slate-400">
+            Durum: {invite.status || "-"} · Ofis: {invite.officeId || "-"}
+          </div>
+
+          {invite.officeId && (
+            <div className="mt-4">
+              <a
+                href={officeViewHref(invite.officeId)}
+                target="_blank"
+                rel="noopener"
+                className="inline-flex rounded-full bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+              >
+                Ofisi Görüntüle →
+              </a>
+            </div>
+          )}
+
+          <div className="mt-4">
+            <label className={labelCls}>Müşteri Tipi</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {CUSTOMER_TYPE_OPTIONS.map((item) => (
+                <button
+                  key={item.code}
+                  onClick={() => updateInviteCustomerType(invite, item.code)}
+                  disabled={saving}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                    (invite.customerType || "DEMO") === item.code
+                      ? "bg-emerald-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+
+              {invite.archivedAt || invite.status === "ARCHIVED" ? (
+                <button
+                  onClick={() => restoreInvite(invite)}
+                  disabled={saving}
+                  className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white dark:bg-white dark:text-slate-900"
+                >
+                  Arşivden Çıkar
+                </button>
+              ) : (
+                <button
+                  onClick={() => archiveInvite(invite)}
+                  disabled={saving}
+                  className="rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300"
+                >
+                  Arşivle
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className={labelCls}>Plan</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {PLAN_OPTIONS.map((item) => (
+                <button
+                  key={item.code}
+                  onClick={() => updateInvitePlan(invite, item.code)}
+                  disabled={saving}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                    planConfig(invite.plan).code === item.code
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className={labelCls}>Durum</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {["ACTIVE", "ACCEPTED", "SUSPENDED", "CANCELLED"].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => updateInviteStatus(invite, status)}
+                  disabled={saving}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                    invite.status === status
+                      ? "bg-orange-500 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
