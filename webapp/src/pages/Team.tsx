@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Navigate } from "react-router-dom";
 import {
   computeLeaveBalance,
@@ -571,7 +572,7 @@ function LeaveRequestDetailModal({
   const [deciding, setDeciding] = useState(false);
   const datesChanged = startDate !== request.startDate || endDate !== request.endDate;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:items-center sm:p-6"
       onClick={onClose}
@@ -762,6 +763,7 @@ function LeaveRequestDetailModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

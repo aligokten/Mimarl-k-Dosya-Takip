@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { createLeaveRequest } from "../data";
 import { uploadSharedPdf, useDrive } from "../drive";
 import { inputCls, primaryBtnCls, secondaryBtnCls, smallLabelCls } from "../ui";
@@ -73,7 +74,7 @@ export default function LeaveRequestModal({
     }
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:items-center sm:p-6"
       onClick={onClose}
@@ -256,6 +257,7 @@ export default function LeaveRequestModal({
           onClose={() => setScanOpen(false)}
         />
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
