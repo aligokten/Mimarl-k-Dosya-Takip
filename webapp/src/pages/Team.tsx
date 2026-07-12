@@ -386,6 +386,8 @@ function LeaveManagementSection({ members }: { members: Member[] }) {
   const selected = requests.find((r) => r.id === selectedId) ?? null;
   const pending = requests.filter((r) => r.status === "BEKLIYOR");
   const decided = requests.filter((r) => r.status !== "BEKLIYOR");
+  // Yöneticilerin izin talebi oluşturma hakkı yok; listede yer almazlar.
+  const leaveEligibleMembers = members.filter((m) => m.role !== "ADMIN");
 
   return (
     <div className="space-y-6">
@@ -400,7 +402,12 @@ function LeaveManagementSection({ members }: { members: Member[] }) {
           </p>
         </div>
         <ul className="divide-y divide-slate-100 dark:divide-zinc-700">
-          {members.map((m) => (
+          {leaveEligibleMembers.length === 0 && (
+            <p className="px-6 py-4 text-sm text-slate-400 dark:text-slate-500">
+              Kayıt yok.
+            </p>
+          )}
+          {leaveEligibleMembers.map((m) => (
             <MemberQuotaRow key={m.uid} member={m} leaveRequests={requests} />
           ))}
         </ul>
