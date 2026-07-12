@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter/wght.css";
 
 /* Koyu mod: html.dark sınıfıyla elle kontrol edilir */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -31,8 +32,8 @@ body {
   background: linear-gradient(125deg, #f8d9bc 0%, #f2e6dc 22%, #e8edf3 55%, #c9d9ec 100%)
     fixed;
   color: #0f172a;
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Arial,
-    Helvetica, sans-serif;
+  font-family: "Inter Variable", "Inter", system-ui, -apple-system,
+    "Segoe UI", Arial, Helvetica, sans-serif;
 }
 
 .dark body {
