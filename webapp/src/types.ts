@@ -97,8 +97,59 @@ export interface Member {
   title?: string;
   role: MemberRole;
   mustChangePassword?: boolean;
+  // Yıllık izin hakkı (gün); tanımsızsa DEFAULT_ANNUAL_LEAVE_DAYS uygulanır.
+  annualLeaveQuota?: number;
   createdAt: string;
 }
+
+// ---- İzin yönetimi ----
+
+export type LeaveKind = "YILLIK" | "RAPOR";
+export type LeaveStatus = "BEKLIYOR" | "ONAYLANDI" | "REDDEDILDI";
+
+export interface LeaveRequest {
+  id: string;
+  memberUid: string;
+  memberName: string;
+  kind: LeaveKind;
+  startDate: string; // yyyy-MM-dd
+  endDate: string; // yyyy-MM-dd
+  days: number; // aralık (başlangıç ve bitiş dahil) gün sayısı
+  reason?: string; // yıllık izin: talep notu
+  // Sağlık raporu alanları (kind === RAPOR)
+  reportDiagnosis?: string;
+  reportHospital?: string;
+  reportDoctor?: string;
+  reportFileUrl?: string; // Drive görüntüleme/indirme bağlantısı
+  reportPreviewUrl?: string; // Drive gömülü önizleme (iframe)
+  status: LeaveStatus;
+  decidedByUid?: string;
+  decidedByName?: string;
+  decidedAt?: string;
+  decisionNote?: string;
+  createdAt: string;
+}
+
+export const DEFAULT_ANNUAL_LEAVE_DAYS = 20;
+
+export const LEAVE_KIND_LABELS: Record<LeaveKind, string> = {
+  YILLIK: "Yıllık İzin",
+  RAPOR: "Sağlık Raporu",
+};
+
+export const LEAVE_STATUS_LABELS: Record<LeaveStatus, string> = {
+  BEKLIYOR: "Onay Bekliyor",
+  ONAYLANDI: "Onaylandı",
+  REDDEDILDI: "Reddedildi",
+};
+
+export const LEAVE_STATUS_CHIP: Record<LeaveStatus, string> = {
+  BEKLIYOR:
+    "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  ONAYLANDI:
+    "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  REDDEDILDI: "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+};
 
 // Yönetici tarafından e-posta ile eklenen, henüz ilk girişini yapmamış
 // çalışan. tempPassword ilk hesabı oluşturmak için kullanılır; ilk girişte
@@ -267,8 +318,11 @@ export interface ChatMessage {
 export interface AppNotification {
   id: string;
   forUid: string;
-  projectId: string;
-  projectName: string;
+  // tanımsız = "PROJE" (geriye dönük): proje bildirimlerinde projectId/projectName dolu olur.
+  kind?: "PROJE" | "IZIN";
+  projectId?: string;
+  projectName?: string;
+  leaveRequestId?: string;
   text: string;
   byName: string;
   read: boolean;

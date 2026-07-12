@@ -79,5 +79,17 @@ service cloud.firestore {
       allow create: if isMember();
       allow update, delete: if signedIn() && resource.data.forUid == request.auth.uid;
     }
+
+    // İzin talepleri: tüm üyeler görebilir (yönetici takip eder); yalnızca
+    // kendi talebini oluşturabilir, yönetici onaylar/reddeder/düzenler,
+    // sahibi de kendi bekleyen talebini düzenleyip iptal edebilir.
+    match /leaveRequests/{id} {
+      allow read: if isMember();
+      allow create: if isMember() &&
+        request.resource.data.memberUid == request.auth.uid;
+      allow update, delete: if isAdmin() ||
+        (signedIn() && resource.data.memberUid == request.auth.uid &&
+          resource.data.status == 'BEKLIYOR');
+    }
   }
 }
