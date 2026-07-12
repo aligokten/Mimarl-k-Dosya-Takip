@@ -167,6 +167,19 @@ function accessWarningClass(value?: string) {
   return "font-extrabold text-amber-600 dark:text-amber-300";
 }
 
+function leadStatusPillClass(status?: string) {
+  if (status === "CUSTOMER") {
+    return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300";
+  }
+  if (status === "LOST") {
+    return "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300";
+  }
+  if (status === "CONTACTED") {
+    return "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300";
+  }
+  return "bg-slate-100 text-slate-600 dark:bg-zinc-700 dark:text-slate-200";
+}
+
 function officeViewHref(officeId?: string) {
   if (!officeId) return "";
 
@@ -184,6 +197,7 @@ export default function PlatformAdmin() {
   const [saving, setSaving] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
   const [email, setEmail] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -222,6 +236,11 @@ export default function PlatformAdmin() {
         .slice()
         .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "")),
     [leads, showArchived]
+  );
+
+  const selectedLead = useMemo(
+    () => recentLeads.find((lead) => lead.id === selectedLeadId) ?? null,
+    [recentLeads, selectedLeadId]
   );
 
   async function refresh() {
@@ -767,191 +786,60 @@ export default function PlatformAdmin() {
           )}
 
           {recentLeads.map((lead) => (
-            <div
+            <button
               key={lead.id}
-              className="rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-zinc-700 dark:bg-zinc-800/60"
+              type="button"
+              onClick={() => setSelectedLeadId(lead.id)}
+              className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/70 p-3.5 text-left transition hover:border-slate-300 hover:shadow-sm dark:border-zinc-700 dark:bg-zinc-800/60 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
             >
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <div className="text-base font-extrabold text-slate-900 dark:text-white">
-                    {lead.companyName || "Firma adı yok"}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {lead.contactName || "Yetkili adı yok"} · {lead.email || "E-posta yok"} · {lead.phone || "Telefon yok"}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-400">
-                    Kaynak: {lead.source || "-"} · Durum: {lead.status || "-"} · Bitiş: {lead.accessUntil || "-"}
-                    {accessWarningText(lead.accessUntil) && (
-                      <>
-                        {" "}·{" "}
-                        <span className={accessWarningClass(lead.accessUntil)}>
-                          {accessWarningText(lead.accessUntil)}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-400">
-                    E-posta: {lead.emailStatus || "-"}
-                    {lead.emailSentAt ? ` · Gönderim: ${lead.emailSentAt.slice(0, 16).replace("T", " ")}` : ""}
-                  </div>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-extrabold text-slate-900 dark:text-white">
+                  {lead.companyName || "Firma adı yok"}
                 </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {["INVITE_CREATED", "CONTACTED", "CUSTOMER", "LOST"].map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => updateLeadStatus(lead.id, status)}
-                      disabled={saving}
-                      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                        lead.status === status
-                          ? "bg-orange-500 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
-                      }`}
-                    >
-                      {status}
-                    </button>
-                  ))}
+                <div className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                  {lead.contactName || "Yetkili adı yok"} · {lead.email || "E-posta yok"}
                 </div>
               </div>
-
-              <div className="mt-4 grid gap-3 rounded-2xl bg-slate-50 p-4 text-xs text-slate-600 dark:bg-zinc-900/60 dark:text-slate-300 md:grid-cols-2">
-                <div>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">Plan:</span>{" "}
-                  {planLabel(lead.plan)} · {lead.maxMembers || "-"} kullanıcı · {customerTypeLabel(lead.customerType)}
-                </div>
-                <div>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">Davet e-postası:</span>{" "}
-                  {lead.inviteEmail || lead.email || "-"}
-                </div>
-                <div>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">Ofis:</span>{" "}
-                  {lead.officeId || "-"}
-                </div>
-                <div>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">Oluşturulma:</span>{" "}
-                  {lead.createdAt ? lead.createdAt.slice(0, 16).replace("T", " ") : "-"}
-                </div>
-                <div>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">Güncelleme:</span>{" "}
-                  {lead.updatedAt ? lead.updatedAt.slice(0, 16).replace("T", " ") : "-"}
-                </div>
-                <div>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">KVKK:</span>{" "}
-                  {lead.kvkkConsent ? "Onay alındı" : "Onay yok"}
-                  {lead.kvkkConsentAt ? ` · ${lead.kvkkConsentAt.slice(0, 16).replace("T", " ")}` : ""}
-                </div>
-                <div>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">Rıza kaynağı:</span>{" "}
-                  {lead.consentSource || "-"} {lead.kvkkTextVersion ? `· v${lead.kvkkTextVersion}` : ""}
-                </div>
-                <div className="md:col-span-2">
-                  <span className="font-bold text-slate-800 dark:text-slate-100">Başvuru mesajı:</span>{" "}
-                  {lead.message || "-"}
-                </div>
-                {lead.emailError && (
-                  <div className="md:col-span-2 text-red-600 dark:text-red-300">
-                    <span className="font-bold">E-posta hatası:</span> {lead.emailError}
-                  </div>
-                )}
-              </div>
-
-              {lead.officeId && (
-                <div className="mt-4">
-                  <a
-                    href={officeViewHref(lead.officeId)}
-                    target="_blank"
-                    rel="noopener"
-                    className="inline-flex rounded-full bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
-                  >
-                    Ofisi Görüntüle →
-                  </a>
-                </div>
-              )}
-
-              <div className="mt-4">
-                <label className={labelCls}>Başvuru Tipi</label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {CUSTOMER_TYPE_OPTIONS.map((item) => (
-                    <button
-                      key={item.code}
-                      onClick={() => updateLeadCustomerType(lead, item.code)}
-                      disabled={saving}
-                      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                        (lead.customerType || "DEMO") === item.code
-                          ? "bg-emerald-600 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-
-                  {lead.archivedAt ? (
-                    <button
-                      onClick={() => restoreLead(lead.id)}
-                      disabled={saving}
-                      className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white dark:bg-white dark:text-slate-900"
-                    >
-                      Arşivden Çıkar
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => archiveLead(lead.id)}
-                      disabled={saving}
-                      className="rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300"
-                    >
-                      Arşivle
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <label className={labelCls}>Başvuru Planı</label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {PLAN_OPTIONS.map((item) => (
-                    <button
-                      key={item.code}
-                      onClick={() => updateLeadPlan(lead, item.code)}
-                      disabled={saving}
-                      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                        planConfig(lead.plan).code === item.code
-                          ? "bg-orange-500 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <label className={labelCls}>Platform Notu</label>
-                <textarea
-                  value={leadNotes[lead.id] || ""}
-                  onChange={(e) =>
-                    setLeadNotes((prev) => ({
-                      ...prev,
-                      [lead.id]: e.target.value,
-                    }))
-                  }
-                  rows={3}
-                  placeholder="Örn: 09.07'de arandı, demo randevusu istiyor."
-                  className={`${inputCls} min-h-24`}
-                />
-                <button
-                  onClick={() => updateLeadNotes(lead.id)}
-                  disabled={saving}
-                  className="mt-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-60 dark:bg-white dark:text-slate-900"
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <span
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${leadStatusPillClass(lead.status)}`}
                 >
-                  Notu Kaydet
-                </button>
+                  {lead.status || "INVITE_CREATED"}
+                </span>
+                {accessWarningText(lead.accessUntil) && (
+                  <span className={`text-[11px] ${accessWarningClass(lead.accessUntil)}`}>
+                    {accessWarningText(lead.accessUntil)}
+                  </span>
+                )}
+                {lead.archivedAt && (
+                  <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:bg-zinc-600 dark:text-slate-200">
+                    Arşivlendi
+                  </span>
+                )}
+                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                  Detaylar →
+                </span>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
+
+      {selectedLead && (
+        <LeadDetailModal
+          lead={selectedLead}
+          saving={saving}
+          leadNotes={leadNotes}
+          setLeadNotes={setLeadNotes}
+          onClose={() => setSelectedLeadId(null)}
+          updateLeadStatus={updateLeadStatus}
+          updateLeadCustomerType={updateLeadCustomerType}
+          updateLeadPlan={updateLeadPlan}
+          updateLeadNotes={updateLeadNotes}
+          archiveLead={archiveLead}
+          restoreLead={restoreLead}
+        />
+      )}
 
       <div className={cardCls}>
         <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
@@ -1171,6 +1059,233 @@ export default function PlatformAdmin() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Web başvurusu detayları — sayfada yer kaplamaması için açılır pencerede
+// gösterilir (önceden her başvuru sayfada tam açık bir kart olarak duruyordu).
+function LeadDetailModal({
+  lead,
+  saving,
+  leadNotes,
+  setLeadNotes,
+  onClose,
+  updateLeadStatus,
+  updateLeadCustomerType,
+  updateLeadPlan,
+  updateLeadNotes,
+  archiveLead,
+  restoreLead,
+}: {
+  lead: LeadRow;
+  saving: boolean;
+  leadNotes: Record<string, string>;
+  setLeadNotes: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  onClose: () => void;
+  updateLeadStatus: (leadId: string, status: string) => void;
+  updateLeadCustomerType: (lead: LeadRow, customerType: string) => void;
+  updateLeadPlan: (lead: LeadRow, nextPlan: PlanCode) => void;
+  updateLeadNotes: (leadId: string) => void;
+  archiveLead: (leadId: string) => void;
+  restoreLead: (leadId: string) => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 sm:items-center sm:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="my-8 w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-zinc-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3.5 dark:border-zinc-700">
+          <h3 className="truncate text-base font-extrabold text-slate-900 dark:text-white">
+            {lead.companyName || "Firma adı yok"}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-zinc-800"
+            title="Kapat"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="max-h-[75vh] overflow-y-auto p-5">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            {lead.contactName || "Yetkili adı yok"} · {lead.email || "E-posta yok"} · {lead.phone || "Telefon yok"}
+          </div>
+          <div className="mt-1 text-xs text-slate-400">
+            Kaynak: {lead.source || "-"} · Durum: {lead.status || "-"} · Bitiş: {lead.accessUntil || "-"}
+            {accessWarningText(lead.accessUntil) && (
+              <>
+                {" "}·{" "}
+                <span className={accessWarningClass(lead.accessUntil)}>
+                  {accessWarningText(lead.accessUntil)}
+                </span>
+              </>
+            )}
+          </div>
+          <div className="mt-1 text-xs text-slate-400">
+            E-posta: {lead.emailStatus || "-"}
+            {lead.emailSentAt ? ` · Gönderim: ${lead.emailSentAt.slice(0, 16).replace("T", " ")}` : ""}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {["INVITE_CREATED", "CONTACTED", "CUSTOMER", "LOST"].map((status) => (
+              <button
+                key={status}
+                onClick={() => updateLeadStatus(lead.id, status)}
+                disabled={saving}
+                className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                  lead.status === status
+                    ? "bg-orange-500 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 grid gap-3 rounded-2xl bg-slate-50 p-4 text-xs text-slate-600 dark:bg-zinc-900/60 dark:text-slate-300 md:grid-cols-2">
+            <div>
+              <span className="font-bold text-slate-800 dark:text-slate-100">Plan:</span>{" "}
+              {planLabel(lead.plan)} · {lead.maxMembers || "-"} kullanıcı · {customerTypeLabel(lead.customerType)}
+            </div>
+            <div>
+              <span className="font-bold text-slate-800 dark:text-slate-100">Davet e-postası:</span>{" "}
+              {lead.inviteEmail || lead.email || "-"}
+            </div>
+            <div>
+              <span className="font-bold text-slate-800 dark:text-slate-100">Ofis:</span>{" "}
+              {lead.officeId || "-"}
+            </div>
+            <div>
+              <span className="font-bold text-slate-800 dark:text-slate-100">Oluşturulma:</span>{" "}
+              {lead.createdAt ? lead.createdAt.slice(0, 16).replace("T", " ") : "-"}
+            </div>
+            <div>
+              <span className="font-bold text-slate-800 dark:text-slate-100">Güncelleme:</span>{" "}
+              {lead.updatedAt ? lead.updatedAt.slice(0, 16).replace("T", " ") : "-"}
+            </div>
+            <div>
+              <span className="font-bold text-slate-800 dark:text-slate-100">KVKK:</span>{" "}
+              {lead.kvkkConsent ? "Onay alındı" : "Onay yok"}
+              {lead.kvkkConsentAt ? ` · ${lead.kvkkConsentAt.slice(0, 16).replace("T", " ")}` : ""}
+            </div>
+            <div>
+              <span className="font-bold text-slate-800 dark:text-slate-100">Rıza kaynağı:</span>{" "}
+              {lead.consentSource || "-"} {lead.kvkkTextVersion ? `· v${lead.kvkkTextVersion}` : ""}
+            </div>
+            <div className="md:col-span-2">
+              <span className="font-bold text-slate-800 dark:text-slate-100">Başvuru mesajı:</span>{" "}
+              {lead.message || "-"}
+            </div>
+            {lead.emailError && (
+              <div className="md:col-span-2 text-red-600 dark:text-red-300">
+                <span className="font-bold">E-posta hatası:</span> {lead.emailError}
+              </div>
+            )}
+          </div>
+
+          {lead.officeId && (
+            <div className="mt-4">
+              <a
+                href={officeViewHref(lead.officeId)}
+                target="_blank"
+                rel="noopener"
+                className="inline-flex rounded-full bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+              >
+                Ofisi Görüntüle →
+              </a>
+            </div>
+          )}
+
+          <div className="mt-4">
+            <label className={labelCls}>Başvuru Tipi</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {CUSTOMER_TYPE_OPTIONS.map((item) => (
+                <button
+                  key={item.code}
+                  onClick={() => updateLeadCustomerType(lead, item.code)}
+                  disabled={saving}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                    (lead.customerType || "DEMO") === item.code
+                      ? "bg-emerald-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+
+              {lead.archivedAt ? (
+                <button
+                  onClick={() => restoreLead(lead.id)}
+                  disabled={saving}
+                  className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white dark:bg-white dark:text-slate-900"
+                >
+                  Arşivden Çıkar
+                </button>
+              ) : (
+                <button
+                  onClick={() => archiveLead(lead.id)}
+                  disabled={saving}
+                  className="rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300"
+                >
+                  Arşivle
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className={labelCls}>Başvuru Planı</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {PLAN_OPTIONS.map((item) => (
+                <button
+                  key={item.code}
+                  onClick={() => updateLeadPlan(lead, item.code)}
+                  disabled={saving}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                    planConfig(lead.plan).code === item.code
+                      ? "bg-orange-500 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-700 dark:text-slate-200"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className={labelCls}>Platform Notu</label>
+            <textarea
+              value={leadNotes[lead.id] || ""}
+              onChange={(e) =>
+                setLeadNotes((prev) => ({
+                  ...prev,
+                  [lead.id]: e.target.value,
+                }))
+              }
+              rows={3}
+              placeholder="Örn: 09.07'de arandı, demo randevusu istiyor."
+              className={`${inputCls} min-h-24`}
+            />
+            <button
+              onClick={() => updateLeadNotes(lead.id)}
+              disabled={saving}
+              className="mt-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-60 dark:bg-white dark:text-slate-900"
+            >
+              Notu Kaydet
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -1595,14 +1595,14 @@ async function notifyMembers(project: Project, text: string) {
 }
 
 export async function markNotificationRead(id: string) {
-  await updateDoc(doc(db(), "notifications", id), { read: true });
+  await updateDoc(officeDoc("notifications", id), { read: true });
 }
 
 export async function markAllNotificationsRead() {
   const unread = state.notifications.filter((n) => !n.read);
   const batch = writeBatch(db());
   for (const n of unread) {
-    batch.update(doc(db(), "notifications", n.id), { read: true });
+    batch.update(officeDoc("notifications", n.id), { read: true });
   }
   if (unread.length) await batch.commit();
 }
