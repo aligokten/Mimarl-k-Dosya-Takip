@@ -871,7 +871,7 @@ function DocumentsTab({ project }: { project: Project }) {
         />
       )}
 
-      <div className={`${cardCls} overflow-hidden`}>
+      <div className={`${cardCls} overflow-x-auto`}>
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-600">
           <thead className="bg-slate-50 dark:bg-zinc-800/60">
             <tr>
