@@ -47,6 +47,9 @@ export interface ProjectDocument {
   previewUrl?: string; // Drive gömülü önizleme (iframe) — eski kayıtlarda yok
   physicalLocation?: string;
   projectServiceId?: string;
+  // Geçerlilik tarihi: tanımsız = henüz belirlenmedi, null = süresiz,
+  // string (yyyy-MM-dd) = belirli bir tarihe kadar geçerli.
+  expiryDate?: string | null;
   createdAt: string;
 }
 

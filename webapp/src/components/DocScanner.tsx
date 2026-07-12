@@ -211,7 +211,8 @@ export default function DocScanner({
   const [previewUrl, setPreviewUrl] = useState("");
   const svgRef = useRef<SVGSVGElement>(null);
   const dragIdx = useRef<number>(-1);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   async function onPhotoPicked(file: File) {
     setError(null);
@@ -380,11 +381,14 @@ export default function DocScanner({
                 📷
               </span>
               <p className="max-w-sm text-sm text-slate-600 dark:text-slate-300">
-                Evrakın fotoğrafını çekin. Köşeler otomatik algılanır,
-                gerekirse elle düzeltebilirsiniz; sonuç A4 boyutunda PDF olur.
+                Evrakın fotoğrafını çekin ya da galeriden seçin. Köşeler
+                otomatik algılanır, gerekirse elle düzeltebilirsiniz; sonuç
+                A4 boyutunda PDF olur.
               </p>
+              {/* Kamera çekimi: capture özelliği mobil tarayıcıda doğrudan
+                  kamerayı açar. */}
               <input
-                ref={fileInputRef}
+                ref={cameraInputRef}
                 type="file"
                 accept="image/*"
                 capture="environment"
@@ -395,15 +399,38 @@ export default function DocScanner({
                   if (f) void onPhotoPicked(f);
                 }}
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className={primaryBtnCls}
-              >
-                {pages.length > 0
-                  ? "Yeni Sayfa İçin Fotoğraf Çek"
-                  : "Fotoğraf Çek / Seç"}
-              </button>
+              {/* Galeri seçimi: capture olmadan, tarayıcı dosya/galeri
+                  seçiciyi açar (iOS'ta kamera zorunlu olmaz). */}
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (f) void onPhotoPicked(f);
+                }}
+              />
+              <div className="flex flex-wrap justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className={primaryBtnCls}
+                >
+                  📷{" "}
+                  {pages.length > 0
+                    ? "Yeni Sayfa İçin Kamerayla Çek"
+                    : "Kamerayla Çek"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  className={secondaryBtnCls}
+                >
+                  🖼️ Galeriden Seç
+                </button>
+              </div>
               {pages.length > 0 && (
                 <button
                   type="button"

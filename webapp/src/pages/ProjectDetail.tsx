@@ -880,6 +880,7 @@ function DocumentsTab({ project }: { project: Project }) {
               <th className={thCls}>Hizmet</th>
               <th className={thCls}>Konum / Bağlantı</th>
               <th className={thCls}>Tarih</th>
+              <th className={thCls}>Geçerlilik</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -887,7 +888,7 @@ function DocumentsTab({ project }: { project: Project }) {
             {documents.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400"
                 >
                   Henüz evrak eklenmemiş.
@@ -955,6 +956,9 @@ function DocumentsTab({ project }: { project: Project }) {
                       locale: tr,
                     })}
                   </td>
+                  <td className="px-4 py-3 text-sm">
+                    <ExpiryCell project={project} docItem={docItem} />
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <DeleteButton
                       confirmMessage={`"${docItem.name}" evrakını silmek istediğinize emin misiniz?`}
@@ -986,6 +990,152 @@ function DocumentsTab({ project }: { project: Project }) {
           docItem={previewing}
           onClose={() => setPreviewing(null)}
         />
+      )}
+    </div>
+  );
+}
+
+// Evrağın geçerlilik tarihi: "Süresiz" ya da belirli bir tarih. Tıklanınca
+// (henüz belirlenmemişse "+ Geçerlilik Ekle", belirlenmişse mevcut değer)
+// iki seçenekli küçük bir düzenleyici açılır.
+function ExpiryCell({
+  project,
+  docItem,
+}: {
+  project: Project;
+  docItem: ProjectDocument;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [mode, setMode] = useState<"SURESIZ" | "TARIH">(
+    docItem.expiryDate ? "TARIH" : "SURESIZ"
+  );
+  const [date, setDate] = useState(docItem.expiryDate ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function save(nextExpiry: string | null) {
+    setSaving(true);
+    try {
+      await patchProject(project.id, {
+        documents: project.documents.map((d) =>
+          d.id === docItem.id ? { ...d, expiryDate: nextExpiry } : d
+        ),
+      });
+      setEditing(false);
+    } catch (err) {
+      window.alert(
+        "Geçerlilik tarihi kaydedilemedi: " +
+          (err instanceof Error ? err.message : String(err))
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function startEditing() {
+    setMode(docItem.expiryDate ? "TARIH" : "SURESIZ");
+    setDate(docItem.expiryDate ?? "");
+    setEditing(true);
+  }
+
+  if (!editing) {
+    if (docItem.expiryDate === null) {
+      return (
+        <button
+          type="button"
+          onClick={startEditing}
+          className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:brightness-95 dark:bg-emerald-500/15 dark:text-emerald-300"
+        >
+          Süresiz
+        </button>
+      );
+    }
+    if (docItem.expiryDate) {
+      const expired =
+        new Date(docItem.expiryDate) < new Date(new Date().toDateString());
+      return (
+        <button
+          type="button"
+          onClick={startEditing}
+          title="Geçerlilik tarihini düzenle"
+          className={
+            expired
+              ? "rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:brightness-95 dark:bg-red-500/15 dark:text-red-300"
+              : "rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 hover:brightness-95 dark:bg-amber-500/15 dark:text-amber-300"
+          }
+        >
+          {format(new Date(docItem.expiryDate), "d MMM yyyy", { locale: tr })}
+          {expired && " · süresi doldu"}
+        </button>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={startEditing}
+        className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+      >
+        + Geçerlilik Ekle
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="inline-flex rounded-full border border-slate-200 bg-white p-0.5 dark:border-slate-600 dark:bg-zinc-800">
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => {
+            setMode("SURESIZ");
+            void save(null);
+          }}
+          className={clsx(
+            "rounded-full px-2.5 py-1 text-xs font-semibold",
+            mode === "SURESIZ"
+              ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+              : "text-slate-500 dark:text-slate-400"
+          )}
+        >
+          Süresiz
+        </button>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => setMode("TARIH")}
+          className={clsx(
+            "rounded-full px-2.5 py-1 text-xs font-semibold",
+            mode === "TARIH"
+              ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+              : "text-slate-500 dark:text-slate-400"
+          )}
+        >
+          Tarih Seç
+        </button>
+      </div>
+      {mode === "TARIH" && (
+        <div className="flex items-center gap-1.5">
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-zinc-800 dark:text-slate-100"
+          />
+          <button
+            type="button"
+            disabled={!date || saving}
+            onClick={() => void save(date)}
+            className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900"
+          >
+            Kaydet
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+          >
+            Vazgeç
+          </button>
+        </div>
       )}
     </div>
   );
