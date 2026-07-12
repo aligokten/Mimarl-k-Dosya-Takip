@@ -344,6 +344,20 @@ export interface PlatformMessage {
   createdAt: string;
 }
 
+// Platform sitesinden (web başvuru formu) gelen demo/lead kayıtları —
+// bildirim çanı için yalnızca gerekli alanlar; tam CRM alanları
+// PlatformAdmin.tsx içindeki LeadRow'da tutulur.
+export interface PlatformLeadNotice {
+  id: string;
+  companyName?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  source?: string;
+  createdAt?: string;
+  notifSeen?: boolean;
+}
+
 export interface CustomTemplate {
   id: string;
   title: string;

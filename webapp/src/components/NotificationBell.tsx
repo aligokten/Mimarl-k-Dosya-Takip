@@ -4,8 +4,10 @@ import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import {
   markAllNotificationsRead,
+  markAllPlatformLeadNoticesSeen,
   markAllPlatformMessagesRead,
   markNotificationRead,
+  markPlatformLeadNoticeSeen,
   markPlatformMessageRead,
   useApp,
 } from "../data";
@@ -17,7 +19,9 @@ export default function NotificationBell() {
   const navigate = useNavigate();
 
   const unreadMessages = app.platformMessages.filter((m) => !m.read).length;
-  const unread = app.notifications.filter((n) => !n.read).length + unreadMessages;
+  const unseenLeads = app.platformLeads.filter((l) => !l.notifSeen).length;
+  const unread =
+    app.notifications.filter((n) => !n.read).length + unreadMessages + unseenLeads;
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -67,6 +71,7 @@ export default function NotificationBell() {
                 onClick={() => {
                   markAllNotificationsRead();
                   markAllPlatformMessagesRead();
+                  markAllPlatformLeadNoticesSeen();
                 }}
                 className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
               >
@@ -75,11 +80,47 @@ export default function NotificationBell() {
             )}
           </div>
           <div className="max-h-96 overflow-y-auto">
-            {app.notifications.length === 0 && app.platformMessages.length === 0 && (
-              <p className="px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
-                Henüz bildirim yok.
-              </p>
-            )}
+            {app.notifications.length === 0 &&
+              app.platformMessages.length === 0 &&
+              app.platformLeads.length === 0 && (
+                <p className="px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
+                  Henüz bildirim yok.
+                </p>
+              )}
+            {app.platformLeads.slice(0, 20).map((l) => (
+              <button
+                key={l.id}
+                onClick={() => {
+                  if (!l.notifSeen) markPlatformLeadNoticeSeen(l.id);
+                  setOpen(false);
+                  navigate("/platform");
+                }}
+                className={
+                  "flex w-full gap-2 border-b border-slate-50 px-4 py-3 text-left last:border-0 hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-zinc-700/50 " +
+                  (l.notifSeen ? "" : "bg-emerald-50/50 dark:bg-emerald-500/10")
+                }
+              >
+                {!l.notifSeen && (
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                )}
+                <span className={l.notifSeen ? "pl-4" : ""}>
+                  <span className="block text-sm text-slate-700 dark:text-slate-200">
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {l.companyName || l.contactName || "Yeni başvuru"}
+                    </span>{" "}
+                    — Yeni web başvurusu
+                  </span>
+                  <span className="mt-0.5 block text-[11px] text-slate-400 dark:text-slate-500">
+                    {l.contactName || l.email || "—"}
+                    {l.createdAt &&
+                      ` · ${formatDistanceToNow(new Date(l.createdAt), {
+                        addSuffix: true,
+                        locale: tr,
+                      })}`}
+                  </span>
+                </span>
+              </button>
+            ))}
             {app.platformMessages.slice(0, 20).map((m) => (
               <button
                 key={m.id}
