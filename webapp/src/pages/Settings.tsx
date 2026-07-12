@@ -5,6 +5,7 @@ import {
   addStage,
   deleteServiceType,
   deleteStage,
+  sendPlatformMessage,
   updateOfficeConfig,
   updateOfficeOnboarding,
   useApp,
@@ -39,7 +40,9 @@ export default function Settings() {
         icon={<GearIcon className="h-5 w-5" />}
         title="Ayarlar"
         subtitle="Hizmet türleri, dosya depolama ve ekip."
-      />\n\n      <section className={`${cardCls} p-5`}>
+      />
+
+      <section className={`${cardCls} p-5`}>
         <h2 className="text-base font-bold text-slate-900 dark:text-white">
           Başlangıç Rehberi
         </h2>
@@ -82,6 +85,8 @@ export default function Settings() {
           </Link>
         </section>
       )}
+
+      {app.me?.role === "ADMIN" && <PlatformMessageSection />}
 
       <DriveSection />
       <ServiceTypesSection />
@@ -355,5 +360,70 @@ function ServiceTypeCard({ serviceType }: { serviceType: ServiceType }) {
         </div>
       )}
     </div>
+  );
+}
+
+function PlatformMessageSection() {
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <section className={`${cardCls} p-6`}>
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+        Ruhsat360&apos;a Mesaj Gönder
+      </h2>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        Sorularınızı veya taleplerinizi doğrudan Ruhsat360 ekibine iletin;
+        mesajınız platform yönetim ekranındaki gelen kutusuna düşer.
+      </p>
+
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (!text.trim()) return;
+          setSending(true);
+          setError(null);
+          try {
+            await sendPlatformMessage(text.trim());
+            setText("");
+            setSent(true);
+            setTimeout(() => setSent(false), 2500);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Mesaj gönderilemedi.");
+          } finally {
+            setSending(false);
+          }
+        }}
+        className="mt-4 space-y-3"
+      >
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={3}
+          placeholder="Mesajınızı yazın..."
+          className={inputCls}
+          required
+        />
+        {error && (
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        )}
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={sending}
+            className={`${primaryBtnCls} disabled:opacity-60`}
+          >
+            {sending ? "Gönderiliyor..." : "Gönder"}
+          </button>
+          {sent && (
+            <span className="text-sm text-green-700 dark:text-green-300">
+              Mesajınız gönderildi ✓
+            </span>
+          )}
+        </div>
+      </form>
+    </section>
   );
 }

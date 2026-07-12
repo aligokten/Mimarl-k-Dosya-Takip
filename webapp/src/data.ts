@@ -52,6 +52,7 @@ import type {
   MevzuatDoc,
   MevzuatKind,
   Office,
+  PlatformMessage,
   Professional,
   Project,
   ServiceType,
@@ -87,6 +88,7 @@ export interface AppState {
   mevzuat: MevzuatDoc[];
   chat: ChatMessage[];
   leaveRequests: LeaveRequest[];
+  platformMessages: PlatformMessage[];
 }
 
 let state: AppState = {
@@ -109,6 +111,7 @@ let state: AppState = {
   mevzuat: [],
   chat: [],
   leaveRequests: [],
+  platformMessages: [],
 };
 
 const listeners = new Set<() => void>();
@@ -424,6 +427,21 @@ function projectActivitiesCollection(projectId: string) {
 async function startForMember(fbUser: FbUser, requestedOfficeId?: string) {
   clearDataSubs();
 
+  if (state.platformAdmin) {
+    dataUnsubs.push(
+      onSnapshot(
+        collection(db(), "platformMessages"),
+        (snap) => {
+          const list = snap.docs
+            .map((d) => stripId<PlatformMessage>(d))
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+          set({ platformMessages: list });
+        },
+        () => set({ platformMessages: [] })
+      )
+    );
+  }
+
   let officeId = requestedOfficeId;
 
   if (!officeId) {
@@ -707,6 +725,7 @@ export function initAuth() {
         mevzuat: [],
         chat: [],
         leaveRequests: [],
+        platformMessages: [],
       });
       return;
     }
@@ -930,6 +949,7 @@ export async function signOutUser() {
       mevzuat: [],
       chat: [],
       leaveRequests: [],
+      platformMessages: [],
     });
 
     try {
@@ -1636,6 +1656,41 @@ export async function markAllNotificationsRead() {
   const batch = writeBatch(db());
   for (const n of unread) {
     batch.update(officeDoc("notifications", n.id), { read: true });
+  }
+  if (unread.length) await batch.commit();
+}
+
+// ---- Platforma mesaj gönderme (ofis yöneticisi → Ruhsat360) ----
+// Ofis bazlı değil; tek bir platform geneli koleksiyonda tutulur ve yalnızca
+// platform yöneticileri tarafından "Platform > Gelen Kutusu"nda görülür.
+
+export async function sendPlatformMessage(text: string): Promise<void> {
+  const who = currentName();
+  const u = auth().currentUser;
+  await addDoc(
+    collection(db(), "platformMessages"),
+    stripUndefined({
+      officeId: currentOfficeId() ?? undefined,
+      officeName: currentOfficeDisplayName(),
+      fromUid: who.uid,
+      fromName: who.name,
+      fromEmail: u?.email ?? undefined,
+      text,
+      read: false,
+      createdAt: now(),
+    })
+  );
+}
+
+export async function markPlatformMessageRead(id: string): Promise<void> {
+  await updateDoc(doc(db(), "platformMessages", id), { read: true });
+}
+
+export async function markAllPlatformMessagesRead(): Promise<void> {
+  const unread = state.platformMessages.filter((m) => !m.read);
+  const batch = writeBatch(db());
+  for (const m of unread) {
+    batch.update(doc(db(), "platformMessages", m.id), { read: true });
   }
   if (unread.length) await batch.commit();
 }
