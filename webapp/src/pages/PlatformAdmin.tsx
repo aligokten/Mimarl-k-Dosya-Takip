@@ -224,6 +224,7 @@ export default function PlatformAdmin() {
   const [showArchived, setShowArchived] = useState(false);
   const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [contactListOpen, setContactListOpen] = useState(false);
   const [selectedOfficeId, setSelectedOfficeId] = useState<string | null>(
     null
   );
@@ -740,6 +741,16 @@ export default function PlatformAdmin() {
             </button>
           </div>
         </div>
+
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setContactListOpen(true)}
+            className="rounded-full border border-slate-200 bg-white/70 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800/70 dark:text-slate-200 dark:hover:bg-zinc-700"
+          >
+            📋 İletişim Listesi
+          </button>
+        </div>
       </div>
 
       <div className={`${cardCls} p-6`}>
@@ -1006,6 +1017,130 @@ export default function PlatformAdmin() {
           restoreInvite={restoreInvite}
         />
       )}
+
+      {contactListOpen && (
+        <LeadContactListModal
+          leads={recentLeads}
+          onClose={() => setContactListOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Demo talep eden kullanıcılara hatırlatma e-postası/mesajı göndermek için
+// isim/e-posta/telefon bilgilerini toplu (excel tablosu gibi) listeler.
+function LeadContactListModal({
+  leads,
+  onClose,
+}: {
+  leads: LeadRow[];
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function copyToClipboard() {
+    const header = ["İsim", "E-posta", "Telefon"];
+    const rows = leads.map((lead) => [
+      lead.contactName || lead.companyName || "",
+      lead.email || "",
+      lead.phone || "",
+    ]);
+    const text = [header, ...rows].map((row) => row.join("\t")).join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.alert("Panoya kopyalanamadı.");
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:items-center sm:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="my-8 w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-zinc-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-zinc-700">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              İletişim Listesi
+            </h3>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              Demo talep eden kullanıcıların isim, e-posta ve telefon
+              bilgileri.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-zinc-800"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="max-h-[70vh] overflow-y-auto p-5">
+          {leads.length === 0 ? (
+            <p className="text-sm text-slate-400 dark:text-slate-500">
+              Kayıt yok.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-700">
+              <table className="min-w-full border-collapse text-sm">
+                <thead className="bg-slate-50 dark:bg-zinc-800/60">
+                  <tr>
+                    <th className="border border-slate-200 px-3 py-2 text-left font-bold text-slate-700 dark:border-zinc-700 dark:text-slate-200">
+                      İsim
+                    </th>
+                    <th className="border border-slate-200 px-3 py-2 text-left font-bold text-slate-700 dark:border-zinc-700 dark:text-slate-200">
+                      E-posta
+                    </th>
+                    <th className="border border-slate-200 px-3 py-2 text-left font-bold text-slate-700 dark:border-zinc-700 dark:text-slate-200">
+                      Telefon
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leads.map((lead) => (
+                    <tr key={lead.id}>
+                      <td className="border border-slate-200 px-3 py-2 text-slate-700 dark:border-zinc-700 dark:text-slate-200">
+                        {lead.contactName || lead.companyName || "-"}
+                      </td>
+                      <td className="border border-slate-200 px-3 py-2 text-slate-700 dark:border-zinc-700 dark:text-slate-200">
+                        {lead.email || "-"}
+                      </td>
+                      <td className="border border-slate-200 px-3 py-2 text-slate-700 dark:border-zinc-700 dark:text-slate-200">
+                        {lead.phone || "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-4 dark:border-zinc-700">
+          {copied && (
+            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              Kopyalandı ✓
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={copyToClipboard}
+            disabled={leads.length === 0}
+            className={`${primaryBtnCls} disabled:opacity-60`}
+          >
+            Panoya Kopyala
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
