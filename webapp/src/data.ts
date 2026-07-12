@@ -403,6 +403,12 @@ function officeDoc(name: string, id: string) {
     : doc(db(), name, id);
 }
 
+function currentOfficeRef() {
+  const officeId = currentOfficeId();
+  if (!officeId) throw new Error("Ofis bulunamadı.");
+  return doc(db(), "offices", officeId);
+}
+
 function projectActivitiesCollection(projectId: string) {
   const officeId = currentOfficeId();
   return officeId
