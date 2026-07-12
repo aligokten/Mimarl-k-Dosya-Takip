@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { addDocTemplate } from "../data";
-import { uploadToDrive, useDrive } from "../drive";
+import { convertDocToDocx, uploadToDrive, useDrive } from "../drive";
 import { cardCls, inputCls, labelCls, primaryBtnCls, smallLabelCls } from "../ui";
 import PageTitle from "../components/PageTitle";
 import { FileIcon } from "../components/icons";
@@ -20,31 +20,35 @@ function textToHtml(text: string): string {
     .join("\n");
 }
 
+async function docxBufferToHtml(buffer: ArrayBuffer): Promise<string> {
+  const mammoth = await import("mammoth/mammoth.browser");
+  // Tablolar, görseller (base64) ve başlıklar korunur; altı çizili/üstü
+  // çizili gibi biçimler de aktarılır. Sayfa/tablo yapısı bozulmaz.
+  // (Tür tanımı tek argüman bildiriyor; options çalışma zamanında geçerli.)
+  const convert = mammoth.convertToHtml as unknown as (
+    input: { arrayBuffer: ArrayBuffer },
+    options?: { styleMap?: string[]; includeDefaultStyleMap?: boolean }
+  ) => Promise<{ value: string }>;
+  const result = await convert(
+    { arrayBuffer: buffer },
+    {
+      styleMap: [
+        "u => u",
+        "strike => s",
+        "p[style-name='Title'] => h1:fresh",
+        "p[style-name='Heading 1'] => h1:fresh",
+        "p[style-name='Heading 2'] => h2:fresh",
+      ],
+      includeDefaultStyleMap: true,
+    }
+  );
+  return result.value;
+}
+
 async function fileToHtml(file: File): Promise<string> {
   const name = file.name.toLowerCase();
   if (name.endsWith(".docx")) {
-    const mammoth = await import("mammoth/mammoth.browser");
-    // Tablolar, görseller (base64) ve başlıklar korunur; altı çizili/üstü
-    // çizili gibi biçimler de aktarılır. Sayfa/tablo yapısı bozulmaz.
-    // (Tür tanımı tek argüman bildiriyor; options çalışma zamanında geçerli.)
-    const convert = mammoth.convertToHtml as unknown as (
-      input: { arrayBuffer: ArrayBuffer },
-      options?: { styleMap?: string[]; includeDefaultStyleMap?: boolean }
-    ) => Promise<{ value: string }>;
-    const result = await convert(
-      { arrayBuffer: await file.arrayBuffer() },
-      {
-        styleMap: [
-          "u => u",
-          "strike => s",
-          "p[style-name='Title'] => h1:fresh",
-          "p[style-name='Heading 1'] => h1:fresh",
-          "p[style-name='Heading 2'] => h2:fresh",
-        ],
-        includeDefaultStyleMap: true,
-      }
-    );
-    return result.value;
+    return docxBufferToHtml(await file.arrayBuffer());
   }
   if (name.endsWith(".html") || name.endsWith(".htm")) {
     const text = await file.text();
@@ -56,7 +60,7 @@ async function fileToHtml(file: File): Promise<string> {
     return textToHtml(await file.text());
   }
   throw new Error(
-    "Desteklenmeyen dosya türü. .docx (Word), .txt veya .html yükleyebilirsiniz."
+    "Desteklenmeyen dosya türü. .docx (Word), .doc (eski Word), .txt veya .html yükleyebilirsiniz."
   );
 }
 
@@ -89,7 +93,7 @@ export default function TemplateUpload() {
           <PageTitle
             icon={<FileIcon className="h-5 w-5" />}
             title="Şablon Yükle"
-            subtitle="Kendi matbu evrakınızı Word (.docx), .txt veya .html olarak yükleyin; ya da metni yapıştırın."
+            subtitle="Kendi matbu evrakınızı Word (.docx veya eski .doc), .txt ya da .html olarak yükleyin; ya da metni yapıştırın."
           />
         </div>
       </div>
@@ -113,34 +117,64 @@ export default function TemplateUpload() {
             let body: string;
             let source: { sourceDriveFileId: string; sourceFileName: string } | undefined;
             if (file instanceof File && file.size > 0) {
-              // Drive'a yükleme (gerekirse Google yetkilendirme penceresi
-              // açar) mutlaka İLK adım olmalı: tarayıcılar, kullanıcı
-              // tıklamasından sonra araya giren başka bir bekleme (ör.
-              // mammoth dönüşümü) varsa açılır pencereyi engelleyebilir.
-              // Bu adım isteğe bağlıdır (Taahhütname'de birebir sayfa
-              // düzeni için kullanılır) — başarısız olsa bile şablonun
-              // kendisinin yüklenmesini engellemesin.
-              if (file.name.toLowerCase().endsWith(".docx") && drive.connected) {
-                try {
-                  setBusyText("Orijinal Word dosyası Drive'a yükleniyor...");
-                  const uploaded = await uploadToDrive(file, "Şablon Word Dosyaları");
-                  source = { sourceDriveFileId: uploaded.id, sourceFileName: file.name };
-                } catch (driveErr) {
-                  console.error("Drive'a orijinal dosya yüklenemedi:", driveErr);
-                  // navigate() az sonra bu sayfadan çıkaracağı için setError
-                  // yerine alert kullanıyoruz — kullanıcı bunu görmeden
-                  // sayfadan ayrılmasın.
-                  window.alert(
-                    "Orijinal Word dosyası Drive'a yüklenemedi, bu yüzden " +
-                      "Taahhütname Oluştur'da birebir sayfa düzeniyle " +
-                      "kullanılamayacak; ancak şablonun kendisi normal " +
-                      "şekilde yükleniyor.\n\nHata: " +
-                      (driveErr instanceof Error ? driveErr.message : String(driveErr))
+              const lowerName = file.name.toLowerCase();
+              const isDoc = lowerName.endsWith(".doc") && !lowerName.endsWith(".docx");
+
+              if (isDoc) {
+                // Eski Word (.doc, ikili OLE biçimi) tarayıcıda ayrıştırılamaz;
+                // Drive'ın kendi dönüştürücüsü üzerinden .docx'e çevrilir. Bu
+                // adım Drive bağlantısı gerektirir ve mutlaka İLK adım olmalı
+                // (kullanıcı tıklamasından sonra araya giren bir bekleme varsa
+                // Google'ın yetkilendirme penceresi engellenebilir).
+                if (!drive.connected) {
+                  setError(
+                    "Word 97-2003 (.doc) dosyalarını içe aktarmak için önce " +
+                      "Ayarlar > Google Drive'a bağlanın (dönüştürme Drive " +
+                      "üzerinden yapılır); ya da dosyayı Word/Google " +
+                      "Dokümanlar'da .docx olarak yeniden kaydedip tekrar " +
+                      "yükleyin."
                   );
+                  setBusy(false);
+                  return;
                 }
+                setBusyText("Eski Word (.doc) dosyası .docx'e dönüştürülüyor...");
+                const { docxBytes, docxFileId, docxFileName } = await convertDocToDocx(
+                  file,
+                  "Şablon Word Dosyaları"
+                );
+                source = { sourceDriveFileId: docxFileId, sourceFileName: docxFileName };
+                setBusyText("Dosya dönüştürülüyor...");
+                body = await docxBufferToHtml(docxBytes);
+              } else {
+                // Drive'a yükleme (gerekirse Google yetkilendirme penceresi
+                // açar) mutlaka İLK adım olmalı: tarayıcılar, kullanıcı
+                // tıklamasından sonra araya giren başka bir bekleme (ör.
+                // mammoth dönüşümü) varsa açılır pencereyi engelleyebilir.
+                // Bu adım isteğe bağlıdır (Taahhütname'de birebir sayfa
+                // düzeni için kullanılır) — başarısız olsa bile şablonun
+                // kendisinin yüklenmesini engellemesin.
+                if (lowerName.endsWith(".docx") && drive.connected) {
+                  try {
+                    setBusyText("Orijinal Word dosyası Drive'a yükleniyor...");
+                    const uploaded = await uploadToDrive(file, "Şablon Word Dosyaları");
+                    source = { sourceDriveFileId: uploaded.id, sourceFileName: file.name };
+                  } catch (driveErr) {
+                    console.error("Drive'a orijinal dosya yüklenemedi:", driveErr);
+                    // navigate() az sonra bu sayfadan çıkaracağı için setError
+                    // yerine alert kullanıyoruz — kullanıcı bunu görmeden
+                    // sayfadan ayrılmasın.
+                    window.alert(
+                      "Orijinal Word dosyası Drive'a yüklenemedi, bu yüzden " +
+                        "Taahhütname Oluştur'da birebir sayfa düzeniyle " +
+                        "kullanılamayacak; ancak şablonun kendisi normal " +
+                        "şekilde yükleniyor.\n\nHata: " +
+                        (driveErr instanceof Error ? driveErr.message : String(driveErr))
+                    );
+                  }
+                }
+                setBusyText("Dosya dönüştürülüyor...");
+                body = await fileToHtml(file);
               }
-              setBusyText("Dosya dönüştürülüyor...");
-              body = await fileToHtml(file);
             } else if (pasted) {
               body = textToHtml(pasted);
             } else {
@@ -177,19 +211,27 @@ export default function TemplateUpload() {
             className="mt-1 text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-slate-700 dark:file:text-slate-200"
           />
           <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-            Word (.docx) belgeleri biçimlendirmesiyle birlikte aktarılır.
+            Word (.docx) belgeleri biçimlendirmesiyle birlikte aktarılır. Eski
+            Word (.doc) dosyaları, Drive bağlıysa otomatik olarak .docx&apos;e
+            dönüştürülür.
           </p>
           {drive.connected ? (
             <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
-              Drive bağlı: orijinal Word dosyası da saklanacak, böylece
+              Drive bağlı: orijinal Word (.docx) dosyası da saklanacak, böylece
               Uzmanlar &gt; Taahhütname Oluştur akışında sayfa düzeni birebir
-              korunarak doldurulabilir.
+              korunarak doldurulabilir. .doc dosyaları da Drive üzerinden
+              .docx&apos;e dönüştürülüp aynı şekilde kullanılabilir (dönüşüm
+              sırasında sayfa düzeni Google&apos;ın dönüştürücüsünce yeniden
+              yorumlandığından birebir eşleşme garanti edilmez — sonucu
+              kontrol edin).
             </p>
           ) : (
             <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
               Taahhütname gibi birebir sayfa düzeni korunması gereken
-              belgeler için önce Ayarlar &gt; Google Drive&apos;a bağlanın;
-              aksi halde yalnızca ekran içi düzenleme kullanılabilir.
+              belgeler için, ayrıca .doc (eski Word) dosyalarını
+              dönüştürebilmek için önce Ayarlar &gt; Google Drive&apos;a
+              bağlanın; aksi halde yalnızca .docx/.txt/.html için ekran içi
+              düzenleme kullanılabilir.
             </p>
           )}
         </div>
