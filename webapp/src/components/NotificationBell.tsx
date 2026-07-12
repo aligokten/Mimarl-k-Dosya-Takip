@@ -4,7 +4,9 @@ import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import {
   markAllNotificationsRead,
+  markAllPlatformMessagesRead,
   markNotificationRead,
+  markPlatformMessageRead,
   useApp,
 } from "../data";
 
@@ -14,7 +16,8 @@ export default function NotificationBell() {
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  const unread = app.notifications.filter((n) => !n.read).length;
+  const unreadMessages = app.platformMessages.filter((m) => !m.read).length;
+  const unread = app.notifications.filter((n) => !n.read).length + unreadMessages;
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -61,7 +64,10 @@ export default function NotificationBell() {
             </span>
             {unread > 0 && (
               <button
-                onClick={() => markAllNotificationsRead()}
+                onClick={() => {
+                  markAllNotificationsRead();
+                  markAllPlatformMessagesRead();
+                }}
                 className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
               >
                 Tümünü okundu yap
@@ -69,11 +75,44 @@ export default function NotificationBell() {
             )}
           </div>
           <div className="max-h-96 overflow-y-auto">
-            {app.notifications.length === 0 && (
+            {app.notifications.length === 0 && app.platformMessages.length === 0 && (
               <p className="px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
                 Henüz bildirim yok.
               </p>
             )}
+            {app.platformMessages.slice(0, 20).map((m) => (
+              <button
+                key={m.id}
+                onClick={() => {
+                  if (!m.read) markPlatformMessageRead(m.id);
+                  setOpen(false);
+                  navigate("/platform");
+                }}
+                className={
+                  "flex w-full gap-2 border-b border-slate-50 px-4 py-3 text-left last:border-0 hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-zinc-700/50 " +
+                  (m.read ? "" : "bg-blue-50/50 dark:bg-blue-500/10")
+                }
+              >
+                {!m.read && (
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                )}
+                <span className={m.read ? "pl-4" : ""}>
+                  <span className="block text-sm text-slate-700 dark:text-slate-200">
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {m.officeName || m.fromName}
+                    </span>{" "}
+                    — {m.text}
+                  </span>
+                  <span className="mt-0.5 block text-[11px] text-slate-400 dark:text-slate-500">
+                    Platform mesajı · {m.fromName} ·{" "}
+                    {formatDistanceToNow(new Date(m.createdAt), {
+                      addSuffix: true,
+                      locale: tr,
+                    })}
+                  </span>
+                </span>
+              </button>
+            ))}
             {app.notifications.slice(0, 30).map((n) => (
               <button
                 key={n.id}

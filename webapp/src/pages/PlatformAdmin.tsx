@@ -8,8 +8,9 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { now, useApp } from "../data";
+import { markPlatformMessageRead, now, useApp } from "../data";
 import { cardCls, inputCls, labelCls, primaryBtnCls } from "../ui";
+import type { PlatformMessage } from "../types";
 
 type AccessStatus = "ACTIVE" | "SUSPENDED" | "PAST_DUE" | "CANCELLED";
 type PlanCode = "TRIAL" | "STARTER" | "PRO" | "ENTERPRISE";
@@ -225,6 +226,9 @@ export default function PlatformAdmin() {
   const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [contactListOpen, setContactListOpen] = useState(false);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
+    null
+  );
   const [selectedOfficeId, setSelectedOfficeId] = useState<string | null>(
     null
   );
@@ -274,6 +278,12 @@ export default function PlatformAdmin() {
   const selectedLead = useMemo(
     () => recentLeads.find((lead) => lead.id === selectedLeadId) ?? null,
     [recentLeads, selectedLeadId]
+  );
+
+  const selectedMessage = useMemo(
+    () =>
+      app.platformMessages.find((m) => m.id === selectedMessageId) ?? null,
+    [app.platformMessages, selectedMessageId]
   );
 
   const selectedOffice = useMemo(
@@ -755,6 +765,49 @@ export default function PlatformAdmin() {
 
       <div className={`${cardCls} p-6`}>
         <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
+          Gelen Kutusu
+          {app.platformMessages.filter((m) => !m.read).length > 0 && (
+            <span className="ml-2 rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+              {app.platformMessages.filter((m) => !m.read).length}
+            </span>
+          )}
+        </h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Ofis yöneticilerinden gelen doğrudan mesajlar.
+        </p>
+
+        <div className="mt-4 grid gap-3">
+          {app.platformMessages.length === 0 && (
+            <p className="text-sm text-slate-500">Henüz mesaj yok.</p>
+          )}
+          {app.platformMessages.slice(0, 30).map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setSelectedMessageId(m.id)}
+              className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/70 p-3.5 text-left transition hover:border-slate-300 hover:shadow-sm dark:border-zinc-700 dark:bg-zinc-800/60 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-extrabold text-slate-900 dark:text-white">
+                  {m.officeName || m.fromName}
+                  {!m.read && (
+                    <span className="ml-2 inline-block h-2 w-2 rounded-full bg-blue-500 align-middle" />
+                  )}
+                </div>
+                <div className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                  {m.text}
+                </div>
+              </div>
+              <span className="shrink-0 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                Detaylar →
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className={`${cardCls} p-6`}>
+        <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
           Yeni Müşteri Daveti
         </h2>
 
@@ -1024,6 +1077,13 @@ export default function PlatformAdmin() {
           onClose={() => setContactListOpen(false)}
         />
       )}
+
+      {selectedMessage && (
+        <PlatformMessageDetailModal
+          message={selectedMessage}
+          onClose={() => setSelectedMessageId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1139,6 +1199,66 @@ function LeadContactListModal({
           >
             Panoya Kopyala
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlatformMessageDetailModal({
+  message,
+  onClose,
+}: {
+  message: PlatformMessage;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!message.read) markPlatformMessageRead(message.id);
+  }, [message.id, message.read]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:items-center sm:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="my-8 w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-zinc-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-zinc-700">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+            {message.officeName || message.fromName}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-zinc-800"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="space-y-3 p-5">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {message.fromName}
+            {message.fromEmail && (
+              <>
+                {" · "}
+                <a
+                  href={`mailto:${message.fromEmail}`}
+                  className="text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  {message.fromEmail}
+                </a>
+              </>
+            )}
+          </p>
+          <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-100">
+            {message.text}
+          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            {message.createdAt?.slice(0, 16).replace("T", " ")}
+          </p>
         </div>
       </div>
     </div>

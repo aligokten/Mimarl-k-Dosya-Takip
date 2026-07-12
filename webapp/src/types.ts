@@ -329,6 +329,21 @@ export interface AppNotification {
   at: string;
 }
 
+// Ofis yöneticilerinin doğrudan platforma (Ruhsat360) gönderdiği mesajlar.
+// Yalnızca platform yöneticileri tarafından "Platform > Gelen Kutusu"nda
+// görülür; herhangi bir ofise özel değildir.
+export interface PlatformMessage {
+  id: string;
+  officeId?: string;
+  officeName?: string;
+  fromUid: string;
+  fromName: string;
+  fromEmail?: string;
+  text: string;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface CustomTemplate {
   id: string;
   title: string;

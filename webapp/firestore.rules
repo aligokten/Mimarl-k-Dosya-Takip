@@ -91,5 +91,19 @@ service cloud.firestore {
         (signedIn() && resource.data.memberUid == request.auth.uid &&
           resource.data.status == 'BEKLIYOR');
     }
+
+    function isPlatformAdmin() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/platformAdmins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/platformAdmins/$(request.auth.uid)).data.active == true;
+    }
+
+    // Ofis yöneticilerinden platforma (Ruhsat360) gelen doğrudan mesajlar:
+    // herkes kendi mesajını oluşturabilir, yalnızca platform yöneticisi
+    // gelen kutusunu okuyup okundu işaretleyebilir.
+    match /platformMessages/{id} {
+      allow read, update: if isPlatformAdmin();
+      allow create: if signedIn();
+    }
   }
 }
