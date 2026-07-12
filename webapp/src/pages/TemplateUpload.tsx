@@ -174,7 +174,6 @@ export default function TemplateUpload() {
           <input
             type="file"
             name="file"
-            accept=".docx,.txt,.html,.htm,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/html"
             className="mt-1 text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-slate-700 dark:file:text-slate-200"
           />
           <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
