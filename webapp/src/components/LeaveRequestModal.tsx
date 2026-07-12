@@ -126,23 +126,23 @@ export default function LeaveRequestModal({
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
+            <div className="min-w-0">
               <label className={smallLabelCls}>Başlangıç Tarihi</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className={inputCls}
+                className={`${inputCls} min-w-0`}
                 required
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className={smallLabelCls}>Bitiş Tarihi</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className={inputCls}
+                className={`${inputCls} min-w-0`}
                 required
               />
             </div>
