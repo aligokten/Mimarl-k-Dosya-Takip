@@ -602,24 +602,24 @@ function LeaveRequestDetailModal({
           </span>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
+            <div className="min-w-0">
               <label className={labelCls}>Başlangıç Tarihi</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 disabled={request.status !== "BEKLIYOR"}
-                className={`${inputCls} disabled:opacity-60`}
+                className={`${inputCls} min-w-0 disabled:opacity-60`}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className={labelCls}>Bitiş Tarihi</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 disabled={request.status !== "BEKLIYOR"}
-                className={`${inputCls} disabled:opacity-60`}
+                className={`${inputCls} min-w-0 disabled:opacity-60`}
               />
             </div>
           </div>
