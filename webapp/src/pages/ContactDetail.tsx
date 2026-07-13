@@ -7,7 +7,12 @@ import {
   useApp,
 } from "../data";
 import { uploadToDrive, useDrive } from "../drive";
-import { cardCls, secondaryBtnCls, smallLabelCls } from "../ui";
+import {
+  cardCls,
+  friendlyFirestoreError,
+  secondaryBtnCls,
+  smallLabelCls,
+} from "../ui";
 import { CONTACT_ROLE_CHIP, CONTACT_ROLE_LABELS } from "../types";
 import ContactForm from "./ContactForm";
 import DeleteButton from "../components/DeleteButton";
@@ -82,6 +87,8 @@ export default function ContactDetail() {
   const { id } = useParams<{ id: string }>();
   const db = useApp();
   const navigate = useNavigate();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const contact = db.contacts.find((c) => c.id === id);
   if (!contact) {
@@ -167,9 +174,19 @@ export default function ContactDetail() {
         <ContactForm
           initialValues={contact}
           submitLabel="Değişiklikleri Kaydet"
+          saving={saving}
+          error={error}
           onSubmit={async (values) => {
-            await updateContact(contact.id, values);
-            window.alert("Kişi bilgileri kaydedildi.");
+            setSaving(true);
+            setError(null);
+            try {
+              await updateContact(contact.id, values);
+              window.alert("Kişi bilgileri kaydedildi.");
+            } catch (err) {
+              setError(friendlyFirestoreError(err, "Kaydedilemedi"));
+            } finally {
+              setSaving(false);
+            }
           }}
         />
       </div>

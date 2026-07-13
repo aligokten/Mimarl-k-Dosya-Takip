@@ -14,10 +14,14 @@ export default function ContactForm({
   initialValues,
   submitLabel,
   onSubmit,
+  saving,
+  error,
 }: {
   initialValues?: Contact;
   submitLabel: string;
   onSubmit: (values: ContactFormValues) => void;
+  saving?: boolean;
+  error?: string | null;
 }) {
   const [roles, setRoles] = useState<ContactRole[]>(
     initialValues?.roles ?? ["MUSTERI"]
@@ -205,8 +209,15 @@ export default function ContactForm({
           className={inputCls}
         />
       </div>
-      <button type="submit" className={primaryBtnCls}>
-        {submitLabel}
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      )}
+      <button
+        type="submit"
+        disabled={saving}
+        className={`${primaryBtnCls} disabled:opacity-60`}
+      >
+        {saving ? "Kaydediliyor..." : submitLabel}
       </button>
     </form>
   );

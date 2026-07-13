@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { addContact } from "../data";
-import { cardCls } from "../ui";
+import { cardCls, friendlyFirestoreError } from "../ui";
 import PageTitle from "../components/PageTitle";
 import { UsersIcon } from "../components/icons";
 import ContactForm from "./ContactForm";
 
 export default function ContactNew() {
   const navigate = useNavigate();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -18,9 +21,18 @@ export default function ContactNew() {
       <div className={`${cardCls} p-6`}>
         <ContactForm
           submitLabel="Kişiyi Kaydet"
+          saving={saving}
+          error={error}
           onSubmit={async (values) => {
-            const id = await addContact(values);
-            navigate(`/kisiler/${id}`);
+            setSaving(true);
+            setError(null);
+            try {
+              const id = await addContact(values);
+              navigate(`/kisiler/${id}`);
+            } catch (err) {
+              setError(friendlyFirestoreError(err, "Kişi kaydedilemedi"));
+              setSaving(false);
+            }
           }}
         />
       </div>
