@@ -28,3 +28,14 @@ export function str(formData: FormData, key: string): string | undefined {
   const trimmed = value.trim();
   return trimmed === "" ? undefined : trimmed;
 }
+
+// Firestore izin hatalarını (ör. ofis erişim durumu askıya alınmış) kullanıcı
+// için anlaşılır bir mesaja çevirir; diğer hatalarda ham mesajı gösterir.
+export function friendlyFirestoreError(err: unknown, action: string): string {
+  const code = (err as { code?: string } | null)?.code;
+  if (code === "permission-denied") {
+    return `${action}: Bu işlem için yetkiniz yok. Ofis erişim durumunuzda bir sorun olabilir; lütfen yöneticinizle iletişime geçin.`;
+  }
+  const message = err instanceof Error ? err.message : String(err);
+  return `${action}: ${message}`;
+}
