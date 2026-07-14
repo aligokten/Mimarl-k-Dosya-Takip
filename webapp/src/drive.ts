@@ -431,6 +431,19 @@ export async function downloadDriveFileBytes(
   return resp.arrayBuffer();
 }
 
+// Bir Drive webViewLink'inden ("...file/d/{id}/view..." veya "?id=...")
+// dosya kimliğini çıkarır; uygulama içi gömülü önizleme (iframe) için kullanılır.
+export function driveFileIdFromUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ?? url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  return match?.[1];
+}
+
+export function drivePreviewUrl(url?: string): string | undefined {
+  const id = driveFileIdFromUrl(url);
+  return id ? `https://drive.google.com/file/d/${id}/preview` : undefined;
+}
+
 
 // Client ID tanımlıysa Google betiğini uygulama açılışında yükle:
 // böylece "Drive'a Bağlan" tıklamasında popup gecikmeden (ve Safari
