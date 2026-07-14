@@ -6,7 +6,7 @@ import {
   updateContact,
   useApp,
 } from "../data";
-import { uploadToDrive, useDrive } from "../drive";
+import { uploadSharedPdf, useDrive } from "../drive";
 import {
   cardCls,
   friendlyFirestoreError,
@@ -43,10 +43,10 @@ function PoaUpload({
           if (!(file instanceof File) || file.size === 0) return;
           setUploading(true);
           try {
-            const uploaded = await uploadToDrive(file, "Vekaletnameler");
-            if (uploaded.url) {
-              await updateContact(contactId, { poaUrl: uploaded.url });
-            }
+            // "Bağlantıya sahip herkes görüntüleyebilir" izniyle yüklenir;
+            // böylece ofis içi önizleme (iframe) diğer üyeler için de çalışır.
+            const uploaded = await uploadSharedPdf(file, "Vekaletnameler");
+            await updateContact(contactId, { poaUrl: uploaded.webViewLink });
             form.reset();
             window.alert("Vekaletname Drive'a yüklendi ve kayda bağlandı.");
           } catch (err) {
@@ -172,6 +172,7 @@ export default function ContactDetail() {
 
       <div className={`${cardCls} p-6`}>
         <ContactForm
+          key={contact.poaUrl ?? "none"}
           initialValues={contact}
           submitLabel="Değişiklikleri Kaydet"
           saving={saving}

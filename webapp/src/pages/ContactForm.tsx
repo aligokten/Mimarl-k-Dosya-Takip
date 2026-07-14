@@ -1,10 +1,73 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   CONTACT_ROLE_LABELS,
   type Contact,
   type ContactRole,
 } from "../types";
-import { inputCls, labelCls, primaryBtnCls, smallLabelCls, str } from "../ui";
+import { drivePreviewUrl } from "../drive";
+import {
+  inputCls,
+  labelCls,
+  primaryBtnCls,
+  secondaryBtnCls,
+  smallLabelCls,
+  str,
+} from "../ui";
+
+function PoaPreviewModal({
+  url,
+  onClose,
+}: {
+  url: string;
+  onClose: () => void;
+}) {
+  const previewUrl = drivePreviewUrl(url);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="flex h-full w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-zinc-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3 dark:border-zinc-700">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+            Taranmış Vekaletname
+          </h3>
+          <div className="flex items-center gap-2">
+            <a href={url} target="_blank" rel="noreferrer" className={secondaryBtnCls}>
+              Yeni sekmede aç
+            </a>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-zinc-800"
+              title="Kapat"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+        {previewUrl ? (
+          <iframe
+            src={previewUrl}
+            title="Taranmış Vekaletname"
+            className="min-h-0 flex-1 bg-slate-100 dark:bg-zinc-800"
+          />
+        ) : (
+          <p className="p-6 text-sm text-slate-500 dark:text-slate-400">
+            Bu bağlantı için uygulama içi önizleme oluşturulamadı. &quot;Yeni
+            sekmede aç&quot; ile açabilirsiniz.
+          </p>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 export type ContactFormValues = Omit<Contact, "id" | "createdAt">;
 
@@ -26,6 +89,9 @@ export default function ContactForm({
   const [roles, setRoles] = useState<ContactRole[]>(
     initialValues?.roles ?? ["MUSTERI"]
   );
+  const [poaUrl, setPoaUrl] = useState(initialValues?.poaUrl ?? "");
+  const [editingPoaUrl, setEditingPoaUrl] = useState(!initialValues?.poaUrl);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   function toggleRole(role: ContactRole) {
     setRoles((prev) =>
@@ -189,15 +255,53 @@ export default function ContactForm({
             <label className={smallLabelCls}>
               Taranmış Vekaletname Bağlantısı (Google Drive linki)
             </label>
-            <input
-              name="poaUrl"
-              type="url"
-              placeholder="https://drive.google.com/..."
-              defaultValue={initialValues?.poaUrl ?? ""}
-              className={inputCls}
-            />
+            {editingPoaUrl ? (
+              <input
+                name="poaUrl"
+                type="url"
+                placeholder="https://drive.google.com/..."
+                value={poaUrl}
+                onChange={(e) => setPoaUrl(e.target.value)}
+                onBlur={() => {
+                  if (poaUrl.trim()) setEditingPoaUrl(false);
+                }}
+                className={inputCls}
+              />
+            ) : (
+              <>
+                <input type="hidden" name="poaUrl" value={poaUrl} />
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewOpen(true)}
+                    className={secondaryBtnCls}
+                  >
+                    Önizle
+                  </button>
+                  <a
+                    href={poaUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={secondaryBtnCls}
+                  >
+                    Bağlantıyı Aç
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPoaUrl(true)}
+                    className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    Değiştir
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
+      )}
+
+      {previewOpen && poaUrl && (
+        <PoaPreviewModal url={poaUrl} onClose={() => setPreviewOpen(false)} />
       )}
 
       <div>
