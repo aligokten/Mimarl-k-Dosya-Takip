@@ -115,5 +115,12 @@ service cloud.firestore {
     match /platformLeads/{id} {
       allow read, update: if isPlatformAdmin();
     }
+
+    // Müşteri Takip Linki: girişsiz salt-okunur takip kopyaları. Okuma
+    // herkese açık; yazma yalnızca giriş yapmış ofis üyesi tarafından.
+    match /publicShares/{token} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
   }
 }

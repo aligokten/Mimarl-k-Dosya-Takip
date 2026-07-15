@@ -6,6 +6,8 @@ import { tr } from "date-fns/locale";
 import {
   addActivity,
   deleteProject,
+  disableProjectShare,
+  enableProjectShare,
   loadActivities,
   patchProject,
   uid,
@@ -290,6 +292,7 @@ function ProgressWidget({
 function GeneralTab({ project }: { project: Project }) {
   return (
     <div className="space-y-6">
+      <ShareCard project={project} />
       <AssigneesCard project={project} />
       <AuthorsCard project={project} />
       <div className={`${cardCls} p-6`}>
@@ -305,6 +308,126 @@ function GeneralTab({ project }: { project: Project }) {
           }}
         />
       </div>
+    </div>
+  );
+}
+
+// Müşteri Takip Linki: girişsiz, salt-okunur bir takip sayfası oluşturur.
+// Müşteri projesinin hangi aşamada olduğunu görebilir; TC/telefon/adres,
+// evrak, not gibi hassas bilgiler paylaşılmaz.
+function ShareCard({ project }: { project: Project }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const shareUrl =
+    project.shareEnabled && project.shareToken
+      ? `${window.location.origin}${window.location.pathname}#/takip/${project.shareToken}`
+      : "";
+
+  async function enable() {
+    setBusy(true);
+    setError(null);
+    try {
+      await enableProjectShare(project.id);
+    } catch (err) {
+      const code = (err as { code?: string } | null)?.code;
+      setError(
+        code === "permission-denied"
+          ? "Takip linki için gerekli izin bulunamadı. Bu özellik ilk kez kullanılıyorsa Firestore kurallarının güncellenmesi gerekir; lütfen sistem yöneticisiyle iletişime geçin."
+          : err instanceof Error
+            ? err.message
+            : "Takip linki oluşturulamadı."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disable() {
+    if (!window.confirm("Takip linkini kapatmak istediğinize emin misiniz? Mevcut bağlantı artık çalışmayacak.")) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await disableProjectShare(project.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("Bağlantıyı kopyalayın:", shareUrl);
+    }
+  }
+
+  return (
+    <div className={`${cardCls} p-6`}>
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+        Müşteri Takip Linki
+      </h2>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        Müşterinize girişsiz, salt-okunur bir takip bağlantısı verin; projenin
+        hangi aşamada olduğunu kendisi görebilsin. TC, telefon, adres, evrak ve
+        notlar paylaşılmaz — yalnızca hizmet aşamaları ve ilerleme görünür.
+      </p>
+
+      {error && (
+        <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>
+      )}
+
+      {project.shareEnabled && project.shareToken ? (
+        <div className="mt-3 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              readOnly
+              value={shareUrl}
+              onFocus={(e) => e.currentTarget.select()}
+              className={`${inputCls} mt-0 flex-1`}
+            />
+            <button
+              type="button"
+              onClick={copy}
+              className={secondaryBtnCls}
+            >
+              {copied ? "Kopyalandı ✓" : "Kopyala"}
+            </button>
+            <a
+              href={shareUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={secondaryBtnCls}
+            >
+              Önizle
+            </a>
+          </div>
+          <button
+            type="button"
+            onClick={disable}
+            disabled={busy}
+            className="text-xs font-medium text-red-600 hover:underline disabled:opacity-60 dark:text-red-400"
+          >
+            Takip linkini kapat
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={enable}
+          disabled={busy}
+          className={`${primaryBtnCls} mt-3 disabled:opacity-60`}
+        >
+          {busy ? "Oluşturuluyor..." : "Takip linki oluştur"}
+        </button>
+      )}
     </div>
   );
 }

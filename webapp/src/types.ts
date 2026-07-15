@@ -82,7 +82,38 @@ export interface Project {
   noteList?: ProjectNote[];
   memberIds?: string[];
   authorIds?: string[]; // müellif olarak eklenen uzman (professional) id'leri
+  // Müşteri takip linki: paylaşım açıkken publicShares/{shareToken} altında
+  // sanitize edilmiş bir kopya tutulur ve girişsiz görüntülenebilir.
+  shareToken?: string;
+  shareEnabled?: boolean;
   createdAt: string;
+  updatedAt: string;
+}
+
+// Müşteriye verilen girişsiz takip sayfasının (publicShares/{token})
+// içeriği. Yalnızca güvenli/özet alanlar tutulur — TC/telefon/adres, evrak
+// bağlantıları, notlar, finans (Arsapay) ve ekip bilgisi ASLA yer almaz.
+export interface PublicShareService {
+  serviceName: string;
+  status: ProjectStatus;
+  targetDate?: string;
+  stages: { name: string; done: boolean }[];
+}
+
+export interface PublicShare {
+  token: string;
+  officeId: string;
+  projectId: string;
+  officeName: string;
+  projectName: string;
+  status: ProjectStatus;
+  province?: string;
+  district?: string;
+  neighborhood?: string;
+  ada?: string;
+  parsel?: string;
+  percent: number;
+  services: PublicShareService[];
   updatedAt: string;
 }
 
