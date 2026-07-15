@@ -2004,6 +2004,14 @@ export async function setTodoDone(id: string, done: boolean): Promise<void> {
   await updateDoc(officeDoc("todos", id), { done });
 }
 
+export async function updateTodoText(id: string, text: string): Promise<void> {
+  await updateDoc(officeDoc("todos", id), { text });
+}
+
+export async function deleteTodo(id: string): Promise<void> {
+  await deleteDoc(officeDoc("todos", id));
+}
+
 // ---- Hizmet türleri ----
 
 export async function addServiceType(name: string) {

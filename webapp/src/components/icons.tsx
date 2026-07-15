@@ -235,6 +235,17 @@ export function CircleIcon({ className }: { className?: string }) {
   );
 }
 
+export function TrashIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M4 7h16" />
+      <path d="M9 7V4.8c0-.44.36-.8.8-.8h4.4c.44 0 .8.36.8.8V7" />
+      <path d="M6 7l1 13a2 2 0 0 0 2 1.9h6a2 2 0 0 0 2-1.9L18 7" />
+      <path d="M10 11v6M14 11v6" />
+    </Svg>
+  );
+}
+
 export function ChatIcon({ className }: { className?: string }) {
   return (
     <Svg className={className}>
