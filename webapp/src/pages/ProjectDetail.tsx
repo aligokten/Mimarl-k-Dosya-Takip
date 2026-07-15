@@ -37,7 +37,8 @@ import {
 import ProjectForm from "./ProjectForm";
 import DeleteButton from "../components/DeleteButton";
 import DocScanner from "../components/DocScanner";
-import { ChevronLeftIcon } from "../components/icons";
+import { ChevronLeftIcon, WhatsAppIcon } from "../components/icons";
+import { waLink } from "../whatsapp";
 import { Avatar } from "../App";
 
 const TABS = [
@@ -316,6 +317,7 @@ function GeneralTab({ project }: { project: Project }) {
 // Müşteri projesinin hangi aşamada olduğunu görebilir; TC/telefon/adres,
 // evrak, not gibi hassas bilgiler paylaşılmaz.
 function ShareCard({ project }: { project: Project }) {
+  const db = useApp();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -324,6 +326,27 @@ function ShareCard({ project }: { project: Project }) {
     project.shareEnabled && project.shareToken
       ? `${window.location.origin}${window.location.pathname}#/takip/${project.shareToken}`
       : "";
+
+  const client = db.contacts.find((c) => c.id === project.clientId);
+  const officeName = db.office?.name || "Ruhsat360 Ofisi";
+  const clientName = client?.name || "Müşterimiz";
+
+  // Resmi & kısa şablonlar.
+  const linkMessage =
+    `Sayın ${clientName},\n` +
+    `${project.name} projenizin güncel durumunu aşağıdaki bağlantıdan takip edebilirsiniz:\n` +
+    `${shareUrl}\n\n` +
+    `${officeName}`;
+
+  const statusMessage =
+    `Sayın ${clientName},\n` +
+    `${project.name} projenizin durumu güncellenmiştir: ${PROJECT_STATUS_LABELS[project.status]}.` +
+    (shareUrl ? `\nGüncel takip: ${shareUrl}` : "") +
+    `\n\n${officeName}`;
+
+  const linkWaHref = shareUrl ? waLink(client?.phone, linkMessage) : null;
+  const statusWaHref = waLink(client?.phone, statusMessage);
+  const hasClientPhone = !!client?.phone;
 
   async function enable() {
     setBusy(true);
@@ -408,6 +431,17 @@ function ShareCard({ project }: { project: Project }) {
             >
               Önizle
             </a>
+            {linkWaHref && (
+              <a
+                href={linkWaHref}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-3.5 py-1.5 text-xs font-semibold text-white hover:brightness-95"
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                WhatsApp ile Gönder
+              </a>
+            )}
           </div>
           <button
             type="button"
@@ -428,6 +462,30 @@ function ShareCard({ project }: { project: Project }) {
           {busy ? "Oluşturuluyor..." : "Takip linki oluştur"}
         </button>
       )}
+
+      {/* Müşteriyi proje durumu hakkında WhatsApp ile bilgilendirme */}
+      <div className="mt-4 border-t border-slate-100 pt-4 dark:border-zinc-700">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Müşteriyi projenin güncel durumu hakkında WhatsApp ile
+          bilgilendirin. Hazır mesaj açılır; siz &quot;gönder&quot;e basarsınız.
+        </p>
+        {hasClientPhone && statusWaHref ? (
+          <a
+            href={statusWaHref}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-4 py-2 text-xs font-semibold text-white hover:brightness-95"
+          >
+            <WhatsAppIcon className="h-4 w-4" />
+            Müşteriyi WhatsApp ile bilgilendir
+          </a>
+        ) : (
+          <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+            Bu özelliği kullanmak için müşteri kişisinde telefon numarası
+            kayıtlı olmalı.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
