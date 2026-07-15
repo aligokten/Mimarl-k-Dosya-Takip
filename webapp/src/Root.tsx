@@ -1,8 +1,10 @@
 import { useEffect } from "react";
+import { Route, Routes } from "react-router-dom";
 import { isConfigured } from "./firebase";
 import { initAuth, signOutUser, useApp } from "./data";
 import App from "./App";
 import FirebaseSetup from "./pages/FirebaseSetup";
+import PublicTracking from "./pages/PublicTracking";
 import {
   Login,
   CreateOffice,
@@ -13,7 +15,6 @@ import {
 let authStarted = false;
 
 export default function Root() {
-  const app = useApp();
   const configured = isConfigured();
 
   useEffect(() => {
@@ -26,6 +27,19 @@ export default function Root() {
   if (!configured) {
     return <FirebaseSetup />;
   }
+
+  // Müşteri takip sayfası kimlik doğrulaması gerektirmez; auth kapısından
+  // önce ayrı bir rota olarak sunulur.
+  return (
+    <Routes>
+      <Route path="/takip/:token" element={<PublicTracking />} />
+      <Route path="*" element={<GatedApp />} />
+    </Routes>
+  );
+}
+
+function GatedApp() {
+  const app = useApp();
 
   if (!app.authReady) {
     return <Splash text="Yükleniyor..." />;

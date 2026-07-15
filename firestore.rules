@@ -241,6 +241,19 @@ service cloud.firestore {
       allow read, create, update, delete: if isPlatformAdmin();
     }
 
+    // Müşteri Takip Linki: girişsiz (herkese açık) salt-okunur takip
+    // kopyaları. Okuma herkese açıktır (link bilen görür); yazma/silme
+    // yalnızca ilgili ofisin erişimi olan üyesi (veya platform yöneticisi)
+    // tarafından yapılabilir. Sanitize edilmiş, hassas veri içermeyen
+    // özet alanlar burada tutulur.
+    match /publicShares/{token} {
+      allow read: if true;
+      allow create, update: if isPlatformAdmin() ||
+        hasOfficeAccess(request.resource.data.officeId);
+      allow delete: if isPlatformAdmin() ||
+        hasOfficeAccess(resource.data.officeId);
+    }
+
     match /offices/{officeId} {
       allow read: if hasOfficeMembership(officeId) || isPlatformAdmin();
 

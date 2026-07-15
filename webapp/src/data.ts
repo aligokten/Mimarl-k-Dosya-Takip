@@ -57,6 +57,7 @@ import type {
   PlatformMessage,
   Professional,
   Project,
+  PublicShare,
   ServiceType,
   TodoNote,
 } from "./types";
@@ -2115,6 +2116,8 @@ export async function patchProject(
     ...stripUndefined(patch),
     updatedAt: now(),
   });
+  // Müşteri takip linki açıksa, herkese açık takip kopyasını güncel tut.
+  void syncPublicShare(projectId, patch);
   if (activity) {
     await addActivity(projectId, activity.type, activity.text);
     if (activity.notify) {
@@ -2125,5 +2128,122 @@ export async function patchProject(
 }
 
 export async function deleteProject(projectId: string) {
+  const project = state.projects.find((p) => p.id === projectId);
   await deleteDoc(officeDoc("projects", projectId));
+  if (project?.shareToken) {
+    await deleteDoc(doc(db(), "publicShares", project.shareToken)).catch(() => {});
+  }
+}
+
+// ---- Müşteri Takip Linki (girişsiz salt-okunur paylaşım) ----
+
+// Projeden yalnızca güvenli/özet alanları içeren public takip kopyası üretir.
+function buildPublicShare(
+  project: Project,
+  token: string,
+  officeId: string
+): PublicShare {
+  let total = 0;
+  let done = 0;
+  const services: PublicShare["services"] = project.services.map((s) => {
+    const st = state.serviceTypes.find((t) => t.id === s.serviceTypeId);
+    const stages = st?.stages ?? [];
+    const completed = new Set(s.completedStageIds ?? []);
+    if (stages.length > 0) {
+      total += stages.length;
+      done += stages.filter((x) => completed.has(x.id)).length;
+    } else {
+      total += 1;
+      if (s.status === "TAMAMLANDI") done += 1;
+    }
+    // Firestore iç içe undefined kabul etmez: targetDate yalnızca varsa
+    // eklenir.
+    return {
+      serviceName: st?.name ?? "Hizmet",
+      status: s.status,
+      ...(s.targetDate ? { targetDate: s.targetDate } : {}),
+      stages: stages.map((x) => ({ name: x.name, done: completed.has(x.id) })),
+    };
+  });
+  const percent =
+    total > 0
+      ? Math.round((done / total) * 100)
+      : project.status === "TAMAMLANDI"
+        ? 100
+        : 0;
+  return {
+    token,
+    officeId,
+    projectId: project.id,
+    officeName: currentOfficeDisplayName(),
+    projectName: project.name,
+    status: project.status,
+    province: project.province,
+    district: project.district,
+    neighborhood: project.neighborhood,
+    ada: project.ada,
+    parsel: project.parsel,
+    percent,
+    services,
+    updatedAt: now(),
+  };
+}
+
+// Paylaşım açıksa herkese açık takip kopyasını yeniden yazar (sessizdir —
+// hata olsa da ofisin normal akışını bozmaz).
+async function syncPublicShare(projectId: string, patch?: Partial<Project>) {
+  const base = state.projects.find((p) => p.id === projectId);
+  const project = { ...(base ?? {}), ...(patch ?? {}) } as Project;
+  if (!project.shareEnabled || !project.shareToken || !project.id) return;
+  const officeId = currentOfficeId();
+  if (!officeId) return;
+  try {
+    await setDoc(
+      doc(db(), "publicShares", project.shareToken),
+      stripUndefined(buildPublicShare(project, project.shareToken, officeId))
+    );
+  } catch (err) {
+    console.error("Takip kopyası güncellenemedi:", err);
+  }
+}
+
+// Bir proje için takip linkini açar; token yoksa üretir. Döndürülen token ile
+// link oluşturulur. publicShares yazımı Firestore kuralı gerektirir.
+export async function enableProjectShare(projectId: string): Promise<string> {
+  const project = state.projects.find((p) => p.id === projectId);
+  if (!project) throw new Error("Proje bulunamadı.");
+  const token = project.shareToken || uid().replace(/-/g, "");
+  const officeId = currentOfficeId();
+  if (!officeId) throw new Error("Ofis bulunamadı.");
+  // Önce public kopyayı yaz (kural sorunu varsa burada anlaşılır hata verir),
+  // sonra projede paylaşımı işaretle.
+  await setDoc(
+    doc(db(), "publicShares", token),
+    stripUndefined(
+      buildPublicShare({ ...project, shareToken: token }, token, officeId)
+    )
+  );
+  await updateDoc(officeDoc("projects", projectId), {
+    shareToken: token,
+    shareEnabled: true,
+    updatedAt: now(),
+  });
+  return token;
+}
+
+export async function disableProjectShare(projectId: string): Promise<void> {
+  const project = state.projects.find((p) => p.id === projectId);
+  await updateDoc(officeDoc("projects", projectId), {
+    shareEnabled: false,
+    updatedAt: now(),
+  });
+  if (project?.shareToken) {
+    await deleteDoc(doc(db(), "publicShares", project.shareToken)).catch(() => {});
+  }
+}
+
+// Girişsiz takip sayfasının okuduğu public kopyayı getirir (auth gerektirmez).
+export async function loadPublicShare(token: string): Promise<PublicShare | null> {
+  const snap = await getDoc(doc(db(), "publicShares", token));
+  return snap.exists() ? (snap.data() as PublicShare) : null;
 }
