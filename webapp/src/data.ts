@@ -58,6 +58,7 @@ import type {
   Professional,
   Project,
   ServiceType,
+  TodoNote,
 } from "./types";
 import { DEFAULT_ANNUAL_LEAVE_DAYS, MAX_MEMBERS } from "./types";
 
@@ -92,6 +93,7 @@ export interface AppState {
   leaveRequests: LeaveRequest[];
   platformMessages: PlatformMessage[];
   platformLeads: PlatformLeadNotice[];
+  todos: TodoNote[];
 }
 
 let state: AppState = {
@@ -116,6 +118,7 @@ let state: AppState = {
   leaveRequests: [],
   platformMessages: [],
   platformLeads: [],
+  todos: [],
 };
 
 const listeners = new Set<() => void>();
@@ -593,6 +596,19 @@ async function startForMember(fbUser: FbUser, requestedOfficeId?: string) {
       )
     );
 
+    dataUnsubs.push(
+      onSnapshot(
+        query(collection(db(), "todos"), where("uid", "==", fbUser.uid)),
+        (snap) => {
+          const list = snap.docs
+            .map((d) => stripId<TodoNote>(d))
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+          set({ todos: list });
+        },
+        () => set({ todos: [] })
+      )
+    );
+
     return;
   }
 
@@ -724,6 +740,22 @@ async function startForMember(fbUser: FbUser, requestedOfficeId?: string) {
       () => set({ leaveRequests: [] })
     )
   );
+
+  dataUnsubs.push(
+    onSnapshot(
+      query(
+        collection(db(), "offices", officeId, "todos"),
+        where("uid", "==", fbUser.uid)
+      ),
+      (snap) => {
+        const list = snap.docs
+          .map((d) => stripId<TodoNote>(d))
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        set({ todos: list });
+      },
+      () => set({ todos: [] })
+    )
+  );
 }
 
 
@@ -754,6 +786,7 @@ export function initAuth() {
         leaveRequests: [],
         platformMessages: [],
         platformLeads: [],
+        todos: [],
       });
       return;
     }
@@ -979,6 +1012,7 @@ export async function signOutUser() {
       leaveRequests: [],
       platformMessages: [],
       platformLeads: [],
+      todos: [],
     });
 
     try {
@@ -1952,6 +1986,22 @@ export async function updateContact(
 }
 export async function deleteContact(id: string) {
   await deleteDoc(officeDoc("contacts", id));
+}
+
+// ---- Panel anasayfası: Yapılacak İşler (kişisel not defteri) ----
+
+export async function addTodo(text: string): Promise<void> {
+  const u = auth().currentUser;
+  if (!u) return;
+  const id = uid();
+  await setDoc(
+    officeDoc("todos", id),
+    stripUndefined({ uid: u.uid, text, done: false, createdAt: now() })
+  );
+}
+
+export async function setTodoDone(id: string, done: boolean): Promise<void> {
+  await updateDoc(officeDoc("todos", id), { done });
 }
 
 // ---- Hizmet türleri ----

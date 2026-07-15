@@ -172,6 +172,10 @@ service cloud.firestore {
       allow read, write: if isLegacyMember();
     }
 
+    match /todos/{id} {
+      allow read, write: if isLegacyMember();
+    }
+
     match /mevzuat/{id} {
       allow read: if isLegacyMember();
       allow write: if isLegacyAdmin();

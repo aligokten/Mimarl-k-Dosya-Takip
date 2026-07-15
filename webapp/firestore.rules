@@ -63,6 +63,8 @@ service cloud.firestore {
     match /activity/{id} { allow read, write: if isMember(); }
     // Ofis içi sohbet (kalıcı değil; her üye yazabilir/temizleyebilir)
     match /chat/{id} { allow read, write: if isMember(); }
+    // Panel anasayfasındaki kişisel not defteri (uid ile filtrelenir)
+    match /todos/{id} { allow read, write: if isMember(); }
     // Mevzuat PDF kayıtları: herkes görür, yalnızca yönetici ekler/siler.
     match /mevzuat/{id} {
       allow read: if isMember();
