@@ -162,8 +162,12 @@ export default function NotificationBell() {
                   setOpen(false);
                   if (n.kind === "IZIN") {
                     navigate(app.me?.role === "ADMIN" ? "/ekip" : "/profil");
-                  } else {
+                  } else if (n.projectId) {
                     navigate(`/projeler/${n.projectId}`);
+                  } else if (n.contactId) {
+                    navigate(`/kisiler/${n.contactId}`);
+                  } else {
+                    navigate("/");
                   }
                 }}
                 className={
@@ -177,7 +181,8 @@ export default function NotificationBell() {
                 <span className={n.read ? "pl-4" : ""}>
                   <span className="block text-sm text-slate-700 dark:text-slate-200">
                     <span className="font-semibold text-slate-900 dark:text-white">
-                      {n.projectName ?? "İzin"}
+                      {n.projectName ??
+                        (n.kind === "HATIRLATMA" ? "Hatırlatma" : "İzin")}
                     </span>{" "}
                     — {n.text}
                   </span>

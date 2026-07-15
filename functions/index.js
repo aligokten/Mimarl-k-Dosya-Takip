@@ -1,4 +1,5 @@
 const { onRequest } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 
@@ -170,6 +171,257 @@ async function sendMailBridgeEmail({ to, subject, html, text }) {
 
   return parsed;
 }
+
+// ============================================================================
+//  Otomatik Tarih/Süre Hatırlatmaları (günlük zamanlanmış tarama)
+// ----------------------------------------------------------------------------
+//  Her ofisin projelerini (hizmet hedef tarihleri, evrak geçerlilik tarihleri)
+//  ve kişilerini (vekaletname geçerlilik tarihi) tarar; hedefe 7 ve 1 gün kala
+//  ilgili kişilere hem uygulama içi bildirim (offices/{id}/notifications) hem de
+//  e-posta (mail bridge) gönderir. Deterministik bildirim kimliği ile mükerrer
+//  gönderim engellenir (create() ALREADY_EXISTS → atla).
+// ============================================================================
+
+const REMINDER_MILESTONES = [7, 1]; // hedefe kaç gün kala hatırlatılacağı
+
+function istanbulTodayStr() {
+  // "YYYY-MM-DD" (Europe/Istanbul)
+  return new Date().toLocaleDateString("en-CA", {
+    timeZone: "Europe/Istanbul",
+  });
+}
+
+function daysBetween(todayStr, targetStr) {
+  const a = Date.parse(`${todayStr}T00:00:00Z`);
+  const b = Date.parse(`${String(targetStr).slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(a) || Number.isNaN(b)) return null;
+  return Math.round((b - a) / 86400000);
+}
+
+function trDate(s) {
+  const p = String(s || "").slice(0, 10).split("-");
+  return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : String(s || "");
+}
+
+function reminderEmailHtml(officeName, lines) {
+  const items = lines
+    .map(
+      (l) =>
+        `<li style="margin:6px 0;font-size:14px;line-height:1.6;color:#334155">${escapeHtml(
+          l
+        )}</li>`
+    )
+    .join("");
+  return `
+    <div style="font-family:Arial,sans-serif;background:#f8fafc;padding:28px;color:#0f172a">
+      <div style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:20px;padding:28px;border:1px solid #e2e8f0">
+        <h2 style="margin:0 0 6px">Yaklaşan tarih hatırlatmaları</h2>
+        <p style="font-size:13px;color:#64748b;margin:0 0 16px">${escapeHtml(
+          officeName
+        )}</p>
+        <ul style="padding-left:18px;margin:0">${items}</ul>
+        <hr style="border:0;border-top:1px solid #e2e8f0;margin:24px 0">
+        <p style="font-size:12px;color:#94a3b8">
+          Bu e-posta Ruhsat360 tarafından otomatik olarak gönderilmiştir.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+exports.sendDateReminders = onSchedule(
+  {
+    schedule: "every day 08:00",
+    timeZone: "Europe/Istanbul",
+    region: "europe-west1",
+    memory: "256MiB",
+    timeoutSeconds: 300,
+    secrets: [MAIL_BRIDGE_URL, MAIL_BRIDGE_SECRET],
+  },
+  async () => {
+    const todayStr = istanbulTodayStr();
+    const officesSnap = await db.collection("offices").get();
+
+    for (const officeDoc of officesSnap.docs) {
+      const officeId = officeDoc.id;
+      const office = officeDoc.data() || {};
+      const officeName = office.name || "Ruhsat360 Ofisi";
+
+      try {
+        const [membersSnap, projectsSnap, contactsSnap, serviceTypesSnap] =
+          await Promise.all([
+            db.collection(`offices/${officeId}/members`).get(),
+            db.collection(`offices/${officeId}/projects`).get(),
+            db.collection(`offices/${officeId}/contacts`).get(),
+            db.collection(`offices/${officeId}/serviceTypes`).get(),
+          ]);
+
+        const members = new Map(); // uid -> { uid, email, displayName, role }
+        const adminUids = [];
+        membersSnap.forEach((m) => {
+          const d = m.data() || {};
+          const uid = d.uid || m.id;
+          members.set(uid, {
+            uid,
+            email: d.email || null,
+            displayName: d.displayName || d.email || "Üye",
+            role: d.role || "STAFF",
+          });
+          if ((d.role || "").toUpperCase() === "ADMIN") adminUids.push(uid);
+        });
+
+        const serviceTypeName = new Map();
+        serviceTypesSnap.forEach((s) => {
+          const d = s.data() || {};
+          serviceTypeName.set(s.id, d.name || "Hizmet");
+        });
+
+        // Bir hatırlatma olayı için alıcı kümesi (var olan üyelere sınırlı).
+        const resolve = (uids) =>
+          [...new Set(uids)].filter((u) => members.has(u));
+
+        // { uid -> [satır] } e-posta özeti
+        const emailDigest = new Map();
+        const notifCol = db.collection(`offices/${officeId}/notifications`);
+
+        // Bir olay için: her alıcıya deterministik bildirim yaz (yoksa) ve
+        // e-posta özetine ekle.
+        async function emit(evt) {
+          for (const uid of evt.recipients) {
+            const member = members.get(uid);
+            if (!member) continue;
+            const notifId = `rem_${evt.type}_${evt.key}_${evt.milestone}_${uid}`;
+            const data = {
+              forUid: uid,
+              kind: "HATIRLATMA",
+              text: evt.text,
+              byName: "Ruhsat360 Hatırlatma",
+              read: false,
+              at: new Date().toISOString(),
+            };
+            if (evt.projectId) data.projectId = evt.projectId;
+            if (evt.projectName) data.projectName = evt.projectName;
+            if (evt.contactId) data.contactId = evt.contactId;
+            try {
+              await notifCol.doc(notifId).create(data);
+            } catch (e) {
+              // ALREADY_EXISTS → bu kilometre taşı için zaten bildirildi.
+              continue;
+            }
+            if (member.email) {
+              if (!emailDigest.has(uid)) emailDigest.set(uid, []);
+              emailDigest.get(uid).push(evt.line);
+            }
+          }
+        }
+
+        for (const projDoc of projectsSnap.docs) {
+          const project = projDoc.data() || {};
+          const projectId = projDoc.id;
+          const projectName = project.name || "Proje";
+          const projectRecipients = resolve([
+            ...(Array.isArray(project.memberIds) ? project.memberIds : []),
+            ...adminUids,
+          ]);
+
+          // 1) Hizmet hedef tarihleri (devam eden hizmetler)
+          for (const s of Array.isArray(project.services) ? project.services : []) {
+            if (!s || !s.targetDate || s.status !== "DEVAM_EDIYOR") continue;
+            const d = daysBetween(todayStr, s.targetDate);
+            if (d === null || !REMINDER_MILESTONES.includes(d)) continue;
+            const svcName = serviceTypeName.get(s.serviceTypeId) || "Hizmet";
+            await emit({
+              type: "svc",
+              key: `${projectId}_${s.id}`,
+              milestone: d,
+              recipients: projectRecipients,
+              projectId,
+              projectName,
+              text: `${projectName} · ${svcName} hedef tarihine ${d} gün kaldı (${trDate(
+                s.targetDate
+              )}).`,
+              line: `${projectName} — ${svcName}: hedef ${trDate(
+                s.targetDate
+              )} (${d} gün kaldı)`,
+            });
+          }
+
+          // 2) Evrak geçerlilik tarihleri
+          for (const doc of Array.isArray(project.documents) ? project.documents : []) {
+            if (!doc || !doc.expiryDate) continue;
+            const d = daysBetween(todayStr, doc.expiryDate);
+            if (d === null || !REMINDER_MILESTONES.includes(d)) continue;
+            await emit({
+              type: "doc",
+              key: `${projectId}_${doc.id}`,
+              milestone: d,
+              recipients: projectRecipients,
+              projectId,
+              projectName,
+              text: `${projectName} · "${doc.name || "Evrak"}" evrakının geçerliliğine ${d} gün kaldı (${trDate(
+                doc.expiryDate
+              )}).`,
+              line: `${projectName} — ${doc.name || "Evrak"}: geçerlilik ${trDate(
+                doc.expiryDate
+              )} (${d} gün kaldı)`,
+            });
+          }
+        }
+
+        // 3) Vekaletname geçerlilik tarihleri (kişiler) — yöneticilere
+        for (const cDoc of contactsSnap.docs) {
+          const c = cDoc.data() || {};
+          if (!c.poaExpiryDate) continue;
+          const d = daysBetween(todayStr, c.poaExpiryDate);
+          if (d === null || !REMINDER_MILESTONES.includes(d)) continue;
+          await emit({
+            type: "poa",
+            key: cDoc.id,
+            milestone: d,
+            recipients: resolve(adminUids),
+            contactId: cDoc.id,
+            text: `${c.name || "Kişi"} vekaletnamesinin geçerliliğine ${d} gün kaldı (${trDate(
+              c.poaExpiryDate
+            )}).`,
+            line: `${c.name || "Kişi"} — vekaletname geçerlilik ${trDate(
+              c.poaExpiryDate
+            )} (${d} gün kaldı)`,
+          });
+        }
+
+        // E-posta özetlerini gönder (kişi başına tek e-posta)
+        for (const [uid, lines] of emailDigest) {
+          const member = members.get(uid);
+          if (!member || !member.email || lines.length === 0) continue;
+          try {
+            await sendMailBridgeEmail({
+              to: member.email,
+              subject: "Ruhsat360 — Yaklaşan tarih hatırlatmaları",
+              html: reminderEmailHtml(officeName, lines),
+              text: [
+                `Yaklaşan tarih hatırlatmaları — ${officeName}`,
+                "",
+                ...lines.map((l) => `• ${l}`),
+              ].join("\n"),
+            });
+          } catch (e) {
+            console.error(
+              `Hatırlatma e-postası gönderilemedi (${officeId}/${uid}):`,
+              e instanceof Error ? e.message : e
+            );
+          }
+        }
+      } catch (e) {
+        console.error(
+          `Ofis hatırlatmaları işlenemedi (${officeId}):`,
+          e instanceof Error ? e.message : e
+        );
+      }
+    }
+
+    return null;
+  }
+);
 
 exports.createWebsitePlatformInvite = onRequest(
   {
