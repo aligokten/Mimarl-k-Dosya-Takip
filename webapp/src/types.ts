@@ -315,6 +315,16 @@ export interface ChatMessage {
   at: string;
 }
 
+// Panel anasayfasındaki kişisel "Yapılacak İşler" not defteri — yalnızca
+// notu oluşturan kullanıcının kendi ekranında görünür (uid ile filtrelenir).
+export interface TodoNote {
+  id: string;
+  uid: string;
+  text: string;
+  done: boolean;
+  createdAt: string;
+}
+
 export interface AppNotification {
   id: string;
   forUid: string;

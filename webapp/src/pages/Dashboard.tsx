@@ -12,14 +12,15 @@ import {
 } from "date-fns";
 import { tr } from "date-fns/locale";
 import clsx from "clsx";
-import { useApp } from "../data";
+import { addTodo, setTodoDone, useApp } from "../data";
 import { useDrive } from "../drive";
-import { cardCls } from "../ui";
+import { cardCls, inputCls, primaryBtnCls } from "../ui";
 import {
   CalendarIcon,
   CheckCircleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  CircleIcon,
   CloudIcon,
   FolderIcon,
 } from "../components/icons";
@@ -263,6 +264,106 @@ function CalendarCard({ db }: { db: AppState }) {
   );
 }
 
+// Panel anasayfasındaki kişisel not defteri: her yeni not listenin başına
+// eklenir (en yeni en üstte), her notun sonundaki iki simgeyle tamamlandı /
+// tamamlanmadı olarak işaretlenir; tamamlandığında metin soluklaşır.
+function TodoCard({ db }: { db: AppState }) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <div className={`${cardCls} flex h-full flex-col p-5`}>
+      <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 text-white">
+          <CheckCircleIcon className="h-4 w-4" />
+        </span>
+        Yapılacak İşler
+      </h2>
+
+      <form
+        className="mt-3 flex items-center gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const value = text.trim();
+          if (!value || busy) return;
+          setText("");
+          setBusy(true);
+          try {
+            await addTodo(value);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Yeni not ekle..."
+          className={`${inputCls} mt-0 flex-1`}
+        />
+        <button
+          type="submit"
+          disabled={busy || !text.trim()}
+          className={`${primaryBtnCls} shrink-0 disabled:opacity-60`}
+        >
+          Ekle
+        </button>
+      </form>
+
+      <ul className="mt-3 min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
+        {db.todos.length === 0 && (
+          <li className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">
+            Henüz not eklenmedi.
+          </li>
+        )}
+        {db.todos.map((todo) => (
+          <li
+            key={todo.id}
+            className="flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-zinc-800/60"
+          >
+            <span
+              className={clsx(
+                "flex-1 break-words text-sm text-slate-700 dark:text-slate-200",
+                todo.done && "opacity-40"
+              )}
+            >
+              {todo.text}
+            </span>
+            <span className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setTodoDone(todo.id, true)}
+                title="Tamamlandı"
+                className={clsx(
+                  "flex h-6 w-6 items-center justify-center rounded-full transition",
+                  todo.done
+                    ? "bg-emerald-500 text-white"
+                    : "text-slate-300 hover:text-emerald-500 dark:text-slate-600"
+                )}
+              >
+                <CheckCircleIcon className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setTodoDone(todo.id, false)}
+                title="Tamamlanmadı"
+                className={clsx(
+                  "flex h-6 w-6 items-center justify-center rounded-full transition",
+                  !todo.done
+                    ? "bg-slate-200 text-slate-600 dark:bg-zinc-600 dark:text-slate-100"
+                    : "text-slate-300 hover:text-slate-500 dark:text-slate-600"
+                )}
+              >
+                <CircleIcon className="h-4 w-4" />
+              </button>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const db = useApp();
   const drive = useDrive();
@@ -466,81 +567,84 @@ export default function Dashboard() {
         <CalendarCard db={db} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Hizmet Dağılımı */}
-        <div className={`${cardCls} p-5`}>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">
-            Hizmet Dağılımı
-          </h2>
-          {serviceDistribution.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-              Henüz projelere hizmet eklenmemiş.
-            </p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {serviceDistribution.map((service, idx) => (
-                <div key={service.name}>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-600 dark:text-slate-300">
-                      {service.name}
-                    </span>
-                    <span className="font-bold text-slate-900 dark:text-white">
-                      {service.count} proje
-                    </span>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
+        <div className="space-y-4">
+          {/* Hizmet Dağılımı (küçültülmüş) */}
+          <div className={`${cardCls} p-4`}>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+              Hizmet Dağılımı
+            </h2>
+            {serviceDistribution.length === 0 ? (
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                Henüz projelere hizmet eklenmemiş.
+              </p>
+            ) : (
+              <div className="mt-3 max-h-40 space-y-2 overflow-y-auto pr-1">
+                {serviceDistribution.map((service, idx) => (
+                  <div key={service.name}>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-slate-600 dark:text-slate-300">
+                        {service.name}
+                      </span>
+                      <span className="font-bold text-slate-900 dark:text-white">
+                        {service.count} proje
+                      </span>
+                    </div>
+                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-zinc-700">
+                      <div
+                        className={`h-full rounded-full ${BAR_COLORS[idx % BAR_COLORS.length]}`}
+                        style={{
+                          width: `${Math.max((service.count / maxServiceCount) * 100, 6)}%`,
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-zinc-700">
-                    <div
-                      className={`h-full rounded-full ${BAR_COLORS[idx % BAR_COLORS.length]}`}
-                      style={{
-                        width: `${Math.max((service.count / maxServiceCount) * 100, 6)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
 
-        {/* Son İşlemler */}
-        <div className={`${cardCls} p-5`}>
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+          {/* Son İşlemler (küçültülmüş) */}
+          <div className={`${cardCls} p-4`}>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
               Son İşlemler
             </h2>
+            <ul className="mt-2 max-h-52 divide-y divide-slate-100 overflow-y-auto dark:divide-zinc-700">
+              {recentActivity.length === 0 && (
+                <li className="py-3 text-xs text-slate-500 dark:text-slate-400">
+                  Henüz işlem yok.
+                </li>
+              )}
+              {recentActivity.map((act) => (
+                <li key={act.id}>
+                  <Link
+                    to={`/projeler/${act.projectId}`}
+                    className="block rounded-xl px-2 py-2 hover:bg-slate-50 dark:hover:bg-zinc-700/60"
+                  >
+                    <p className="text-xs font-medium text-slate-800 dark:text-slate-100">
+                      {act.text}
+                    </p>
+                    <p className="mt-0.5 flex flex-wrap gap-x-2 truncate text-[11px] text-slate-500 dark:text-slate-400">
+                      {act.projectName && (
+                        <span className="font-medium">{act.projectName}</span>
+                      )}
+                      <span>
+                        {act.byName} ·{" "}
+                        {formatDistanceToNow(new Date(act.at), {
+                          addSuffix: true,
+                          locale: tr,
+                        })}
+                      </span>
+                    </p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="mt-3 divide-y divide-slate-100 dark:divide-zinc-700">
-            {recentActivity.length === 0 && (
-              <li className="py-4 text-sm text-slate-500 dark:text-slate-400">
-                Henüz işlem yok.
-              </li>
-            )}
-            {recentActivity.map((act) => (
-              <li key={act.id}>
-                <Link
-                  to={`/projeler/${act.projectId}`}
-                  className="block rounded-xl px-2 py-2.5 hover:bg-slate-50 dark:hover:bg-zinc-700/60"
-                >
-                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                    {act.text}
-                  </p>
-                  <p className="mt-0.5 flex flex-wrap gap-x-2 truncate text-xs text-slate-500 dark:text-slate-400">
-                    {act.projectName && (
-                      <span className="font-medium">{act.projectName}</span>
-                    )}
-                    <span>
-                      {act.byName} ·{" "}
-                      {formatDistanceToNow(new Date(act.at), {
-                        addSuffix: true,
-                        locale: tr,
-                      })}
-                    </span>
-                  </p>
-                </Link>
-              </li>
-            ))}
-          </ul>
         </div>
+
+        {/* Yapılacak İşler */}
+        <TodoCard db={db} />
       </div>
     </div>
   );

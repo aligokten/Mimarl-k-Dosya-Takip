@@ -227,6 +227,14 @@ export function SendIcon({ className }: { className?: string }) {
   );
 }
 
+export function CircleIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <circle cx="12" cy="12" r="9" />
+    </Svg>
+  );
+}
+
 export function ChatIcon({ className }: { className?: string }) {
   return (
     <Svg className={className}>
