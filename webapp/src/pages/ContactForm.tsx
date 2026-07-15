@@ -124,6 +124,9 @@ export default function ContactForm({
           poaDate: roles.includes("ARSA_SAHIBI")
             ? str(formData, "poaDate")
             : initialValues?.poaDate,
+          poaExpiryDate: roles.includes("ARSA_SAHIBI")
+            ? str(formData, "poaExpiryDate")
+            : initialValues?.poaExpiryDate,
           notaryName: roles.includes("ARSA_SAHIBI")
             ? str(formData, "notaryName")
             : initialValues?.notaryName,
@@ -249,6 +252,18 @@ export default function ContactForm({
                 defaultValue={initialValues?.notaryName ?? ""}
                 className={inputCls}
               />
+            </div>
+            <div>
+              <label className={smallLabelCls}>Geçerlilik Bitişi</label>
+              <input
+                type="date"
+                name="poaExpiryDate"
+                defaultValue={initialValues?.poaExpiryDate ?? ""}
+                className={inputCls}
+              />
+              <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                Girilirse süre dolmadan otomatik hatırlatılır.
+              </p>
             </div>
           </div>
           <div className="mt-3">

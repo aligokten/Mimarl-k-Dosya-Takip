@@ -25,6 +25,9 @@ export interface Contact {
   taxNo?: string;
   poaNo?: string;
   poaDate?: string;
+  // Vekaletname geçerlilik (bitiş) tarihi (yyyy-MM-dd) — süre dolmadan
+  // otomatik hatırlatma için kullanılır.
+  poaExpiryDate?: string;
   notaryName?: string;
   poaUrl?: string;
   notes?: string;
@@ -360,9 +363,11 @@ export interface AppNotification {
   id: string;
   forUid: string;
   // tanımsız = "PROJE" (geriye dönük): proje bildirimlerinde projectId/projectName dolu olur.
-  kind?: "PROJE" | "IZIN";
+  // "HATIRLATMA" = otomatik tarih/süre hatırlatması (Cloud Function üretir).
+  kind?: "PROJE" | "IZIN" | "HATIRLATMA";
   projectId?: string;
   projectName?: string;
+  contactId?: string; // vekaletname hatırlatmalarında ilgili kişi
   leaveRequestId?: string;
   text: string;
   byName: string;
