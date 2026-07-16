@@ -11,6 +11,16 @@ import {
   markPlatformMessageRead,
   useApp,
 } from "../data";
+import type { AppNotification, PlatformLeadNotice, PlatformMessage } from "../types";
+
+// Farklı kaynaklardan (ofis içi bildirim, platform mesajı, web başvurusu)
+// gelen öğeleri tek bir zaman sırasına göre karıştırmak için ortak biçim —
+// böylece hiçbir tür sabit şekilde en üstte/altta kalıp diğerini gözden
+// kaçırmaz.
+type FeedItem =
+  | { kind: "lead"; at: string; read: boolean; data: PlatformLeadNotice }
+  | { kind: "message"; at: string; read: boolean; data: PlatformMessage }
+  | { kind: "notif"; at: string; read: boolean; data: AppNotification };
 
 export default function NotificationBell() {
   const app = useApp();
@@ -22,6 +32,23 @@ export default function NotificationBell() {
   const unseenLeads = app.platformLeads.filter((l) => !l.notifSeen).length;
   const unread =
     app.notifications.filter((n) => !n.read).length + unreadMessages + unseenLeads;
+
+  const feed: FeedItem[] = [
+    ...app.platformLeads.map(
+      (l): FeedItem => ({
+        kind: "lead",
+        at: l.createdAt || "",
+        read: !!l.notifSeen,
+        data: l,
+      })
+    ),
+    ...app.platformMessages.map(
+      (m): FeedItem => ({ kind: "message", at: m.createdAt, read: m.read, data: m })
+    ),
+    ...app.notifications.map(
+      (n): FeedItem => ({ kind: "notif", at: n.at, read: n.read, data: n })
+    ),
+  ].sort((a, b) => b.at.localeCompare(a.at));
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -80,122 +107,131 @@ export default function NotificationBell() {
             )}
           </div>
           <div className="max-h-96 overflow-y-auto">
-            {app.notifications.length === 0 &&
-              app.platformMessages.length === 0 &&
-              app.platformLeads.length === 0 && (
-                <p className="px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
-                  Henüz bildirim yok.
-                </p>
-              )}
-            {app.platformLeads.slice(0, 20).map((l) => (
-              <button
-                key={l.id}
-                onClick={() => {
-                  if (!l.notifSeen) markPlatformLeadNoticeSeen(l.id);
-                  setOpen(false);
-                  navigate("/platform");
-                }}
-                className={
-                  "flex w-full gap-2 border-b border-slate-50 px-4 py-3 text-left last:border-0 hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-zinc-700/50 " +
-                  (l.notifSeen ? "" : "bg-emerald-50/50 dark:bg-emerald-500/10")
-                }
-              >
-                {!l.notifSeen && (
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
-                )}
-                <span className={l.notifSeen ? "pl-4" : ""}>
-                  <span className="block text-sm text-slate-700 dark:text-slate-200">
-                    <span className="font-semibold text-slate-900 dark:text-white">
-                      {l.companyName || l.contactName || "Yeni başvuru"}
-                    </span>{" "}
-                    — Yeni web başvurusu
-                  </span>
-                  <span className="mt-0.5 block text-[11px] text-slate-400 dark:text-slate-500">
-                    {l.contactName || l.email || "—"}
-                    {l.createdAt &&
-                      ` · ${formatDistanceToNow(new Date(l.createdAt), {
+            {feed.length === 0 && (
+              <p className="px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
+                Henüz bildirim yok.
+              </p>
+            )}
+            {feed.slice(0, 50).map((item) => {
+              if (item.kind === "lead") {
+                const l = item.data;
+                return (
+                  <button
+                    key={`lead_${l.id}`}
+                    onClick={() => {
+                      if (!l.notifSeen) markPlatformLeadNoticeSeen(l.id);
+                      setOpen(false);
+                      navigate("/platform");
+                    }}
+                    className={
+                      "flex w-full gap-2 border-b border-slate-50 px-4 py-3 text-left last:border-0 hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-zinc-700/50 " +
+                      (l.notifSeen ? "" : "bg-emerald-50/50 dark:bg-emerald-500/10")
+                    }
+                  >
+                    {!l.notifSeen && (
+                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                    )}
+                    <span className={l.notifSeen ? "pl-4" : ""}>
+                      <span className="block text-sm text-slate-700 dark:text-slate-200">
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {l.companyName || l.contactName || "Yeni başvuru"}
+                        </span>{" "}
+                        — Yeni web başvurusu
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-slate-400 dark:text-slate-500">
+                        {l.contactName || l.email || "—"}
+                        {l.createdAt &&
+                          ` · ${formatDistanceToNow(new Date(l.createdAt), {
+                            addSuffix: true,
+                            locale: tr,
+                          })}`}
+                      </span>
+                    </span>
+                  </button>
+                );
+              }
+
+              if (item.kind === "message") {
+                const m = item.data;
+                return (
+                  <button
+                    key={`msg_${m.id}`}
+                    onClick={() => {
+                      if (!m.read) markPlatformMessageRead(m.id);
+                      setOpen(false);
+                      navigate("/platform");
+                    }}
+                    className={
+                      "flex w-full gap-2 border-b border-slate-50 px-4 py-3 text-left last:border-0 hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-zinc-700/50 " +
+                      (m.read ? "" : "bg-blue-50/50 dark:bg-blue-500/10")
+                    }
+                  >
+                    {!m.read && (
+                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                    )}
+                    <span className={m.read ? "pl-4" : ""}>
+                      <span className="block text-sm text-slate-700 dark:text-slate-200">
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {m.officeName || m.fromName}
+                        </span>{" "}
+                        — {m.text}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-slate-400 dark:text-slate-500">
+                        Platform mesajı · {m.fromName} ·{" "}
+                        {formatDistanceToNow(new Date(m.createdAt), {
+                          addSuffix: true,
+                          locale: tr,
+                        })}
+                      </span>
+                    </span>
+                  </button>
+                );
+              }
+
+              const n = item.data;
+              return (
+                <button
+                  key={`notif_${n.id}`}
+                  onClick={() => {
+                    if (!n.read) markNotificationRead(n.id);
+                    setOpen(false);
+                    if (n.kind === "IZIN") {
+                      navigate(app.me?.role === "ADMIN" ? "/ekip" : "/profil");
+                    } else if (n.projectId) {
+                      navigate(`/projeler/${n.projectId}`);
+                    } else if (n.contactId) {
+                      navigate(`/kisiler/${n.contactId}`);
+                    } else {
+                      navigate("/");
+                    }
+                  }}
+                  className={
+                    "flex w-full gap-2 border-b border-slate-50 px-4 py-3 text-left last:border-0 hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-zinc-700/50 " +
+                    (n.read ? "" : "bg-blue-50/50 dark:bg-blue-500/10")
+                  }
+                >
+                  {!n.read && (
+                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                  )}
+                  <span className={n.read ? "pl-4" : ""}>
+                    <span className="block text-sm text-slate-700 dark:text-slate-200">
+                      <span className="font-semibold text-slate-900 dark:text-white">
+                        {n.projectName ??
+                          (n.kind === "HATIRLATMA" ? "Hatırlatma" : "İzin")}
+                      </span>{" "}
+                      — {n.text}
+                    </span>
+                    <span className="mt-0.5 block text-[11px] text-slate-400 dark:text-slate-500">
+                      {n.byName} ·{" "}
+                      {formatDistanceToNow(new Date(n.at), {
                         addSuffix: true,
                         locale: tr,
-                      })}`}
+                      })}
+                    </span>
                   </span>
-                </span>
-              </button>
-            ))}
-            {app.platformMessages.slice(0, 20).map((m) => (
-              <button
-                key={m.id}
-                onClick={() => {
-                  if (!m.read) markPlatformMessageRead(m.id);
-                  setOpen(false);
-                  navigate("/platform");
-                }}
-                className={
-                  "flex w-full gap-2 border-b border-slate-50 px-4 py-3 text-left last:border-0 hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-zinc-700/50 " +
-                  (m.read ? "" : "bg-blue-50/50 dark:bg-blue-500/10")
-                }
-              >
-                {!m.read && (
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
-                )}
-                <span className={m.read ? "pl-4" : ""}>
-                  <span className="block text-sm text-slate-700 dark:text-slate-200">
-                    <span className="font-semibold text-slate-900 dark:text-white">
-                      {m.officeName || m.fromName}
-                    </span>{" "}
-                    — {m.text}
-                  </span>
-                  <span className="mt-0.5 block text-[11px] text-slate-400 dark:text-slate-500">
-                    Platform mesajı · {m.fromName} ·{" "}
-                    {formatDistanceToNow(new Date(m.createdAt), {
-                      addSuffix: true,
-                      locale: tr,
-                    })}
-                  </span>
-                </span>
-              </button>
-            ))}
-            {app.notifications.slice(0, 30).map((n) => (
-              <button
-                key={n.id}
-                onClick={() => {
-                  if (!n.read) markNotificationRead(n.id);
-                  setOpen(false);
-                  if (n.kind === "IZIN") {
-                    navigate(app.me?.role === "ADMIN" ? "/ekip" : "/profil");
-                  } else if (n.projectId) {
-                    navigate(`/projeler/${n.projectId}`);
-                  } else if (n.contactId) {
-                    navigate(`/kisiler/${n.contactId}`);
-                  } else {
-                    navigate("/");
-                  }
-                }}
-                className={
-                  "flex w-full gap-2 border-b border-slate-50 px-4 py-3 text-left last:border-0 hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-zinc-700/50 " +
-                  (n.read ? "" : "bg-blue-50/50 dark:bg-blue-500/10")
-                }
-              >
-                {!n.read && (
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
-                )}
-                <span className={n.read ? "pl-4" : ""}>
-                  <span className="block text-sm text-slate-700 dark:text-slate-200">
-                    <span className="font-semibold text-slate-900 dark:text-white">
-                      {n.projectName ??
-                        (n.kind === "HATIRLATMA" ? "Hatırlatma" : "İzin")}
-                    </span>{" "}
-                    — {n.text}
-                  </span>
-                  <span className="mt-0.5 block text-[11px] text-slate-400 dark:text-slate-500">
-                    {n.byName} ·{" "}
-                    {formatDistanceToNow(new Date(n.at), {
-                      addSuffix: true,
-                      locale: tr,
-                    })}
-                  </span>
-                </span>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
