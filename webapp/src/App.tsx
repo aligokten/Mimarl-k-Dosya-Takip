@@ -6,8 +6,10 @@ import { toggleTheme, useTheme } from "./theme";
 import NotificationBell from "./components/NotificationBell";
 import ChatWidget from "./components/ChatWidget";
 import ArsapayModal from "./components/ArsapayModal";
+import RuhsatHesapModal from "./components/RuhsatHesapModal";
 import {
   BuildingIcon,
+  CalculatorIcon,
   CoinsIcon,
   FileIcon,
   FolderIcon,
@@ -87,6 +89,7 @@ export default function App() {
   const theme = useTheme();
   const me = app.me!;
   const [arsapayOpen, setArsapayOpen] = useState(false);
+  const [ruhsatHesapOpen, setRuhsatHesapOpen] = useState(false);
 
   const navItems = app.platformAdmin
     ? [
@@ -198,6 +201,14 @@ export default function App() {
             <CoinsIcon className="h-4 w-4" />
             Arsapay
           </button>
+          <button
+            type="button"
+            onClick={() => setRuhsatHesapOpen(true)}
+            className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 px-3.5 py-1.5 text-sm font-medium text-white shadow-sm"
+          >
+            <CalculatorIcon className="h-4 w-4" />
+            Ruhsat Hesap
+          </button>
         </nav>
 
         <div className="flex gap-3 px-3 pb-8 pt-5 sm:px-5 md:gap-6 md:pl-4">
@@ -253,6 +264,19 @@ export default function App() {
               </span>
             </button>
             <button
+              type="button"
+              onClick={() => setRuhsatHesapOpen(true)}
+              title="Ruhsat Hesap Paneli"
+              className="group flex flex-col items-center gap-1"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow-md transition group-hover:brightness-110">
+                <CalculatorIcon className="h-5 w-5" />
+              </span>
+              <span className="max-w-[4.5rem] truncate text-center text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                Ruhsat Hesap
+              </span>
+            </button>
+            <button
               onClick={() => signOutUser()}
               title="Çıkış Yap"
               className="mt-1 flex h-12 w-12 items-center justify-center rounded-full bg-white/70 text-slate-400 shadow-sm backdrop-blur hover:text-red-500 dark:bg-zinc-800/70 dark:text-slate-500 dark:hover:text-red-400"
@@ -296,6 +320,9 @@ export default function App() {
       </div>
       <ChatWidget />
       {arsapayOpen && <ArsapayModal onClose={() => setArsapayOpen(false)} />}
+      {ruhsatHesapOpen && (
+        <RuhsatHesapModal onClose={() => setRuhsatHesapOpen(false)} />
+      )}
     </div>
   );
 }
