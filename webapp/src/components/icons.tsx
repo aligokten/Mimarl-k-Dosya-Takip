@@ -202,6 +202,17 @@ export function BuildingIcon({ className }: { className?: string }) {
   );
 }
 
+export function CalculatorIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <rect x="4.5" y="2.5" width="15" height="19" rx="2.2" />
+      <path d="M7.5 6.5h9" />
+      <path d="M7.8 11.2h.01M12 11.2h.01M16.2 11.2h.01M7.8 14.8h.01M12 14.8h.01M7.8 18.4h.01M12 18.4h.01" />
+      <path d="M16.2 14.2v4.6M14 16.5h4.4" />
+    </Svg>
+  );
+}
+
 export function CloudIcon({ className }: { className?: string }) {
   return (
     <Svg className={className}>
