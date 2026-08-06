@@ -47,13 +47,18 @@ function replaceTokensInPart(
     spans.push({ node, start, end: start + text.length });
   }
 
+  // Eşleştirme büyük/küçük harf duyarsızdır (ör. şablonda [Pafta] veya
+  // [PAFTA] fark etmez) — tr-TR kuralları kullanılır (İ/I, ı/i doğru
+  // katlanır). toLocaleLowerCase karakter sayısını değiştirmediğinden
+  // bulunan konumlar orijinal metinle birebir uyumlu kalır.
+  const fullLower = full.toLocaleLowerCase("tr-TR");
   const replacements: Replacement[] = [];
   for (const [token, value] of Object.entries(tokens)) {
     if (!value) continue;
-    const needle = `[${token}]`;
+    const needle = `[${token}]`.toLocaleLowerCase("tr-TR");
     let from = 0;
     for (;;) {
-      const idx = full.indexOf(needle, from);
+      const idx = fullLower.indexOf(needle, from);
       if (idx === -1) break;
       replacements.push({ start: idx, end: idx + needle.length, value });
       from = idx + needle.length;

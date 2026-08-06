@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { addDocTemplate } from "../data";
 import { convertDocToDocx, uploadToDrive, useDrive } from "../drive";
+import { docxBufferToHtml } from "../docxToHtml";
 import { cardCls, inputCls, labelCls, primaryBtnCls, smallLabelCls } from "../ui";
 import PageTitle from "../components/PageTitle";
 import { FileIcon } from "../components/icons";
@@ -18,31 +19,6 @@ function textToHtml(text: string): string {
     .split(/\r?\n/)
     .map((line) => `<p>${escapeHtml(line) || "&nbsp;"}</p>`)
     .join("\n");
-}
-
-async function docxBufferToHtml(buffer: ArrayBuffer): Promise<string> {
-  const mammoth = await import("mammoth/mammoth.browser");
-  // Tablolar, görseller (base64) ve başlıklar korunur; altı çizili/üstü
-  // çizili gibi biçimler de aktarılır. Sayfa/tablo yapısı bozulmaz.
-  // (Tür tanımı tek argüman bildiriyor; options çalışma zamanında geçerli.)
-  const convert = mammoth.convertToHtml as unknown as (
-    input: { arrayBuffer: ArrayBuffer },
-    options?: { styleMap?: string[]; includeDefaultStyleMap?: boolean }
-  ) => Promise<{ value: string }>;
-  const result = await convert(
-    { arrayBuffer: buffer },
-    {
-      styleMap: [
-        "u => u",
-        "strike => s",
-        "p[style-name='Title'] => h1:fresh",
-        "p[style-name='Heading 1'] => h1:fresh",
-        "p[style-name='Heading 2'] => h2:fresh",
-      ],
-      includeDefaultStyleMap: true,
-    }
-  );
-  return result.value;
 }
 
 async function fileToHtml(file: File): Promise<string> {
