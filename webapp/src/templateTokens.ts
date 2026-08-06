@@ -75,3 +75,32 @@ export function buildProfessionalTokens(
   }
   return tokens;
 }
+
+// Taahhütname Yükle akışında yüklenen gerçek belgeler, MÜELLİF/FENNİ MESUL
+// önekli kurumsal alanlar yerine önekesiz sade alan adları kullanıyor
+// (ör. [Uzman Adı Soyadı], [TC No], [Oda Sicil No], [Arsa Sahibi]). Bu
+// fonksiyon proje ve uzman alanlarını hem eski önekli biçimde hem de bu
+// sade biçimde döndürür; TELEFON/ADRES gibi ortak adlar kasıtlı olarak
+// uzmanın bilgisiyle geçersiz kılınır (taahhütnamede imza sahibi odur).
+export function buildTaahhutnamePlainTokens(
+  project: Project,
+  contacts: Contact[],
+  pro: Professional,
+  signDate?: string
+): Record<string, string | undefined> {
+  const owner = contacts.find((c) => c.id === project.landOwnerId);
+  return {
+    ...buildProjectTokens(project, contacts),
+    ...buildProfessionalTokens(pro),
+    "ARSA SAHİBİ": owner?.name,
+    "ARSA SAHİBİ ADRES": owner?.address,
+    "UZMAN ADI SOYADI": pro.name,
+    "ADI SOYADI": pro.name,
+    "TC NO": pro.tcNo,
+    TC: pro.tcNo,
+    ADRES: pro.address,
+    TELEFON: pro.phone,
+    "ODA SİCİL NO": pro.odaSicilNo,
+    TARİH: signDate,
+  };
+}

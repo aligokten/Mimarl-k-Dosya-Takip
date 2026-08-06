@@ -31,6 +31,7 @@ import Settings from "./pages/Settings";
 import Templates from "./pages/Templates";
 import TemplateEditor from "./pages/TemplateEditor";
 import TemplateUpload from "./pages/TemplateUpload";
+import TaahhutnameUpload from "./pages/TaahhutnameUpload";
 import Profile from "./pages/Profile";
 import Team from "./pages/Team";
 import Mevzuat from "./pages/Mevzuat";
@@ -307,6 +308,10 @@ export default function App() {
               <Route path="/uzmanlar" element={<Uzmanlar />} />
               <Route path="/sablonlar" element={<Templates />} />
               <Route path="/sablonlar/yukle" element={<TemplateUpload />} />
+              <Route
+                path="/sablonlar/taahhutname-yukle"
+                element={<TaahhutnameUpload />}
+              />
               <Route path="/sablonlar/:id" element={<TemplateEditor />} />
               <Route path="/mevzuat" element={<Mevzuat />} />
               <Route path="/profil" element={<Profile />} />

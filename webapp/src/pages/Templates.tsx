@@ -70,6 +70,22 @@ export default function Templates() {
             şablonunuzu ekleyin
           </span>
         </Link>
+
+        <Link
+          to="/sablonlar/taahhutname-yukle"
+          className="group flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-slate-300 p-5 text-center transition hover:border-slate-400 hover:bg-white/40 dark:border-slate-600 dark:hover:border-slate-500 dark:hover:bg-zinc-800/40"
+        >
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-2xl font-light text-slate-400 shadow-sm transition group-hover:scale-105 group-hover:text-slate-600 dark:bg-zinc-800 dark:text-slate-500">
+            +
+          </span>
+          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+            Taahhütname Yükle
+          </span>
+          <span className="text-xs text-slate-400 dark:text-slate-500">
+            Proje ve müellif seçerek otomatik doldurulan Word (.docx)
+            taahhütnamenizi ekleyin
+          </span>
+        </Link>
       </div>
 
       {templates.length === 0 && (
