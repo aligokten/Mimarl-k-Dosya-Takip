@@ -32,6 +32,7 @@
           ]
         }
       ],
+      "icon": "src/icon.ico",
       "artifactName": "Ruhsat360-Setup-${version}.${ext}"
     },
     "nsis": {

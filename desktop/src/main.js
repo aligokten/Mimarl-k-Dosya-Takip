@@ -1,6 +1,8 @@
 const { app, BrowserWindow, shell, session } = require("electron");
+const path = require("path");
 
 const PANEL_URL = "https://panel.ruhsat360.com/?source=desktop";
+const ICON_PATH = path.join(__dirname, "icon.ico");
 
 let mainWindow = null;
 
@@ -11,6 +13,7 @@ function createMainWindow() {
     minWidth: 1100,
     minHeight: 720,
     title: "Ruhsat360",
+    icon: ICON_PATH,
     autoHideMenuBar: true,
     backgroundColor: "#111217",
     webPreferences: {
