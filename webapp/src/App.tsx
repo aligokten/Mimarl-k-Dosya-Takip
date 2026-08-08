@@ -197,7 +197,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setArsapayOpen(true)}
-            className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 px-3.5 py-1.5 text-sm font-medium text-white shadow-sm"
+            className="neon flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/70 px-3.5 py-1.5 text-sm font-medium backdrop-blur dark:bg-zinc-800/70"
           >
             <CoinsIcon className="h-4 w-4" />
             Arsapay
@@ -205,7 +205,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setRuhsatHesapOpen(true)}
-            className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 px-3.5 py-1.5 text-sm font-medium text-white shadow-sm"
+            className="neon flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/70 px-3.5 py-1.5 text-sm font-medium backdrop-blur dark:bg-zinc-800/70"
           >
             <CalculatorIcon className="h-4 w-4" />
             Ruhsat Hesap
