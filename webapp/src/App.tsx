@@ -257,7 +257,7 @@ export default function App() {
               title="Arsapay"
               className="group flex flex-col items-center gap-1"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow-md transition group-hover:brightness-110">
+              <span className="neon flex h-12 w-12 items-center justify-center rounded-full bg-white/70 backdrop-blur transition group-hover:brightness-110 dark:bg-zinc-800/70">
                 <CoinsIcon className="h-5 w-5" />
               </span>
               <span className="max-w-[4.5rem] truncate text-center text-[10px] font-medium text-slate-500 dark:text-slate-400">
@@ -270,7 +270,7 @@ export default function App() {
               title="Ruhsat Hesap Paneli"
               className="group flex flex-col items-center gap-1"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow-md transition group-hover:brightness-110">
+              <span className="neon flex h-12 w-12 items-center justify-center rounded-full bg-white/70 backdrop-blur transition group-hover:brightness-110 dark:bg-zinc-800/70">
                 <CalculatorIcon className="h-5 w-5" />
               </span>
               <span className="max-w-[4.5rem] truncate text-center text-[10px] font-medium text-slate-500 dark:text-slate-400">
