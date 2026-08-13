@@ -1,34 +1,43 @@
 @import "tailwindcss";
-@import "@fontsource-variable/inter/wght.css";
 
 /* Koyu mod: html.dark sınıfıyla elle kontrol edilir */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ---------------------------------------------------------------------------
-   Tipografi — Neue Montreal
-   Lisanslı font dosyaları public/brand/fonts/ altına eklenince otomatik
-   devreye girer; dosya yoksa tarayıcı sessizce Inter'e düşer (bkz.
-   public/brand/fonts/README.md).
+   Tipografi — PP Neue Montreal (lisanslı, src/fonts/ altında; Vite tarafından
+   parmak izli olarak paketlenir, bu yüzden kök/alt yol deploy'unun ikisinde
+   de doğru çözülür)
+   Elimizdeki kesimler: Book (400), Medium (500), Bold (700), Italic (400).
+   Dik SemiBold kesimi setle gelmediği için 600–900 aralığı gerçek Bold
+   dosyasına bağlandı; böylece font-semibold/bold/extrabold sınıfları
+   tarayıcının sentetik kalınlaştırmasına düşmez.
 --------------------------------------------------------------------------- */
 @font-face {
   font-family: "Neue Montreal";
-  src: url("/brand/fonts/NeueMontreal-Regular.woff2") format("woff2");
+  src: url("./fonts/NeueMontreal-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "Neue Montreal";
-  src: url("/brand/fonts/NeueMontreal-Medium.woff2") format("woff2");
+  src: url("./fonts/NeueMontreal-Medium.woff2") format("woff2");
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "Neue Montreal";
-  src: url("/brand/fonts/NeueMontreal-SemiBold.woff2") format("woff2");
-  font-weight: 600 800;
+  src: url("./fonts/NeueMontreal-Bold.woff2") format("woff2");
+  font-weight: 600 900;
   font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Neue Montreal";
+  src: url("./fonts/NeueMontreal-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
   font-display: swap;
 }
 
@@ -41,8 +50,8 @@
    kimliğe geçiyor.
 --------------------------------------------------------------------------- */
 @theme {
-  --font-sans: "Neue Montreal", "Inter Variable", "Inter", system-ui,
-    -apple-system, "Segoe UI", Arial, Helvetica, sans-serif;
+  --font-sans: "Neue Montreal", "Inter", system-ui, -apple-system, "Segoe UI",
+    Arial, Helvetica, sans-serif;
 
   /* Marka turuncusu */
   --color-brand-50: #fff3ed;
@@ -157,8 +166,8 @@ body {
     linear-gradient(155deg, #fdf7f3 0%, #f6ece5 42%, #eee1d8 100%);
   background-attachment: fixed;
   color: #1d1719;
-  font-family: "Neue Montreal", "Inter Variable", "Inter", system-ui,
-    -apple-system, "Segoe UI", Arial, Helvetica, sans-serif;
+  font-family: "Neue Montreal", "Inter", system-ui, -apple-system, "Segoe UI",
+    Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
