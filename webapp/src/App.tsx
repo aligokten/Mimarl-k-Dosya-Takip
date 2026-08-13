@@ -104,7 +104,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen px-2 py-3 sm:px-4 sm:py-6">
-      <div className="mx-auto max-w-[1240px] rounded-[2rem] bg-white/45 shadow-[0_24px_70px_rgba(15,23,42,0.18)] ring-1 ring-white/60 backdrop-blur-2xl dark:bg-zinc-900/55 dark:ring-white/10">
+      <div className="glass mx-auto max-w-[1240px] rounded-[2rem]">
         <header className="no-print flex items-center justify-between gap-2 px-5 pt-5 sm:px-8 sm:pt-6">
           <Link to="/" className="flex items-center gap-2.5">
             <img
@@ -131,7 +131,7 @@ export default function App() {
               type="button"
               onClick={toggleTheme}
               title={theme === "dark" ? "Açık moda geç" : "Koyu moda geç"}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-slate-600 shadow-sm ring-1 ring-white/60 backdrop-blur hover:bg-white dark:bg-zinc-800/80 dark:text-amber-300 dark:ring-white/10 dark:hover:bg-zinc-700"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/70 bg-white/60 text-slate-600 backdrop-blur-md transition hover:border-brand-300 hover:text-brand-600 dark:border-white/10 dark:bg-white/[0.07] dark:text-brand-300 dark:hover:border-brand-500/40 dark:hover:text-brand-400"
             >
               {theme === "dark" ? (
                 <SunIcon className="h-4.5 w-4.5" />
@@ -142,7 +142,7 @@ export default function App() {
             <Link
               to="/profil"
               title="Profilim"
-              className="flex items-center gap-2 rounded-full bg-white/80 py-1 pl-1 pr-3 text-xs font-medium text-slate-600 shadow-sm ring-1 ring-white/60 backdrop-blur hover:bg-white dark:bg-zinc-800/80 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-zinc-700"
+              className="flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/60 py-1 pl-1 pr-3 text-xs font-medium text-slate-600 backdrop-blur-md transition hover:border-brand-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.07] dark:text-slate-300 dark:hover:border-brand-500/40 dark:hover:text-white"
             >
               <Avatar member={me} />
               <span className="hidden max-w-[7rem] truncate sm:block">
@@ -184,10 +184,10 @@ export default function App() {
               end={item.end}
               className={({ isActive }) =>
                 clsx(
-                  "whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium",
+                  "whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-medium backdrop-blur-md transition",
                   isActive
-                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                    : "bg-white/70 text-slate-600 shadow-sm backdrop-blur dark:bg-zinc-800/70 dark:text-slate-300"
+                    ? "border-brand-500/60 bg-brand-500 text-white shadow-[0_6px_18px_-6px_rgba(255,109,41,0.9)]"
+                    : "border-slate-200/70 bg-white/60 text-slate-600 dark:border-white/10 dark:bg-white/[0.07] dark:text-slate-300"
                 )
               }
             >
@@ -197,7 +197,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setArsapayOpen(true)}
-            className="neon flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/70 px-3.5 py-1.5 text-sm font-medium backdrop-blur dark:bg-zinc-800/70"
+            className="neon flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/50 px-3.5 py-1.5 text-sm font-medium backdrop-blur-md dark:bg-white/[0.06]"
           >
             <CoinsIcon className="h-4 w-4" />
             Arsapay
@@ -205,7 +205,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setRuhsatHesapOpen(true)}
-            className="neon flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/70 px-3.5 py-1.5 text-sm font-medium backdrop-blur dark:bg-zinc-800/70"
+            className="neon flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/50 px-3.5 py-1.5 text-sm font-medium backdrop-blur-md dark:bg-white/[0.06]"
           >
             <CalculatorIcon className="h-4 w-4" />
             Ruhsat Hesap
@@ -228,19 +228,19 @@ export default function App() {
                     <>
                       <span
                         className={clsx(
-                          "flex h-12 w-12 items-center justify-center rounded-full transition",
+                          "flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-md transition",
                           isActive
-                            ? "bg-slate-900 text-white shadow-md dark:bg-white dark:text-slate-900"
-                            : "bg-white/70 text-slate-500 shadow-sm backdrop-blur group-hover:text-slate-900 dark:bg-zinc-800/70 dark:text-slate-400 dark:group-hover:text-white"
+                            ? "border-brand-500/60 bg-brand-500 text-white shadow-[0_8px_22px_-8px_rgba(255,109,41,1)]"
+                            : "border-slate-200/70 bg-white/60 text-slate-500 group-hover:border-brand-300 group-hover:text-brand-600 dark:border-white/10 dark:bg-white/[0.07] dark:text-slate-400 dark:group-hover:border-brand-500/40 dark:group-hover:text-brand-300"
                         )}
                       >
                         <Icon className="h-5 w-5" />
                       </span>
                       <span
                         className={clsx(
-                          "max-w-[4.5rem] truncate text-center text-[10px] font-medium",
+                          "max-w-[4.5rem] truncate text-center text-[10px] font-medium transition",
                           isActive
-                            ? "text-slate-900 dark:text-white"
+                            ? "text-brand-600 dark:text-brand-400"
                             : "text-slate-500 dark:text-slate-400"
                         )}
                       >
@@ -257,7 +257,7 @@ export default function App() {
               title="Arsapay"
               className="group flex flex-col items-center gap-1"
             >
-              <span className="neon flex h-12 w-12 items-center justify-center rounded-full bg-white/70 backdrop-blur transition group-hover:brightness-110 dark:bg-zinc-800/70">
+              <span className="neon flex h-12 w-12 items-center justify-center rounded-full bg-white/50 backdrop-blur-md transition group-hover:brightness-110 dark:bg-white/[0.06]">
                 <CoinsIcon className="h-5 w-5" />
               </span>
               <span className="max-w-[4.5rem] truncate text-center text-[10px] font-medium text-slate-500 dark:text-slate-400">
@@ -270,7 +270,7 @@ export default function App() {
               title="Ruhsat Hesap Paneli"
               className="group flex flex-col items-center gap-1"
             >
-              <span className="neon flex h-12 w-12 items-center justify-center rounded-full bg-white/70 backdrop-blur transition group-hover:brightness-110 dark:bg-zinc-800/70">
+              <span className="neon flex h-12 w-12 items-center justify-center rounded-full bg-white/50 backdrop-blur-md transition group-hover:brightness-110 dark:bg-white/[0.06]">
                 <CalculatorIcon className="h-5 w-5" />
               </span>
               <span className="max-w-[4.5rem] truncate text-center text-[10px] font-medium text-slate-500 dark:text-slate-400">
@@ -280,7 +280,7 @@ export default function App() {
             <button
               onClick={() => signOutUser()}
               title="Çıkış Yap"
-              className="mt-1 flex h-12 w-12 items-center justify-center rounded-full bg-white/70 text-slate-400 shadow-sm backdrop-blur hover:text-red-500 dark:bg-zinc-800/70 dark:text-slate-500 dark:hover:text-red-400"
+              className="mt-1 flex h-12 w-12 items-center justify-center rounded-full border border-slate-200/70 bg-white/60 text-slate-400 backdrop-blur-md transition hover:border-red-300 hover:text-red-500 dark:border-white/10 dark:bg-white/[0.07] dark:text-slate-500 dark:hover:border-red-500/40 dark:hover:text-red-400"
             >
               <svg
                 viewBox="0 0 24 24"

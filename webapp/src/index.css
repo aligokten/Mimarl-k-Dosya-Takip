@@ -4,30 +4,223 @@
 /* Koyu mod: html.dark sınıfıyla elle kontrol edilir */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ---------------------------------------------------------------------------
+   Tipografi — Neue Montreal
+   Lisanslı font dosyaları public/brand/fonts/ altına eklenince otomatik
+   devreye girer; dosya yoksa tarayıcı sessizce Inter'e düşer (bkz.
+   public/brand/fonts/README.md).
+--------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Neue Montreal";
+  src: url("/brand/fonts/NeueMontreal-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Neue Montreal";
+  src: url("/brand/fonts/NeueMontreal-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Neue Montreal";
+  src: url("/brand/fonts/NeueMontreal-SemiBold.woff2") format("woff2");
+  font-weight: 600 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------------------------------------------------------------------------
+   Tasarım token'ları
+   Marka paleti: #FF6D29 (turuncu vurgu) · #453027 (sıcak kahve) ·
+   #161316 (koyu zemin) · #BABABA (nötr gri) · #FFFFFF
+   Tailwind'in slate/zinc nötr rampaları bu sıcak paletle yeniden
+   tanımlanıyor; böylece uygulamadaki mevcut sınıflar tek yerden yeni
+   kimliğe geçiyor.
+--------------------------------------------------------------------------- */
+@theme {
+  --font-sans: "Neue Montreal", "Inter Variable", "Inter", system-ui,
+    -apple-system, "Segoe UI", Arial, Helvetica, sans-serif;
+
+  /* Marka turuncusu */
+  --color-brand-50: #fff3ed;
+  --color-brand-100: #ffe2d2;
+  --color-brand-200: #ffc2a5;
+  --color-brand-300: #ffa078;
+  --color-brand-400: #ff864f;
+  --color-brand-500: #ff6d29;
+  --color-brand-600: #ed5310;
+  --color-brand-700: #c43d0b;
+  --color-brand-800: #93300f;
+  --color-brand-900: #692610;
+  --color-brand-950: #3a1206;
+
+  /* Turuncu yardımcı sınıflar da markaya hizalanır */
+  --color-orange-50: #fff3ed;
+  --color-orange-100: #ffe2d2;
+  --color-orange-200: #ffc2a5;
+  --color-orange-300: #ffa078;
+  --color-orange-400: #ff864f;
+  --color-orange-500: #ff6d29;
+  --color-orange-600: #ed5310;
+  --color-orange-700: #c43d0b;
+  --color-orange-800: #93300f;
+  --color-orange-900: #692610;
+  --color-orange-950: #3a1206;
+
+  /* Sıcak nötr rampa (slate yerine) */
+  --color-slate-50: #faf7f5;
+  --color-slate-100: #f3ede9;
+  --color-slate-200: #e4dad4;
+  --color-slate-300: #cfc1b8;
+  --color-slate-400: #bababa;
+  --color-slate-500: #94867e;
+  --color-slate-600: #6e5c51;
+  --color-slate-700: #453027;
+  --color-slate-800: #2b1f1c;
+  --color-slate-900: #1d1719;
+  --color-slate-950: #161316;
+
+  /* Koyu yüzeyler (zinc yerine) */
+  --color-zinc-50: #faf7f5;
+  --color-zinc-100: #f3ede9;
+  --color-zinc-200: #e4dad4;
+  --color-zinc-300: #cfc1b8;
+  --color-zinc-400: #bababa;
+  --color-zinc-500: #8d8079;
+  --color-zinc-600: #5b4a42;
+  --color-zinc-700: #3a2a24;
+  --color-zinc-800: #241b1b;
+  --color-zinc-900: #161316;
+  --color-zinc-950: #0e0c0e;
+
+  /* Anlamsal renkler sıcak zeminle uyumlu hale getirildi */
+  --color-emerald-50: #eefaf3;
+  --color-emerald-100: #d3f2e1;
+  --color-emerald-300: #7fd6ab;
+  --color-emerald-400: #4cc189;
+  --color-emerald-500: #22a76c;
+  --color-emerald-600: #158a58;
+  --color-emerald-700: #106e47;
+  --color-emerald-900: #0a3d29;
+  --color-emerald-950: #06251a;
+
+  --color-blue-50: #eef4fb;
+  --color-blue-100: #d8e6f7;
+  --color-blue-200: #b4cdec;
+  --color-blue-300: #8db2e0;
+  --color-blue-400: #6693d0;
+  --color-blue-500: #4a78bb;
+  --color-blue-600: #395f9c;
+  --color-blue-700: #2d4a7a;
+  --color-blue-800: #223757;
+  --color-blue-900: #1a2a42;
+  --color-blue-950: #101a2a;
+}
+
 :root {
-  --donut-track: #e9edf2;
+  --donut-track: #e4dad4;
+  --brand: #ff6d29;
+  --glass-tint: 255 255 255;
 }
 
 .dark {
-  --donut-track: #3f3f46;
+  --donut-track: #3a2a24;
+  --glass-tint: 255 236 226;
 }
 
-/* Neon vurgu (ör. Arsapay / Ruhsat Hesap sol panel butonları) */
+/* Referans paletindeki #BABABA nötr grisi koyu zeminde ideal (9.5:1) ancak
+   açık krem zeminde okunmuyor (1.83:1). İkincil metin tonları bu yüzden
+   yalnızca açık modda koyulaştırılır; koyu mod referansa birebir sadık
+   kalır. Bu iki basamak neredeyse tamamen metin için kullanılıyor. */
+html:not(.dark) {
+  --color-slate-400: #7d716a;
+  --color-slate-500: #6b605a;
+  --color-zinc-400: #7d716a;
+  --color-zinc-500: #6b605a;
+}
+
+/* ---------------------------------------------------------------------------
+   Zemin — referanslardaki sıcak turuncu ışık sızıntısı
+--------------------------------------------------------------------------- */
+body {
+  background:
+    radial-gradient(
+      115% 85% at 8% 78%,
+      rgba(255, 109, 41, 0.22) 0%,
+      rgba(255, 109, 41, 0.07) 34%,
+      transparent 62%
+    ),
+    radial-gradient(85% 65% at 92% 6%, rgba(69, 48, 39, 0.12) 0%, transparent 60%),
+    linear-gradient(155deg, #fdf7f3 0%, #f6ece5 42%, #eee1d8 100%);
+  background-attachment: fixed;
+  color: #1d1719;
+  font-family: "Neue Montreal", "Inter Variable", "Inter", system-ui,
+    -apple-system, "Segoe UI", Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.dark body {
+  background:
+    radial-gradient(
+      120% 90% at 6% 74%,
+      rgba(255, 109, 41, 0.3) 0%,
+      rgba(255, 109, 41, 0.1) 32%,
+      transparent 64%
+    ),
+    radial-gradient(90% 70% at 90% 10%, rgba(69, 48, 39, 0.55) 0%, transparent 62%),
+    linear-gradient(160deg, #161316 0%, #1c1618 46%, #100e10 100%);
+  background-attachment: fixed;
+  color: #f3ede9;
+}
+
+/* ---------------------------------------------------------------------------
+   Glassmorphism yardımcıları
+--------------------------------------------------------------------------- */
+.glass {
+  background: rgb(var(--glass-tint) / 0.62);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 10px 34px rgba(69, 48, 39, 0.12);
+}
+.dark .glass {
+  background: rgba(38, 28, 27, 0.5);
+  border-color: rgba(255, 186, 150, 0.14);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.42);
+}
+
+/* Kenarında ince turuncu ışık taşıyan cam yüzey (öne çıkan paneller) */
+.glass-brand {
+  border-color: rgba(255, 109, 41, 0.3);
+  box-shadow: 0 10px 34px rgba(196, 61, 11, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.dark .glass-brand {
+  border-color: rgba(255, 109, 41, 0.28);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 160, 120, 0.12);
+}
+
+/* Neon vurgu (Arsapay / Ruhsat Hesap kısayolları) — marka turuncusu */
 .neon {
-  color: #ff8a00;
-  border: 1px solid #ff8a00;
+  color: var(--brand);
+  border: 1px solid var(--brand);
   border-radius: 100px;
   animation: neon-pulse 2s ease-in-out infinite;
 }
 @keyframes neon-pulse {
   0%,
   100% {
-    text-shadow: 0 0 4px #ff8a00;
-    box-shadow: 0 0 6px -1px #ff8a00, inset 0 0 6px -2px #ff8a00;
+    text-shadow: 0 0 4px var(--brand);
+    box-shadow: 0 0 6px -1px var(--brand), inset 0 0 6px -2px var(--brand);
   }
   50% {
-    text-shadow: 0 0 12px #ff8a00, 0 0 22px #ff8a00;
-    box-shadow: 0 0 18px 0 #ff8a00, inset 0 0 12px -2px #ff8a00;
+    text-shadow: 0 0 12px var(--brand), 0 0 22px var(--brand);
+    box-shadow: 0 0 18px 0 var(--brand), inset 0 0 12px -2px var(--brand);
   }
 }
 
@@ -47,18 +240,11 @@
   animation-play-state: paused;
 }
 
-body {
-  background: linear-gradient(125deg, #f8d9bc 0%, #f2e6dc 22%, #e8edf3 55%, #c9d9ec 100%)
-    fixed;
-  color: #0f172a;
-  font-family: "Inter Variable", "Inter", system-ui, -apple-system,
-    "Segoe UI", Arial, Helvetica, sans-serif;
-}
-
-.dark body {
-  background: linear-gradient(125deg, #1a1a1d 0%, #212124 45%, #161618 100%)
-    fixed;
-  color: #e4e4e7;
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .neon {
+    animation: none;
+  }
 }
 
 /* Resmi evrak sayfası (şablon editörü) */
