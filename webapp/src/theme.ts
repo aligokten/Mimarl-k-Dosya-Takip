@@ -4,12 +4,12 @@ const KEY = "mimarlik-theme";
 
 type Theme = "light" | "dark";
 
+// Ruhsat360 kimliği koyu tema üzerine kurulu; kullanıcı daha önce açık modu
+// seçmediyse koyu modla açılır (açık mod yine başlıktaki düğmeden seçilebilir).
 function readStored(): Theme {
   const stored = localStorage.getItem(KEY);
   if (stored === "dark" || stored === "light") return stored;
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return "dark";
 }
 
 let theme: Theme = readStored();

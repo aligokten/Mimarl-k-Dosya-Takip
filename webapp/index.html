@@ -22,6 +22,27 @@
         } catch (e) {}
       })();
     </script>
+    <script>
+      // Tema sınıfını React yüklenmeden önce uygula; aksi halde koyu tema
+      // kullanıcısında bir kare boyunca açık zemin görünüp göz alıyor.
+      (function () {
+        try {
+          var stored = localStorage.getItem("mimarlik-theme");
+          if (stored !== "light") {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (e) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+    <meta name="color-scheme" content="dark light" />
+    <meta
+      name="theme-color"
+      content="#161316"
+      media="(prefers-color-scheme: dark)"
+    />
+    <meta name="theme-color" content="#fdf7f3" />
     <title>Ruhsat360</title>
     <link rel="icon" type="image/png" href="/brand/favicon.png" />
     <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />

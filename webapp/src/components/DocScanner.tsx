@@ -488,8 +488,8 @@ export default function DocScanner({
                 >
                   <polygon
                     points={corners.map((c) => `${c.x},${c.y}`).join(" ")}
-                    fill="rgba(249,115,22,0.15)"
-                    stroke="#f97316"
+                    fill="rgba(255,109,41,0.15)"
+                    stroke="#ff6d29"
                     strokeWidth={handleR / 4}
                   />
                   {corners.map((c, i) => (
@@ -498,7 +498,7 @@ export default function DocScanner({
                       cx={c.x}
                       cy={c.y}
                       r={handleR}
-                      fill="#f97316"
+                      fill="#ff6d29"
                       stroke="#fff"
                       strokeWidth={handleR / 4}
                       style={{ cursor: "grab" }}
