@@ -273,10 +273,31 @@ body {
   letter-spacing: 0.04em;
   margin-bottom: 1.2em;
 }
-.doc-sheet h2 {
-  font-size: 14px;
+/* Dilekçe başlıkları sayfaya ortalanır; imza/mal sahibi künyesi gibi sola
+   dayanması gereken bloklar "Dilekçe Düzenini Uygula" ile (ya da araç
+   çubuğundaki hizalama düğmeleriyle) satır içi stil alır ve bunu ezer. */
+.doc-sheet h2,
+.doc-sheet h3 {
+  text-align: center;
   font-weight: 700;
   margin: 1.1em 0 0.4em;
+}
+.doc-sheet h2 {
+  font-size: 14px;
+}
+.doc-sheet h3 {
+  font-size: 13.5px;
+}
+.doc-sheet .sol {
+  text-align: left;
+}
+
+/* Verilerden doldurulan alanlar ekranda hafifçe vurgulanır — hangi bilginin
+   otomatik geldiği görünsün diye. Baskıya/PDF'e yansımaz. */
+.doc-sheet [data-token] {
+  background: rgba(255, 109, 41, 0.12);
+  border-radius: 3px;
+  padding: 0 1px;
 }
 .doc-sheet p {
   margin: 0.55em 0;
@@ -348,5 +369,10 @@ body {
     border-radius: 0 !important;
     box-shadow: none !important;
     background: #fff !important;
+  }
+  /* Otomatik doldurulan alanların ekrandaki vurgusu baskıya çıkmaz. */
+  .print-sheet [data-token] {
+    background: none !important;
+    padding: 0 !important;
   }
 }
