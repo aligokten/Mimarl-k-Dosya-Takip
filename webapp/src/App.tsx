@@ -3,6 +3,7 @@ import { Link, Navigate, NavLink, Route, Routes } from "react-router-dom";
 import clsx from "clsx";
 import { signOutUser, useApp } from "./data";
 import { toggleTheme, useTheme } from "./theme";
+import { useHeaderFaded } from "./useHeaderFaded";
 import NotificationBell from "./components/NotificationBell";
 import ChatWidget from "./components/ChatWidget";
 import ArsapayModal from "./components/ArsapayModal";
@@ -88,6 +89,7 @@ function accessWarningForDate(value?: string) {
 export default function App() {
   const app = useApp();
   const theme = useTheme();
+  const { faded: headerFaded, scrolled: headerScrolled } = useHeaderFaded();
   const me = app.me!;
   const [arsapayOpen, setArsapayOpen] = useState(false);
   const [ruhsatHesapOpen, setRuhsatHesapOpen] = useState(false);
@@ -105,7 +107,17 @@ export default function App() {
   return (
     <div className="min-h-screen px-2 py-3 sm:px-4 sm:py-6">
       <div className="glass mx-auto max-w-[1240px] rounded-[2rem]">
-        <header className="no-print flex items-center justify-between gap-2 px-5 pt-5 sm:px-8 sm:pt-6">
+        <header
+          className={clsx(
+            // Tüm sayfalarda kaydırma boyunca üstte kalır. Altından geçen
+            // içeriği örtmesi için kendi cam zemini var.
+            "app-header no-print sticky top-0 z-40 flex items-center justify-between gap-2 px-5 pb-4 pt-5 transition-opacity duration-300 sm:px-8 sm:pt-6",
+            // Tepeye yapışmadan önce kartın yuvarlak üst köşelerini izler;
+            // yapışınca köşeler düzleşir ki altındaki içerik köşelerden sızmasın.
+            headerScrolled ? "rounded-t-none" : "rounded-t-[2rem]",
+            headerFaded ? "opacity-40" : "opacity-100"
+          )}
+        >
           <Link to="/" className="flex items-center gap-2.5">
             <img
               src={`${import.meta.env.BASE_URL}brand/app-icon-512.png`}

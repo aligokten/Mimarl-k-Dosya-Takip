@@ -202,6 +202,19 @@ body {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.42);
 }
 
+/* Sabit üst başlık çubuğu: sayfa kaydırılırken üstte kalır, altından geçen
+   içeriği örtebilmesi için kendi (cam kabından daha opak) zemini vardır. */
+.app-header {
+  background: rgb(var(--glass-tint) / 0.78);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border-bottom: 1px solid rgba(69, 48, 39, 0.08);
+}
+.dark .app-header {
+  background: rgba(28, 21, 21, 0.82);
+  border-bottom-color: rgba(255, 186, 150, 0.1);
+}
+
 /* Kenarında ince turuncu ışık taşıyan cam yüzey (öne çıkan paneller) */
 .glass-brand {
   border-color: rgba(255, 109, 41, 0.3);
