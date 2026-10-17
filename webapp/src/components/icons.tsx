@@ -271,6 +271,15 @@ export function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
+export function DropletIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M12 3.2c3.3 3.5 5.5 6.3 5.5 8.9a5.5 5.5 0 0 1-11 0c0-2.6 2.2-5.4 5.5-8.9z" />
+      <path d="M9.6 13.4a2.6 2.6 0 0 0 2.6 2.6" />
+    </Svg>
+  );
+}
+
 export function ChatIcon({ className }: { className?: string }) {
   return (
     <Svg className={className}>

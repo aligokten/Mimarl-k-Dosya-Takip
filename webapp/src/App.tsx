@@ -8,10 +8,12 @@ import NotificationBell from "./components/NotificationBell";
 import ChatWidget from "./components/ChatWidget";
 import ArsapayModal from "./components/ArsapayModal";
 import RuhsatHesapModal from "./components/RuhsatHesapModal";
+import SuDeposuModal from "./components/SuDeposuModal";
 import {
   BuildingIcon,
   CalculatorIcon,
   CoinsIcon,
+  DropletIcon,
   FileIcon,
   FolderIcon,
   GearIcon,
@@ -93,6 +95,7 @@ export default function App() {
   const me = app.me!;
   const [arsapayOpen, setArsapayOpen] = useState(false);
   const [ruhsatHesapOpen, setRuhsatHesapOpen] = useState(false);
+  const [suDeposuOpen, setSuDeposuOpen] = useState(false);
 
   const navItems = app.platformAdmin
     ? [
@@ -222,6 +225,14 @@ export default function App() {
             <CalculatorIcon className="h-4 w-4" />
             Ruhsat Hesap
           </button>
+          <button
+            type="button"
+            onClick={() => setSuDeposuOpen(true)}
+            className="neon flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/50 px-3.5 py-1.5 text-sm font-medium backdrop-blur-md dark:bg-white/[0.06]"
+          >
+            <DropletIcon className="h-4 w-4" />
+            Su Deposu
+          </button>
         </nav>
 
         <div className="flex gap-3 px-3 pb-8 pt-5 sm:px-5 md:gap-6 md:pl-4">
@@ -290,6 +301,19 @@ export default function App() {
               </span>
             </button>
             <button
+              type="button"
+              onClick={() => setSuDeposuOpen(true)}
+              title="Su Deposu Hesapları"
+              className="group flex flex-col items-center gap-1"
+            >
+              <span className="neon flex h-12 w-12 items-center justify-center rounded-full bg-white/50 backdrop-blur-md transition group-hover:brightness-110 dark:bg-white/[0.06]">
+                <DropletIcon className="h-5 w-5" />
+              </span>
+              <span className="max-w-[4.5rem] truncate text-center text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                Su Deposu
+              </span>
+            </button>
+            <button
               onClick={() => signOutUser()}
               title="Çıkış Yap"
               className="mt-1 flex h-12 w-12 items-center justify-center rounded-full border border-slate-200/70 bg-white/60 text-slate-400 backdrop-blur-md transition hover:border-red-300 hover:text-red-500 dark:border-white/10 dark:bg-white/[0.07] dark:text-slate-500 dark:hover:border-red-500/40 dark:hover:text-red-400"
@@ -340,6 +364,7 @@ export default function App() {
       {ruhsatHesapOpen && (
         <RuhsatHesapModal onClose={() => setRuhsatHesapOpen(false)} />
       )}
+      {suDeposuOpen && <SuDeposuModal onClose={() => setSuDeposuOpen(false)} />}
     </div>
   );
 }
