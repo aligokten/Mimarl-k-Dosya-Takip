@@ -5,6 +5,7 @@ import { signOutUser, useApp } from "./data";
 import { toggleTheme, useTheme } from "./theme";
 import { useHeaderFaded } from "./useHeaderFaded";
 import NotificationBell from "./components/NotificationBell";
+import GlobalSearch from "./components/GlobalSearch";
 import ChatWidget from "./components/ChatWidget";
 import ArsapayModal from "./components/ArsapayModal";
 import RuhsatHesapModal from "./components/RuhsatHesapModal";
@@ -121,7 +122,7 @@ export default function App() {
             headerFaded ? "opacity-40" : "opacity-100"
           )}
         >
-          <Link to="/" className="flex items-center gap-2.5">
+          <Link to="/" className="flex shrink-0 items-center gap-2.5">
             <img
               src={`${import.meta.env.BASE_URL}brand/app-icon-512.png`}
               alt="Ruhsat360"
@@ -140,7 +141,13 @@ export default function App() {
               </span>
             </span>
           </Link>
-          <div className="flex items-center gap-2">
+          {/* Panel geneli arama (Ctrl/⌘+K) — referanstaki gibi üst barın
+              ortasında, her sayfada erişilebilir. */}
+          <div className="flex min-w-0 flex-1 justify-end px-2 md:justify-center md:px-6">
+            <GlobalSearch />
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
             <NotificationBell />
             <button
               type="button"

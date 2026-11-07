@@ -28,9 +28,12 @@ import {
   ChevronRightIcon,
   CircleIcon,
   CloudIcon,
+  FileIcon,
   FolderIcon,
+  GridIcon,
   PenIcon,
   TrashIcon,
+  UsersIcon,
 } from "../components/icons";
 import type { AppState } from "../data";
 import { CONSTRUCTION_TERMS } from "../terms";
@@ -135,6 +138,170 @@ function Donut({
   );
 }
 
+// --- Panel görsel dili -------------------------------------------------
+// Doygun degrade kareler yerine yumuşak tonlu ikon çipleri, ortak kart
+// başlığı, KPI kutusu, yüzdeli lejant satırı ve zaman rozeti.
+
+const CHIP_TONES = {
+  brand: "bg-brand-500/15 text-brand-600 dark:text-brand-400",
+  violet: "bg-violet-500/15 text-violet-600 dark:text-violet-300",
+  blue: "bg-blue-500/15 text-blue-600 dark:text-blue-300",
+  emerald: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+  slate: "bg-slate-500/15 text-slate-600 dark:text-slate-300",
+} as const;
+
+type Ton = keyof typeof CHIP_TONES;
+
+function IconChip({
+  tone = "brand",
+  büyük = false,
+  children,
+}: {
+  tone?: Ton;
+  büyük?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className={clsx(
+        "flex shrink-0 items-center justify-center rounded-xl",
+        büyük ? "h-10 w-10" : "h-8 w-8",
+        CHIP_TONES[tone]
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function CardHead({
+  icon,
+  tone,
+  title,
+  subtitle,
+  action,
+}: {
+  icon: React.ReactNode;
+  tone?: Ton;
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <IconChip tone={tone}>{icon}</IconChip>
+        <div className="min-w-0">
+          <h2 className="truncate text-base font-bold text-slate-900 dark:text-white">
+            {title}
+          </h2>
+          {subtitle && (
+            <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+              {subtitle}
+            </p>
+          )}
+        </div>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function StatCard({
+  icon,
+  tone,
+  label,
+  value,
+  hint,
+  to,
+}: {
+  icon: React.ReactNode;
+  tone?: Ton;
+  label: string;
+  value: React.ReactNode;
+  hint?: string;
+  to?: string;
+}) {
+  const inner = (
+    <>
+      <IconChip tone={tone} büyük>
+        {icon}
+      </IconChip>
+      <div className="min-w-0">
+        <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">
+          {label}
+        </p>
+        <p className="text-2xl font-bold leading-tight tracking-tight text-slate-900 dark:text-white">
+          {value}
+        </p>
+        {hint && (
+          <p className="truncate text-[11px] text-slate-400 dark:text-slate-500">
+            {hint}
+          </p>
+        )}
+      </div>
+    </>
+  );
+  const cls = `${cardCls} flex items-center gap-3 p-4`;
+  return to ? (
+    <Link to={to} className={`${cls} transition hover:brightness-[1.04]`}>
+      {inner}
+    </Link>
+  ) : (
+    <div className={cls}>{inner}</div>
+  );
+}
+
+function LegendRow({
+  color,
+  label,
+  value,
+  total,
+}: {
+  color: string;
+  label: string;
+  value: number;
+  total: number;
+}) {
+  const yuzde = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span
+        className="h-2.5 w-2.5 shrink-0 rounded-full"
+        style={{ backgroundColor: color }}
+      />
+      <span className="min-w-0 flex-1 truncate font-medium text-slate-600 dark:text-slate-300">
+        {label}
+      </span>
+      <span className="shrink-0 font-bold tabular-nums text-slate-900 dark:text-white">
+        {value}
+      </span>
+      <span className="w-9 shrink-0 text-right tabular-nums text-slate-400 dark:text-slate-500">
+        %{yuzde}
+      </span>
+    </div>
+  );
+}
+
+function TimePill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="shrink-0 rounded-full bg-slate-500/10 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+      {children}
+    </span>
+  );
+}
+
+function TumunuGor({ to }: { to: string }) {
+  return (
+    <Link
+      to={to}
+      className="shrink-0 whitespace-nowrap text-xs font-semibold text-brand-600 transition hover:text-brand-500 dark:text-brand-400"
+    >
+      Tümünü Gör →
+    </Link>
+  );
+}
+
 interface DayEvent {
   projectId: string;
   projectName: string;
@@ -176,12 +343,19 @@ function CalendarCard({ db }: { db: AppState }) {
   return (
     <div className={`${cardCls} p-5`}>
       <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <IconChip tone="blue">
             <CalendarIcon className="h-4 w-4" />
-          </span>
-          Takvim
-        </h2>
+          </IconChip>
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-bold text-slate-900 dark:text-white">
+              Takvim
+            </h2>
+            <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+              Hedef tarihler
+            </p>
+          </div>
+        </div>
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -301,10 +475,10 @@ function TodoCard({ db }: { db: AppState }) {
 
   return (
     <div className={`${cardCls} flex h-full flex-col p-5`}>
-      <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 text-white">
+      <h2 className="flex items-center gap-2.5 text-base font-bold text-slate-900 dark:text-white">
+        <IconChip tone="emerald">
           <CheckCircleIcon className="h-4 w-4" />
-        </span>
+        </IconChip>
         Yapılacak İşler
       </h2>
 
@@ -466,7 +640,7 @@ export default function Dashboard() {
     0
   );
 
-  const upcoming = db.projects
+  const upcomingAll = db.projects
     .flatMap((p) =>
       p.services
         .filter((s) => s.status === "DEVAM_EDIYOR" && s.targetDate)
@@ -480,8 +654,11 @@ export default function Dashboard() {
     )
     .sort((a, b) =>
       (a.service.targetDate ?? "").localeCompare(b.service.targetDate ?? "")
-    )
-    .slice(0, 4);
+    );
+  const upcoming = upcomingAll.slice(0, 4);
+  const upcomingCount = upcomingAll.length;
+  const activeCount =
+    statusCounts.find((s) => s.status === "DEVAM_EDIYOR")?.value ?? 0;
 
   const recentActivity = db.activityFeed.slice(0, 5);
 
@@ -496,6 +673,7 @@ export default function Dashboard() {
     }))
     .filter((s) => s.count > 0)
     .sort((a, b) => b.count - a.count);
+  const serviceTotal = serviceDistribution.reduce((sum, s) => sum + s.count, 0);
   const SERVICE_COLORS = [
     "#7c3aed",
     "#f97316",
@@ -539,87 +717,111 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Özet göstergeler */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard
+          icon={<FolderIcon className="h-5 w-5" />}
+          tone="brand"
+          label="Toplam Proje"
+          value={db.projects.length}
+          hint={`${activeCount} devam ediyor`}
+          to="/projeler"
+        />
+        <StatCard
+          icon={<CheckCircleIcon className="h-5 w-5" />}
+          tone="violet"
+          label="Yaklaşan İş"
+          value={upcomingCount}
+          hint="Hedef tarihi girilmiş"
+        />
+        <StatCard
+          icon={<FileIcon className="h-5 w-5" />}
+          tone="blue"
+          label="Kayıtlı Evrak"
+          value={documentCount}
+          hint={`${db.projects.length} projede`}
+        />
+        <StatCard
+          icon={<UsersIcon className="h-5 w-5" />}
+          tone="emerald"
+          label="Kişi"
+          value={db.contacts.length}
+          hint="Müşteri, arsa sahibi, müteahhit"
+          to="/kisiler"
+        />
+      </div>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Yaklaşan İşler */}
         <div className={`${cardCls} p-5`}>
-          <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 text-white">
-                <CheckCircleIcon className="h-4 w-4" />
-              </span>
-              Yaklaşan İşler
-            </h2>
-            <Link
-              to="/projeler/yeni"
-              title="Yeni Proje"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg font-semibold text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-zinc-800 dark:text-slate-300 dark:ring-slate-600 dark:hover:bg-zinc-700"
-            >
-              +
-            </Link>
-          </div>
-          <div className="mt-4 space-y-3">
-            {upcoming.length === 0 && (
-              <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500 dark:bg-zinc-800/60 dark:text-slate-400">
+          <CardHead
+            icon={<CheckCircleIcon className="h-4 w-4" />}
+            tone="brand"
+            title="Yaklaşan İşler"
+            subtitle="Hedef tarihi en yakın hizmetler"
+            action={<TumunuGor to="/projeler" />}
+          />
+          <div className="mt-4">
+            {upcoming.length === 0 ? (
+              <p className="rounded-2xl bg-slate-500/5 p-4 text-sm text-slate-500 dark:text-slate-400">
                 Hedef tarihi girilmiş devam eden iş yok. Proje detayındaki
                 &quot;Hizmetler ve Aşamalar&quot; sekmesinden hedef tarih
                 verebilirsiniz.
               </p>
-            )}
-            {upcoming.map(({ project, service, serviceType }, idx) => (
-              <Link
-                key={service.id}
-                to={`/projeler/${project.id}`}
-                className={clsx(
-                  "block rounded-2xl p-4 transition hover:brightness-[0.98]",
-                  idx % 2 === 0
-                    ? "bg-orange-50 dark:bg-orange-500/15"
-                    : "bg-blue-50 dark:bg-blue-500/15"
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-600 shadow-sm dark:bg-zinc-800 dark:text-slate-300">
-                    <FolderIcon className="h-4 w-4" />
-                  </span>
-                  <CheckCircleIcon className="h-5 w-5 shrink-0 text-slate-300 dark:text-slate-600" />
+            ) : (
+              <>
+                <div className="flex items-center gap-2 border-b border-slate-200/70 px-1 pb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:border-white/10 dark:text-slate-500">
+                  <span className="min-w-0 flex-1">Proje / Hizmet</span>
+                  <span className="shrink-0">Hedef</span>
                 </div>
-                <p className="mt-2 text-sm font-bold text-slate-900 dark:text-white">
-                  {project.name}
-                </p>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                  {serviceType?.name ?? "-"} · Hedef:{" "}
-                  {service.targetDate
-                    ? format(new Date(service.targetDate), "d MMMM yyyy", {
-                        locale: tr,
-                      })
-                    : "-"}
-                </p>
-              </Link>
-            ))}
+                <ul className="divide-y divide-slate-200/60 dark:divide-white/5">
+                  {upcoming.map(({ project, service, serviceType }) => (
+                    <li key={service.id}>
+                      <Link
+                        to={`/projeler/${project.id}`}
+                        className="flex items-center gap-2.5 rounded-xl px-1 py-2.5 transition hover:bg-slate-500/5"
+                      >
+                        <IconChip tone="slate">
+                          <FolderIcon className="h-4 w-4" />
+                        </IconChip>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">
+                            {project.name}
+                          </span>
+                          <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">
+                            {serviceType?.name ?? "-"}
+                          </span>
+                        </span>
+                        <TimePill>
+                          {service.targetDate
+                            ? format(new Date(service.targetDate), "d MMM yyyy", {
+                                locale: tr,
+                              })
+                            : "-"}
+                        </TimePill>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
         </div>
 
         {/* Projeler Özeti (donut) */}
         <div className={`${cardCls} p-5`}>
-          <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-violet-700 text-white">
-                <FolderIcon className="h-4 w-4" />
-              </span>
-              Projeler Özeti
-            </h2>
-            <Link
-              to="/projeler"
-              title="Projelere git"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-zinc-800 dark:text-slate-400 dark:ring-slate-600 dark:hover:bg-zinc-700"
-            >
-              ↗
-            </Link>
-          </div>
-          <div className="mt-2 flex flex-col items-center">
-            <div className="relative">
-              <Donut segments={statusCounts} />
+          <CardHead
+            icon={<FolderIcon className="h-4 w-4" />}
+            tone="violet"
+            title="Projeler Özeti"
+            subtitle="Duruma göre dağılım"
+            action={<TumunuGor to="/projeler" />}
+          />
+          <div className="mt-4 flex items-center gap-5">
+            <div className="relative shrink-0">
+              <Donut segments={statusCounts} size={120} />
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                <span className="text-2xl font-bold text-slate-900 dark:text-white">
                   {db.projects.length}
                 </span>
                 <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
@@ -627,25 +829,21 @@ export default function Dashboard() {
                 </span>
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
+            <div className="min-w-0 flex-1 space-y-2">
               {statusCounts.map((s) => (
-                <span
+                <LegendRow
                   key={s.status}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300"
-                >
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: s.color }}
-                  />
-                  {s.label}: {s.value}
-                </span>
+                  color={s.color}
+                  label={s.label}
+                  value={s.value}
+                  total={db.projects.length}
+                />
               ))}
             </div>
-            <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-              Toplam {documentCount} kayıtlı evrak · {db.contacts.length}{" "}
-              kişi
-            </p>
           </div>
+          <p className="mt-4 border-t border-slate-200/70 pt-3 text-xs text-slate-400 dark:border-white/10 dark:text-slate-500">
+            Toplam {documentCount} kayıtlı evrak · {db.contacts.length} kişi
+          </p>
         </div>
 
         {/* Takvim */}
@@ -655,39 +853,38 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
         <div className="space-y-4">
           {/* Hizmet Dağılımı (küçültülmüş) */}
-          <div className={`${cardCls} p-4`}>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-              Hizmet Dağılımı
-            </h2>
+          <div className={`${cardCls} p-5`}>
+            <CardHead
+              icon={<GridIcon className="h-4 w-4" />}
+              tone="blue"
+              title="Hizmet Dağılımı"
+              subtitle="Projelerdeki hizmet türleri"
+            />
             {serviceDistribution.length === 0 ? (
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
                 Henüz projelere hizmet eklenmemiş.
               </p>
             ) : (
-              <div className="mt-3 flex items-center gap-4">
+              <div className="mt-4 flex items-center gap-5">
                 <Donut
-                  size={96}
+                  size={104}
                   segments={serviceDistribution.map((s, idx) => ({
                     value: s.count,
                     color: SERVICE_COLORS[idx % SERVICE_COLORS.length],
                   }))}
                 />
-                <div className="min-w-0 flex-1 space-y-1.5 overflow-y-auto pr-1" style={{ maxHeight: 96 }}>
+                <div
+                  className="min-w-0 flex-1 space-y-2 overflow-y-auto pr-1"
+                  style={{ maxHeight: 112 }}
+                >
                   {serviceDistribution.map((service, idx) => (
-                    <div key={service.name} className="flex items-center gap-1.5 text-xs">
-                      <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{
-                          backgroundColor: SERVICE_COLORS[idx % SERVICE_COLORS.length],
-                        }}
-                      />
-                      <span className="min-w-0 flex-1 truncate font-medium text-slate-600 dark:text-slate-300">
-                        {service.name}
-                      </span>
-                      <span className="shrink-0 font-bold text-slate-900 dark:text-white">
-                        {service.count}
-                      </span>
-                    </div>
+                    <LegendRow
+                      key={service.name}
+                      color={SERVICE_COLORS[idx % SERVICE_COLORS.length]}
+                      label={service.name}
+                      value={service.count}
+                      total={serviceTotal}
+                    />
                   ))}
                 </div>
               </div>
@@ -695,11 +892,14 @@ export default function Dashboard() {
           </div>
 
           {/* Son İşlemler (küçültülmüş) */}
-          <div className={`${cardCls} p-4`}>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-              Son İşlemler
-            </h2>
-            <ul className="mt-2 max-h-52 divide-y divide-slate-100 overflow-y-auto dark:divide-zinc-700">
+          <div className={`${cardCls} p-5`}>
+            <CardHead
+              icon={<PenIcon className="h-4 w-4" />}
+              tone="emerald"
+              title="Son İşlemler"
+              subtitle="Ekibin son hareketleri"
+            />
+            <ul className="mt-3 max-h-56 divide-y divide-slate-200/60 overflow-y-auto dark:divide-white/5">
               {recentActivity.length === 0 && (
                 <li className="py-3 text-xs text-slate-500 dark:text-slate-400">
                   Henüz işlem yok.
@@ -709,23 +909,30 @@ export default function Dashboard() {
                 <li key={act.id}>
                   <Link
                     to={`/projeler/${act.projectId}`}
-                    className="block rounded-xl px-2 py-2 hover:bg-slate-50 dark:hover:bg-zinc-700/60"
+                    className="flex items-start gap-2.5 rounded-xl px-1 py-2.5 transition hover:bg-slate-500/5"
                   >
-                    <p className="text-xs font-medium text-slate-800 dark:text-slate-100">
-                      {act.text}
-                    </p>
-                    <p className="mt-0.5 flex flex-wrap gap-x-2 truncate text-[11px] text-slate-500 dark:text-slate-400">
-                      {act.projectName && (
-                        <span className="font-medium">{act.projectName}</span>
-                      )}
-                      <span>
-                        {act.byName} ·{" "}
-                        {formatDistanceToNow(new Date(act.at), {
-                          addSuffix: true,
-                          locale: tr,
-                        })}
+                    <IconChip tone="slate">
+                      <PenIcon className="h-4 w-4" />
+                    </IconChip>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-semibold text-slate-800 dark:text-slate-100">
+                        {act.text}
                       </span>
-                    </p>
+                      <span className="mt-0.5 block truncate text-[11px] text-slate-500 dark:text-slate-400">
+                        {act.projectName && (
+                          <span className="font-medium">
+                            {act.projectName} ·{" "}
+                          </span>
+                        )}
+                        {act.byName}
+                      </span>
+                    </span>
+                    <TimePill>
+                      {formatDistanceToNow(new Date(act.at), {
+                        addSuffix: true,
+                        locale: tr,
+                      })}
+                    </TimePill>
                   </Link>
                 </li>
               ))}
