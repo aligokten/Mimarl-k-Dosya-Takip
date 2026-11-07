@@ -110,7 +110,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen px-2 py-3 sm:px-4 sm:py-6">
-      <div className="glass mx-auto max-w-[1240px] rounded-[2rem]">
+      {/* Genişlik sınırı yok: içerik her ekranda (mobil, web, Windows
+          uygulaması) pencereyi doldurur. */}
+      <div className="glass mx-auto w-full rounded-[2rem]">
         <header
           className={clsx(
             // Tüm sayfalarda kaydırma boyunca üstte kalır. Altından geçen
@@ -122,21 +124,23 @@ export default function App() {
             headerFaded ? "opacity-40" : "opacity-100"
           )}
         >
-          <Link to="/" className="flex shrink-0 items-center gap-2.5">
+          {/* min-w-0 + truncate şart: uzun ofis adlarında başlık aksi halde
+              ekrandan taşıyor, sağdaki düğmeler kartın dışına kayıyordu. */}
+          <Link to="/" className="flex min-w-0 items-center gap-2.5">
             <img
               src={`${import.meta.env.BASE_URL}brand/app-icon-512.png`}
               alt="Ruhsat360"
-              className="h-10 w-10 rounded-xl shadow-sm"
+              className="h-10 w-10 shrink-0 rounded-xl shadow-sm"
             />
-            <span className="leading-tight">
-              <span className="block text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-lg font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-xl">
                 {app.office?.name ?? (
                   <>
                     Ruhsat<span className="text-orange-500">360</span>
                   </>
                 )}
               </span>
-              <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              <span className="hidden truncate text-[11px] font-medium text-slate-500 dark:text-slate-400 sm:block">
                 Ruhsat360 · mimarlık ofisi
               </span>
             </span>

@@ -4,22 +4,37 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-      // Bazı mobil tarayıcılarda "Masaüstü Web Sitesi İste" seçeneği açıkken
-      // tarayıcı sayfanın viewport etiketini yok sayıp geniş (masaüstü) bir
-      // görünüm genişliği zorluyor; sayfa da bu genişliğe göre küçültülerek
-      // gösteriliyor. window.screen.width gerçek cihaz genişliğini verdiği
-      // için bunu viewport'a geri yazarak düzeltiyoruz.
+      // "Masaüstü Web Sitesi İste" açıkken tarayıcı viewport etiketini yok
+      // sayıp geniş bir masaüstü genişliği zorluyor. Bunu düzeltiyoruz; ancak
+      // YALNIZCA o durumda.
+      //
+      // Önceki sürüm viewport'a koşulsuz "width=<screen.width>" yazıyordu.
+      // screen.width güvenilir bir CSS genişliği değil (cihaza göre fiziksel
+      // piksel ya da yöne göre sabit bir değer dönebiliyor); gerçek yerleşim
+      // genişliğinden küçük geldiğinde sayfa ekranı doldurmayıp sağda ölü
+      // boşluk bırakıyordu. Artık yalnızca yerleşim genişliği cihaz
+      // ekranından belirgin biçimde büyükse (masaüstü site belirtisi)
+      // müdahale ediliyor, diğer tüm hâllerde width=device-width korunuyor.
       (function () {
-        try {
-          var vp = document.querySelector('meta[name="viewport"]');
-          var screenW = window.screen && window.screen.width;
-          if (vp && screenW && screenW > 0 && screenW < 820) {
-            vp.setAttribute(
-              "content",
-              "width=" + screenW + ", initial-scale=1.0"
-            );
-          }
-        } catch (e) {}
+        var VARSAYILAN = "width=device-width, initial-scale=1.0";
+        var vp = document.querySelector('meta[name="viewport"]');
+        if (!vp) return;
+        function duzelt() {
+          try {
+            var ekran = window.screen && window.screen.width;
+            var yerlesim = document.documentElement.clientWidth;
+            if (!ekran || !yerlesim) return;
+            if (yerlesim > ekran * 1.5) {
+              vp.setAttribute("content", "width=" + ekran + ", initial-scale=1.0");
+            } else if (vp.getAttribute("content") !== VARSAYILAN) {
+              vp.setAttribute("content", VARSAYILAN);
+            }
+          } catch (e) {}
+        }
+        duzelt();
+        window.addEventListener("resize", duzelt);
+        window.addEventListener("orientationchange", duzelt);
+        document.addEventListener("DOMContentLoaded", duzelt);
       })();
     </script>
     <script>
