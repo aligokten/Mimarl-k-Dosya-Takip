@@ -141,7 +141,18 @@ async function requestToken(): Promise<string> {
       error_callback: (err: any) => {
         let message: string;
         if (err?.type === "popup_closed") {
-          message = "Yetkilendirme penceresi kapatıldı.";
+          // Google, origin_mismatch gibi hataları kendi penceresinde
+          // gösterip pencereyi kapattırıyor; bize yalnızca "popup_closed"
+          // ulaşıyor. Sadece "pencere kapatıldı" demek yanlış yönlendirdiği
+          // için kayıtlı olması gereken adresi de yazıyoruz.
+          message =
+            "Yetkilendirme penceresi kapatıldı. Pencerede " +
+            '"Hata 400: origin_mismatch" yazdıysa bu adres Google Cloud ' +
+            "Console'da kayıtlı değildir: " +
+            window.location.origin +
+            " — Console > API'ler ve Hizmetler > Kimlik Bilgileri > OAuth " +
+            "istemciniz > \"Yetkili JavaScript kaynakları\" bölümüne bu " +
+            "adresi ekleyin.";
         } else if (
           err?.type === "popup_failed_to_open" ||
           /popup/i.test(err?.message ?? "")
