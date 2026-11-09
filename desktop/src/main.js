@@ -1,8 +1,27 @@
 const { app, BrowserWindow, shell, session } = require("electron");
 const path = require("path");
 
-const PANEL_URL = "https://panel.ruhsat360.com/?source=desktop";
+const PANEL_HOST = "panel.ruhsat360.com";
+const PANEL_URL = `https://${PANEL_HOST}/?source=desktop`;
 const ICON_PATH = path.join(__dirname, "icon.ico");
+
+// Panel yalnızca https üzerinden açılmalı. Sayfa http'ten açılırsa sayfanın
+// origin'i "http://panel.ruhsat360.com" olur; Google OAuth localhost dışında
+// http origin kabul etmediği için Drive bağlantısı "Hata 400:
+// origin_mismatch" ile reddedilir. Aşağıdaki üç nokta (gezinme, yeni pencere
+// ve ağ katmanı) panelin http'e düşmesini engeller.
+function httpsZorla(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname === PANEL_HOST && u.protocol === "http:") {
+      u.protocol = "https:";
+      return u.toString();
+    }
+  } catch (e) {
+    // URL çözümlenemezse olduğu gibi bırak.
+  }
+  return url;
+}
 
 let mainWindow = null;
 
@@ -31,24 +50,33 @@ function createMainWindow() {
   mainWindow.loadURL(PANEL_URL);
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    const hedef = httpsZorla(url);
     if (
-      url.startsWith("https://accounts.google.com/") ||
-      url.startsWith("https://oauth2.googleapis.com/") ||
-      url.startsWith("https://www.googleapis.com/") ||
-      url.startsWith("https://drive.google.com/") ||
-      url.startsWith("https://panel.ruhsat360.com/") ||
-      url.includes("google.com")
+      hedef.startsWith("https://accounts.google.com/") ||
+      hedef.startsWith("https://oauth2.googleapis.com/") ||
+      hedef.startsWith("https://www.googleapis.com/") ||
+      hedef.startsWith("https://drive.google.com/") ||
+      hedef.startsWith(`https://${PANEL_HOST}/`) ||
+      hedef.includes("google.com")
     ) {
       return { action: "allow" };
     }
 
-    shell.openExternal(url);
+    shell.openExternal(hedef);
     return { action: "deny" };
   });
 
   mainWindow.webContents.on("will-navigate", (event, url) => {
+    // Panele http ile gidilmeye çalışılırsa engelleyip https'e taşı.
+    const hedef = httpsZorla(url);
+    if (hedef !== url) {
+      event.preventDefault();
+      mainWindow.loadURL(hedef);
+      return;
+    }
+
     if (
-      url.startsWith("https://panel.ruhsat360.com/") ||
+      url.startsWith(`https://${PANEL_HOST}/`) ||
       url.startsWith("https://accounts.google.com/") ||
       url.includes("google.com")
     ) {
@@ -69,6 +97,21 @@ app.whenReady().then(() => {
     const allowedPermissions = ["notifications"];
     callback(allowedPermissions.includes(permission));
   });
+
+  // Son güvenlik ağı: panele giden her http isteği, kaynağı ne olursa olsun
+  // (yönlendirme, eski önbellek, elle girilen adres) ağ katmanında https'e
+  // çevrilir.
+  session.defaultSession.webRequest.onBeforeRequest(
+    { urls: [`http://${PANEL_HOST}/*`] },
+    (details, callback) => {
+      const hedef = httpsZorla(details.url);
+      if (hedef !== details.url) {
+        callback({ redirectURL: hedef });
+        return;
+      }
+      callback({});
+    }
+  );
 
   createMainWindow();
 
