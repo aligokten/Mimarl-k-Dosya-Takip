@@ -418,46 +418,50 @@ function buildDXF(originalPoly, pieces, unitM, textH) {
    UI
    ========================================================= */
 
-const FONT_DISPLAY = "'JetBrains Mono', 'IBM Plex Mono', monospace";
-const FONT_BODY = "'Inter', -apple-system, system-ui, sans-serif";
-const ACCENT = "#c1440e";
+// Panelin tipografisi ve marka rengi (bkz. src/index.css).
+const FONT_DISPLAY = "'Neue Montreal', 'Inter', -apple-system, system-ui, sans-serif";
+const FONT_BODY = "'Neue Montreal', 'Inter', -apple-system, system-ui, sans-serif";
+// Koordinat girişi gibi hizalama gerektiren alanlarda tek genişlikli yazı tipi.
+const FONT_MONO = "ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace";
+const ACCENT = "#ff6d29";
+const RADIUS = 14;
 
 const THEMES = {
   light: {
-    paper: "#faf9f6",
-    ink: "#1c1c1a",
-    rule: "#dcd9d1",
+    paper: "#faf7f5",
+    ink: "#1d1719",
+    rule: "#e4dad4",
     panel: "#ffffff",
-    muted: "#6b675c",
-    mutedLight: "#9a9686",
-    labelMuted: "#8a8678",
-    gridLine: "#f1efe9",
-    tableHeadBg: "#f5f3ee",
-    tableHeadText: "#55524a",
-    disabledText: "#aba795",
-    errorBg: "#fbeae3",
-    errorBorder: "#f0c9b4",
-    errorText: "#7a2e10",
-    infoBg: "#f3f1ea",
-    infoBorder: "#dcd9d1",
+    muted: "#7d716a",
+    mutedLight: "#a0938c",
+    labelMuted: "#8c7f78",
+    gridLine: "#f1e9e4",
+    tableHeadBg: "#f3ede9",
+    tableHeadText: "#55493f",
+    disabledText: "#b5a79f",
+    errorBg: "#fdecea",
+    errorBorder: "#f3c9c2",
+    errorText: "#8c2f20",
+    infoBg: "#f3ede9",
+    infoBorder: "#e4dad4",
   },
   dark: {
-    paper: "#181815",
-    ink: "#f0eee6",
-    rule: "#3a3934",
-    panel: "#222220",
-    muted: "#b8b4a7",
-    mutedLight: "#8c8979",
-    labelMuted: "#9b9788",
-    gridLine: "#28271f",
-    tableHeadBg: "#29281f",
-    tableHeadText: "#d2cfc2",
-    disabledText: "#5d5a4e",
-    errorBg: "#3a2417",
-    errorBorder: "#5b3a22",
-    errorText: "#f0b08c",
-    infoBg: "#242320",
-    infoBorder: "#3a3934",
+    paper: "#161316",
+    ink: "#f3ede9",
+    rule: "#3a2f2c",
+    panel: "#1e1718",
+    muted: "#bababa",
+    mutedLight: "#8c8179",
+    labelMuted: "#9b8f88",
+    gridLine: "#241b1b",
+    tableHeadBg: "#241b1b",
+    tableHeadText: "#d9cfc9",
+    disabledText: "#6b5f59",
+    errorBg: "#3a211d",
+    errorBorder: "#5e342c",
+    errorText: "#ef9d8c",
+    infoBg: "#241b1b",
+    infoBorder: "#3a2f2c",
   },
 };
 
@@ -926,24 +930,25 @@ export default function ArsaPaylastir() {
       .map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(2)},${p[1].toFixed(2)}`)
       .join(" ") + " Z";
 
-  const btnPrimary = { background: C.ink, color: C.paper, border: "none", padding: "11px 16px", fontFamily: FONT_DISPLAY, fontSize: 12.5, letterSpacing: "0.02em", fontWeight: 600 };
-  const btnGhost = { background: "transparent", color: C.ink, border: `1px solid ${C.rule}`, padding: "8px 12px", fontFamily: FONT_DISPLAY, fontSize: 11.5 };
-  const selectStyle = { width: "100%", border: `1px solid ${C.rule}`, padding: "7px 8px", fontSize: 13, background: C.panel, color: C.ink, fontFamily: FONT_BODY };
+  const btnPrimary = { background: ACCENT, color: "#ffffff", border: "none", borderRadius: 999, padding: "11px 18px", fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: "0.01em", fontWeight: 650, boxShadow: "0 6px 20px -6px rgba(255,109,41,0.9)" };
+  const btnGhost = { background: "transparent", color: C.ink, border: `1px solid ${C.rule}`, borderRadius: 999, padding: "7px 14px", fontFamily: FONT_DISPLAY, fontSize: 12, fontWeight: 500 };
+  const selectStyle = { width: "100%", border: `1px solid ${C.rule}`, borderRadius: 10, padding: "8px 10px", fontSize: 13, background: C.panel, color: C.ink, fontFamily: FONT_BODY };
+  const panelBox = { border: `1px solid ${C.rule}`, background: C.panel, borderRadius: RADIUS, overflow: "hidden" };
 
   return (
     <div style={{ fontFamily: FONT_BODY, background: C.paper, color: C.ink, minHeight: "100%", padding: "20px 16px 40px", boxSizing: "border-box" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap');
         * { box-sizing: border-box; }
-        button { cursor: pointer; }
+        button { cursor: pointer; transition: border-color .15s, color .15s, background .15s; }
         button:active { transform: translateY(1px); }
-        textarea:focus, input:focus { outline: 2px solid ${ACCENT}; outline-offset: 1px; }
+        input, textarea { border-radius: 10px; }
+        textarea:focus, input:focus, select:focus { outline: 2px solid ${ACCENT}; outline-offset: 1px; border-color: ${ACCENT}; }
       `}</style>
 
       <header style={{ maxWidth: 1040, margin: "0 auto 18px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ background: "#fff", padding: "5px 10px", borderRadius: 4, display: "flex" }}>
+            <div style={{ background: "#fff", padding: "6px 11px", borderRadius: 10, display: "flex" }}>
               <img src={logoUrl} alt="ArsaPay" style={{ height: 32, display: "block" }} />
             </div>
             <span style={{ fontFamily: FONT_DISPLAY, fontSize: 11, color: C.labelMuted, letterSpacing: "0.04em" }}>
@@ -955,12 +960,12 @@ export default function ArsaPaylastir() {
       </header>
 
       <div style={{ maxWidth: 1040, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr", gap: 18 }}>
-        <div style={{ border: `1px solid ${C.infoBorder}`, background: C.infoBg, padding: 12, fontSize: 12.5, lineHeight: 1.5, color: C.muted }}>
+        <div style={{ border: `1px solid ${C.infoBorder}`, background: C.infoBg, borderRadius: RADIUS, padding: 14, fontSize: 12.5, lineHeight: 1.5, color: C.muted }}>
           <b style={{ color: C.ink }}>Bilgilendirme:</b> Sitemizde yer alan veriler TKGM Parsel Sorgu sisteminden alınmakta olup, kesin imar bilgisi için işlem yapacağınız belediye ve ilgili birimlere başvurmanız gerekmektedir. Buradan edindiğiniz bilgilerin resmi bir bağlayıcılığı bulunmamaktadır.
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.3fr) minmax(280px,1fr)", gap: 18 }}>
-          <div style={{ border: `1px solid ${C.rule}`, background: C.panel }}>
+          <div style={panelBox}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderBottom: `1px solid ${C.rule}`, fontFamily: FONT_DISPLAY, fontSize: 11, letterSpacing: "0.03em", color: C.muted }}>
               <span>SINIR GÖRÜNÜMÜ</span>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1047,7 +1052,7 @@ export default function ArsaPaylastir() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ border: `1px solid ${C.rule}`, background: C.panel, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ ...panelBox, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ fontFamily: FONT_DISPLAY, fontSize: 11, letterSpacing: "0.03em", color: C.muted }}>
                 TKGM PARSEL SORGU
               </div>
@@ -1081,7 +1086,7 @@ export default function ArsaPaylastir() {
               {tkgmError && <div style={{ fontSize: 12, color: ACCENT }}>{tkgmError}</div>}
             </div>
 
-            <div style={{ border: `1px solid ${C.rule}`, background: C.panel, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ ...panelBox, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ fontFamily: FONT_DISPLAY, fontSize: 11, letterSpacing: "0.03em", color: C.muted }}>
                 MİLAS BELEDİYESİ E-İMAR (KEOS)
               </div>
@@ -1096,7 +1101,7 @@ export default function ArsaPaylastir() {
             </div>
 
             <Field label="Koordinatlar (x,y — her satır bir köşe)" C={C}>
-              <textarea value={pointsText} onChange={(e) => applyPointsText(e.target.value)} rows={6} style={{ width: "100%", fontFamily: FONT_DISPLAY, fontSize: 12, border: `1px solid ${C.rule}`, padding: 8, resize: "vertical", background: C.panel, color: C.ink }} />
+              <textarea value={pointsText} onChange={(e) => applyPointsText(e.target.value)} rows={6} style={{ width: "100%", fontFamily: FONT_MONO, fontSize: 12, border: `1px solid ${C.rule}`, borderRadius: 10, padding: 9, resize: "vertical", background: C.panel, color: C.ink }} />
             </Field>
             {parseError && <div style={{ fontSize: 12, color: ACCENT }}>{parseError}</div>}
             {!parseError && isGeoInput && (
@@ -1122,7 +1127,7 @@ export default function ArsaPaylastir() {
               Referans çizgisine dik kesimler kullan (şeritler çizgiye paralel)
             </label>
 
-            <div style={{ fontSize: 12, color: C.muted, fontFamily: FONT_DISPLAY }}>
+            <div style={{ fontSize: 12, color: C.muted, fontFamily: FONT_BODY, fontVariantNumeric: "tabular-nums" }}>
               Toplam alan: <b style={{ color: C.ink }}>{(totalArea * unitM * unitM).toFixed(2)} m²</b>
               {" · "}Hedef parça: <b style={{ color: C.ink }}>{((totalArea * unitM * unitM) / n).toFixed(2)} m²</b>
             </div>
@@ -1132,7 +1137,7 @@ export default function ArsaPaylastir() {
             </button>
 
             {status === "error" && (
-              <div style={{ fontSize: 12.5, color: C.errorText, background: C.errorBg, border: `1px solid ${C.errorBorder}`, padding: 10, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12.5, color: C.errorText, background: C.errorBg, border: `1px solid ${C.errorBorder}`, borderRadius: 12, padding: 11, lineHeight: 1.5 }}>
                 {errorMsg}
               </div>
             )}
@@ -1142,11 +1147,11 @@ export default function ArsaPaylastir() {
         </div>
 
         {pieces && (
-          <div style={{ border: `1px solid ${C.rule}`, background: C.panel }}>
+          <div style={panelBox}>
             <div style={{ padding: "8px 12px", borderBottom: `1px solid ${C.rule}`, fontFamily: FONT_DISPLAY, fontSize: 11, letterSpacing: "0.03em", color: C.muted }}>
               PARSEL PAYLAŞIM LEJANTI
             </div>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: FONT_DISPLAY, fontSize: 12.5 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: FONT_BODY, fontVariantNumeric: "tabular-nums", fontSize: 12.5 }}>
               <thead>
                 <tr style={{ background: C.tableHeadBg }}>
                   {["Parça", "Alan (m²)", "Min kenar (m)", "Renk", "Kenarlar (m)"].map((h) => (
@@ -1214,6 +1219,6 @@ function Field({ label, children, C }) {
 function NumberInput({ value, onChange, min, max, step, C }) {
   return (
     <input type="number" value={value} min={min} max={max} step={step} onChange={(e) => onChange(Number(e.target.value))}
-      style={{ width: "100%", border: `1px solid ${C.rule}`, padding: "7px 8px", fontSize: 13, background: C.panel, color: C.ink }} />
+      style={{ width: "100%", border: `1px solid ${C.rule}`, borderRadius: 10, padding: "8px 10px", fontSize: 13, background: C.panel, color: C.ink }} />
   );
 }
