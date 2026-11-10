@@ -1,11 +1,11 @@
 import { cardCls, secondaryBtnCls } from "../ui";
 import { CoinsIcon } from "./icons";
+import ArsaPaylastir from "../arsapay/ArsaPaylastir";
 
-// Arsapay (arsa payı / hisse dağıtım) aracı ayrı bir depoda yayınlanıyor ve
-// buraya iframe ile gömülüyor. Bu nedenle yalnızca modal çerçevesi panelin
-// tasarım diline uyarlanabiliyor; iframe içeriğinin teması o deponun kendi
-// dosyasından geliyor. Çerçeve, içeriğin açık zeminiyle uyumlu kalsın diye
-// iframe alanında nötr bir zemin kullanılıyor.
+// Arsapay artık Ruhsat360 içinde yerel bir modül (src/arsapay/). Önceden ayrı
+// depodaki GitHub Pages sayfası iframe ile gömülüyordu; değişiklikler artık
+// bu depodan yapılır. Dışa açık bağımsız sürüm adresi geriye dönük uyumluluk
+// için "Yeni sekmede aç" düğmesinde duruyor.
 export const ARSAPAY_URL =
   "https://aligokten.github.io/sagg-muhasebe/arsapaylastir-test.html";
 
@@ -45,11 +45,9 @@ export default function ArsapayModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </div>
-        <iframe
-          src={ARSAPAY_URL}
-          title="Arsapay"
-          className="min-h-0 flex-1 bg-white"
-        />
+        <div className="min-h-0 flex-1 overflow-auto">
+          <ArsaPaylastir />
+        </div>
       </div>
     </div>
   );
