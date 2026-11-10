@@ -1,13 +1,12 @@
-import { cardCls, secondaryBtnCls } from "../ui";
+import { cardCls } from "../ui";
 import { CoinsIcon } from "./icons";
 import ArsaPaylastir from "../arsapay/ArsaPaylastir";
 
-// Arsapay artık Ruhsat360 içinde yerel bir modül (src/arsapay/). Önceden ayrı
-// depodaki GitHub Pages sayfası iframe ile gömülüyordu; değişiklikler artık
-// bu depodan yapılır. Dışa açık bağımsız sürüm adresi geriye dönük uyumluluk
-// için "Yeni sekmede aç" düğmesinde duruyor.
-export const ARSAPAY_URL =
-  "https://aligokten.github.io/sagg-muhasebe/arsapaylastir-test.html";
+// Arsapay, Ruhsat360'ın bir eklentisidir: src/arsapay/ altında yerel olarak
+// çalışır ve yalnızca bu panelden kullanılır. Önceden ayrı depodaki GitHub
+// Pages sayfası iframe ile gömülüyordu; o sayfaya giden "Yeni sekmede aç"
+// bağlantısı kaldırıldı, çünkü artık burada görünenden farklı bir kopyaya
+// gidiyordu.
 
 export default function ArsapayModal({ onClose }: { onClose: () => void }) {
   return (
@@ -27,14 +26,6 @@ export default function ArsapayModal({ onClose }: { onClose: () => void }) {
             Arsapay
           </h3>
           <div className="flex items-center gap-2">
-            <a
-              href={ARSAPAY_URL}
-              target="_blank"
-              rel="noreferrer"
-              className={secondaryBtnCls}
-            >
-              Yeni sekmede aç
-            </a>
             <button
               type="button"
               onClick={onClose}
