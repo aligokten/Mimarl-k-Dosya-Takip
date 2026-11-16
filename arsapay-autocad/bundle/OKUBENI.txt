@@ -1,0 +1,47 @@
+ArsaPay v1.0 - AutoCAD eklentisi (SAGG)
+=======================================
+
+Kurulumdan sonra AutoCAD'i yeniden başlatın. Şeritte (ribbon) "ARSAPAY"
+sekmesi görünür:
+
+  Parsel Bölme paneli
+    Eşit Alanlı Böl   (ARSAPAY)     En kompakt kesimleri otomatik arar
+    Referansa Dik Böl (ARSAPAYREF)  Kesimler, iki noktayla verdiğiniz
+                                    referans çizgisine (ör. yol cephesi) dik olur
+  ArsaPay paneli
+    Ruhsat360 Paneli  (ARSAPAYWEB)  TKGM parsel sorgulu web modülünü açar
+    Bilgi             (ARSAPAYBILGI)
+
+Komutları komut satırına yazarak da kullanabilirsiniz. Eski V5 komutu
+ARSAPAY5 de çalışır.
+
+Kullanım
+  1. Kapalı parsel sınırını seçin (en güvenlisi kapalı LWPOLYLINE; daire,
+     elips, spline ve yaylı poliçizgiler de desteklenir).
+  2. Parça sayısı, 1 çizim biriminin kaç metre olduğu (m=1, cm=0.01,
+     mm=0.001), minimum kenar ve arama hassasiyetini girin.
+  3. Yazı yüksekliğini onaylayın, isterseniz lejant tablosunun yerini seçin.
+  Sonuçlar SAGG-PAY-SINIR / SAGG-PAY-HATCH / SAGG-PAY-YAZI / SAGG-PAY-LEJANT
+  katmanlarına çizilir. Tüm işlem tek bir UNDO ile geri alınabilir.
+
+Şerit sekmesi görünmüyorsa
+  - Komut satırına ARSAPAYSERIT yazın.
+  - Şerit kapalıysa önce RIBBON komutunu çalıştırın.
+  - "Güvenlik - Yürütülebilir dosya yükle" uyarısı çıkarsa "Her zaman yükle"yi seçin.
+
+Gereksinimler
+  AutoCAD 2021 veya üstü (64 bit) ya da AutoCAD tabanlı ürünler
+  (Civil 3D, Map 3D, Architecture...). AutoCAD LT'de şerit sekmesi
+  (.NET) çalışmaz.
+
+Kaldırma
+  Windows Ayarlar > Uygulamalar listesinden "ArsaPay" kaldırılabilir veya
+  %APPDATA%\Autodesk\ApplicationPlugins\ArsaPay.bundle klasörü silinebilir.
+
+Bilgilendirme
+  Parsel verileri TKGM Parsel Sorgu sisteminden alınmakta olup, kesin imar
+  bilgisi için işlem yapacağınız belediye ve ilgili birimlere başvurmanız
+  gerekmektedir. Buradan edindiğiniz bilgilerin resmi bir bağlayıcılığı
+  bulunmamaktadır.
+
+ArsaPay v1.0 uygulaması SAGG markasına ait olup, tüm hakları saklıdır. 2026.
