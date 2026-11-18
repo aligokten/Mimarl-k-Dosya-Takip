@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    ArsaPay AutoCAD şerit (ribbon) eklentisi.
+    net48            -> AutoCAD 2021-2024 (R24.x)
+    net8.0-windows   -> AutoCAD 2025 ve sonrası (R25+)
+    Linux/macOS üzerinde de derlenebilmesi için EnableWindowsTargeting açık.
+  -->
+  <PropertyGroup>
+    <TargetFrameworks>net48;net8.0-windows</TargetFrameworks>
+    <AssemblyName>ArsaPayRibbon</AssemblyName>
+    <RootNamespace>ArsaPay</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <PlatformTarget>x64</PlatformTarget>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Version>1.0.0</Version>
+    <Company>SAGG</Company>
+    <Product>ArsaPay</Product>
+    <Copyright>ArsaPay v1.0 SAGG markasina aittir. Tum haklari saklidir. 2026.</Copyright>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="AutoCAD.NET" Version="24.0.0" ExcludeAssets="runtime" PrivateAssets="all" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <PackageReference Include="AutoCAD.NET" Version="25.0.1" ExcludeAssets="runtime" PrivateAssets="all" />
+    <!-- UseWPF yerine doğrudan referans: XAML derlemesi gerekmiyor ve Linux'taki
+         SDK'da WindowsDesktop hedefleri olmadan da derlenebiliyor. -->
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WPF" />
+  </ItemGroup>
+</Project>

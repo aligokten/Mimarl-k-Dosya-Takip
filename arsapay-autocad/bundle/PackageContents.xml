@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ArsaPay AutoCAD Autoloader paketi.
+  ArsaPay.bundle klasörü %APPDATA%\Autodesk\ApplicationPlugins altına
+  kopyalandığında AutoCAD her açılışta LISP komutlarını ve şerit (ribbon)
+  sekmesini otomatik yükler. ProductCode her sürümde değişir, UpgradeCode sabittir.
+-->
+<ApplicationPackage
+    SchemaVersion="1.0"
+    AutodeskProduct="AutoCAD"
+    ProductType="Application"
+    Name="ArsaPay"
+    Description="Eşit alanlı parsel bölme (SAGG). ARSAPAY şerit sekmesi ve ARSAPAY / ARSAPAYREF komutları."
+    AppVersion="1.0.0"
+    FriendlyVersion="1.0"
+    Author="SAGG"
+    ProductCode="{C1618732-77FA-4765-A4EF-3E2F75D1C501}"
+    UpgradeCode="{01E0B7C6-7E78-4AE4-AC4C-2F73FCDA3100}"
+    HelpFile="./Contents/OKUBENI.txt">
+
+  <CompanyDetails Name="SAGG" />
+
+  <!-- AutoCAD 2021 (R24.0) ve sonrası, 64 bit; AutoCAD tabanlı dikey ürünler dahil -->
+  <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R24.0" />
+
+  <Components Description="ArsaPay LISP komutları">
+    <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R24.0" />
+    <ComponentEntry
+        AppName="ArsaPayLisp"
+        Version="1.0.0"
+        ModuleName="./Contents/SAGG_ARSAPAY.lsp"
+        AppDescription="ARSAPAY, ARSAPAYREF, ARSAPAYWEB, ARSAPAYBILGI komutları"
+        LoadOnAutoCADStartup="True"
+        PerDocument="True" />
+  </Components>
+
+  <!-- Şerit: AutoCAD 2021-2024 (.NET Framework 4.8) -->
+  <Components Description="ArsaPay şerit - AutoCAD 2021-2024">
+    <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R24.0" SeriesMax="R24.3" />
+    <ComponentEntry
+        AppName="ArsaPayRibbon"
+        Version="1.0.0"
+        ModuleName="./Contents/Win64/R24/ArsaPayRibbon.dll"
+        AppDescription="ARSAPAY şerit sekmesi"
+        LoadOnAutoCADStartup="True"
+        LoadOnCommandInvocation="False">
+      <Commands GroupName="ARSAPAY">
+        <Command Global="ARSAPAYSERIT" Local="ARSAPAYSERIT" />
+      </Commands>
+    </ComponentEntry>
+  </Components>
+
+  <!-- Şerit: AutoCAD 2025 ve sonrası (.NET 8) -->
+  <Components Description="ArsaPay şerit - AutoCAD 2025+">
+    <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R25.0" />
+    <ComponentEntry
+        AppName="ArsaPayRibbon"
+        Version="1.0.0"
+        ModuleName="./Contents/Win64/R25/ArsaPayRibbon.dll"
+        AppDescription="ARSAPAY şerit sekmesi"
+        LoadOnAutoCADStartup="True"
+        LoadOnCommandInvocation="False">
+      <Commands GroupName="ARSAPAY">
+        <Command Global="ARSAPAYSERIT" Local="ARSAPAYSERIT" />
+      </Commands>
+    </ComponentEntry>
+  </Components>
+</ApplicationPackage>
