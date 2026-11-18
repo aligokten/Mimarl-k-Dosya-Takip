@@ -3,7 +3,20 @@ const path = require("path");
 
 const PANEL_HOST = "panel.ruhsat360.com";
 const PANEL_URL = `https://${PANEL_HOST}/?source=desktop`;
-const ICON_PATH = path.join(__dirname, "icon.ico");
+// macOS'ta pencere simgesi uygulama paketinden (.icns) gelir; BrowserWindow'a
+// ikon verilmez. Windows ve Linux'ta .ico kullanılır.
+const ICON_PATH =
+  process.platform === "darwin" ? undefined : path.join(__dirname, "icon.ico");
+
+// Electron'un varsayılan user agent'ı "Electron" içerdiği için Google
+// oturum açma sayfası "bu tarayıcı güvenli olmayabilir" diyip engelliyor.
+// Bu yüzden masaüstü sarmalayıcı kendini sıradan bir Chrome gibi tanıtıyor —
+// ancak çalıştığı işletim sistemini doğru bildirmesi gerekiyor; macOS'ta
+// Windows user agent'ı bildirmek Google tarafında tutarsız görünür.
+const USER_AGENT =
+  process.platform === "darwin"
+    ? "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 // Panel yalnızca https üzerinden açılmalı. Sayfa http'ten açılırsa sayfanın
 // origin'i "http://panel.ruhsat360.com" olur; Google OAuth localhost dışında
@@ -34,7 +47,9 @@ function createMainWindow() {
     title: "Ruhsat360",
     icon: ICON_PATH,
     autoHideMenuBar: true,
-    backgroundColor: "#111217",
+    // Panelin koyu zemini (webapp/src/index.css); pencere açılırken bir kare
+    // boyunca farklı bir renk görünmesin.
+    backgroundColor: "#161316",
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -43,9 +58,7 @@ function createMainWindow() {
     }
   });
 
-  mainWindow.webContents.setUserAgent(
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-  );
+  mainWindow.webContents.setUserAgent(USER_AGENT);
 
   mainWindow.loadURL(PANEL_URL);
 
