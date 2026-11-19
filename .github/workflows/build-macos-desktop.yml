@@ -39,6 +39,23 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npm run dist:mac
 
+      - name: Verify signature inside the DMG
+        # Kullanıcıya giden asıl dosyayı denetler: .dmg bağlanıp içindeki
+        # uygulamanın imzası doğrulanır. İmzasız bir paket Apple Silicon'da
+        # açılmaz, macOS onu kurcalanmış sayıp Çöp Sepeti'ne taşır — bu adım
+        # böyle bir paketin derlemeden çıkmasını engeller.
+        run: |
+          set -euo pipefail
+          dmg=$(ls release/*.dmg)
+          echo "Denetlenen paket: $dmg"
+          baglanti=$(mktemp -d)
+          hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$baglanti"
+          trap 'hdiutil detach "$baglanti" -quiet || true' EXIT
+          uygulama=$(ls -d "$baglanti"/*.app)
+          echo "Denetlenen uygulama: $uygulama"
+          codesign --verify --deep --strict --verbose=2 "$uygulama"
+          codesign --display --verbose=2 "$uygulama"
+
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
