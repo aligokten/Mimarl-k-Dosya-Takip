@@ -15,6 +15,7 @@ import {
   connectStorageEmulator,
   type FirebaseStorage,
 } from "firebase/storage";
+import { getFunctions, connectFunctionsEmulator, type Functions } from "firebase/functions";
 import {
   BUILTIN_FIREBASE_CONFIG,
   type FirebaseConfig,
@@ -107,4 +108,14 @@ export function db(): Firestore {
 export function storage(): FirebaseStorage {
   ensureApp();
   return storageInstance!;
+}
+
+// Yapay zekâ asistanı gibi Cloud Functions çağrıları (bölge: europe-west1).
+let functionsInstance: Functions | null = null;
+export function functions(): Functions {
+  if (!functionsInstance) {
+    functionsInstance = getFunctions(ensureApp(), "europe-west1");
+    if (useEmulator()) connectFunctionsEmulator(functionsInstance, "127.0.0.1", 5001);
+  }
+  return functionsInstance;
 }

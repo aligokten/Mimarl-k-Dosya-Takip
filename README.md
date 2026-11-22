@@ -79,6 +79,10 @@ Uygulamanın çalışması için ücretsiz bir Firebase projesi bağlamanız ger
 
 ## Özellikler
 
+- **Yapay Zekâ Asistanı**: Her projede düğmelerle imar analizi, eksik evrak
+  kontrolü, dilekçe ve işveren raporu; sohbetle soru-cevap. Kurulum ve
+  maliyet: [YAPAY-ZEKA-ASISTANI.md](YAPAY-ZEKA-ASISTANI.md).
+
 - **Çoklu kullanıcı ofis**: Gmail ile giriş, davet linkiyle ofise katılma
   (10 kişiye kadar), yönetici (admin) / çalışan (staff) rolleri, profil
   ayarları. Yönetici çalışanları projelere görevli olarak atar.

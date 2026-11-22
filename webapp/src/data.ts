@@ -34,12 +34,16 @@ import {
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
-import { auth, db, storage, googleProvider } from "./firebase";
+import { auth, db, storage, googleProvider, functions } from "./firebase";
+import { httpsCallable } from "firebase/functions";
 import { applySharedDriveClientId, deleteDriveFile } from "./drive";
 import { playNotificationChime } from "./notifySound";
 import type {
   Activity,
   ActivityType,
+  AiActionKey,
+  AiMessage,
+  AiSuggestion,
   AppNotification,
   ChatMessage,
   Contact,
@@ -2246,4 +2250,90 @@ export async function disableProjectShare(projectId: string): Promise<void> {
 export async function loadPublicShare(token: string): Promise<PublicShare | null> {
   const snap = await getDoc(doc(db(), "publicShares", token));
   return snap.exists() ? (snap.data() as PublicShare) : null;
+}
+
+// ---- Yapay zekâ asistanı ----
+
+function aiMessagesCollection(projectId: string) {
+  const officeId = currentOfficeId();
+  if (!officeId) throw new Error("Yapay zekâ asistanı yalnızca ofis hesaplarında kullanılabilir.");
+  return collection(db(), "offices", officeId, "projects", projectId, "aiMessages");
+}
+
+export function aiAvailable(): boolean {
+  return currentOfficeId() !== null;
+}
+
+// Projenin asistan sohbetini canlı izler; aboneliği bırakmak için dönen
+// fonksiyonu çağırın.
+export function watchAiMessages(
+  projectId: string,
+  onChange: (messages: AiMessage[]) => void,
+  onError: (err: unknown) => void
+): Unsubscribe {
+  return onSnapshot(
+    query(aiMessagesCollection(projectId), orderBy("at", "asc"), limit(200)),
+    (snap) => onChange(snap.docs.map((d) => ({ ...(d.data() as AiMessage), id: d.id }))),
+    onError
+  );
+}
+
+export async function askAssistant(
+  projectId: string,
+  input: { action?: AiActionKey; message?: string }
+): Promise<void> {
+  const officeId = currentOfficeId();
+  if (!officeId) throw new Error("Yapay zekâ asistanı yalnızca ofis hesaplarında kullanılabilir.");
+  const call = httpsCallable(functions(), "aiAssistant", { timeout: 310_000 });
+  await call({ officeId, projectId, action: input.action, message: input.message });
+}
+
+// Asistanın önerisini kullanıcı onayıyla uygular ve öneriyi "uygulandı"
+// olarak işaretler. Değişiklik, kullanıcının kendi yetkisiyle yapılır.
+export async function applyAiSuggestion(
+  project: Project,
+  messageId: string,
+  index: number,
+  suggestion: AiSuggestion
+): Promise<void> {
+  const who = currentName();
+  if (suggestion.tur === "NOT_EKLE") {
+    const note = {
+      id: uid(),
+      text: suggestion.notMetni,
+      authorUid: who.uid,
+      authorName: `${who.name} (asistan önerisi)`,
+      createdAt: now(),
+    };
+    await patchProject(
+      project.id,
+      { noteList: [...(project.noteList ?? []), note] },
+      { type: "NOT_EKLENDI", text: "Asistan önerisiyle projeye not eklendi", notify: true }
+    );
+  } else {
+    const service = project.services.find((s) => s.id === suggestion.hizmetId);
+    if (!service) throw new Error("Hizmet artık projede yok.");
+    if (!service.completedStageIds.includes(suggestion.asamaId)) {
+      const services = project.services.map((s) =>
+        s.id === service.id
+          ? { ...s, completedStageIds: [...s.completedStageIds, suggestion.asamaId] }
+          : s
+      );
+      await patchProject(
+        project.id,
+        { services },
+        {
+          type: "ASAMA_TAMAMLANDI",
+          text: `${suggestion.hizmetAdi} · "${suggestion.asamaAdi}" tamamlandı (asistan önerisi)`,
+          notify: true,
+        }
+      );
+    }
+  }
+  const ref = doc(aiMessagesCollection(project.id), messageId);
+  const snap = await getDoc(ref);
+  const applied = ((snap.data()?.appliedSuggestions as number[] | undefined) ?? []).filter(
+    (i) => i !== index
+  );
+  await updateDoc(ref, { appliedSuggestions: [...applied, index] });
 }

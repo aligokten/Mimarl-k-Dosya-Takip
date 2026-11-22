@@ -625,3 +625,6 @@ exports.createWebsitePlatformInvite = onRequest(
     }
   }
 );
+
+// Yapay zekâ asistanı (functions/ai.js)
+exports.aiAssistant = require("./ai").aiAssistant;

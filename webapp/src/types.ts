@@ -477,3 +477,34 @@ export const MEMBER_ROLE_LABELS: Record<MemberRole, string> = {
 };
 
 export const MAX_MEMBERS = 10;
+
+// ---- Yapay zekâ asistanı ----
+// offices/{officeId}/projects/{projectId}/aiMessages altında tutulur; asistan
+// yanıtlarını yalnızca sunucu (functions/ai.js) yazar.
+
+export type AiActionKey = "imar" | "evrak" | "dilekce" | "rapor" | "sonraki";
+
+export type AiSuggestion =
+  | { tur: "NOT_EKLE"; baslik: string; gerekce: string; notMetni: string }
+  | {
+      tur: "ASAMA_TAMAMLA";
+      baslik: string;
+      gerekce: string;
+      hizmetId: string;
+      asamaId: string;
+      hizmetAdi: string;
+      asamaAdi: string;
+    };
+
+export interface AiMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  action?: AiActionKey | null;
+  sources?: { url: string; title: string }[];
+  suggestions?: AiSuggestion[];
+  appliedSuggestions?: number[];
+  byUid: string | null;
+  byName: string;
+  at: string;
+}

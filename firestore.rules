@@ -254,6 +254,20 @@ service cloud.firestore {
         hasOfficeAccess(resource.data.officeId);
     }
 
+    // Yapay zekâ asistanı: ofis planı (aylık istek sınırı, açık/kapalı) ve
+    // kullanım sayaçları. Ofis ağacının (offices/{officeId}/**) DIŞINDA
+    // tutulur; böylece ofis üyeleri kendi kotalarını değiştiremez. Sayaçları
+    // yalnızca Cloud Function (Admin SDK) yazar.
+    match /aiPlans/{officeId} {
+      allow read: if hasOfficeMembership(officeId) || isPlatformAdmin();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /aiUsage/{officeId}/months/{month} {
+      allow read: if hasOfficeMembership(officeId) || isPlatformAdmin();
+      allow write: if false;
+    }
+
     match /offices/{officeId} {
       allow read: if hasOfficeMembership(officeId) || isPlatformAdmin();
 

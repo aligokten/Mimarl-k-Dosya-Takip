@@ -37,6 +37,7 @@ import {
 import ProjectForm from "./ProjectForm";
 import DeleteButton from "../components/DeleteButton";
 import DocScanner from "../components/DocScanner";
+import AiAssistant from "../components/AiAssistant";
 import { ChevronLeftIcon, WhatsAppIcon } from "../components/icons";
 import { waLink } from "../whatsapp";
 import { Avatar } from "../App";
@@ -47,6 +48,7 @@ const TABS = [
   { key: "evraklar", label: "Evraklar" },
   { key: "notlar", label: "Notlar" },
   { key: "aktivite", label: "Geçmiş Aktiviteler" },
+  { key: "asistan", label: "Yapay Zekâ Asistanı" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -149,6 +151,7 @@ export default function ProjectDetail() {
       {tab === "evraklar" && <DocumentsTab project={project} />}
       {tab === "notlar" && <NotesTab project={project} />}
       {tab === "aktivite" && <ActivityTab project={project} />}
+      {tab === "asistan" && <AiAssistant project={project} />}
     </div>
   );
 }
